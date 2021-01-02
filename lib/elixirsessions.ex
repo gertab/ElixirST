@@ -1,4 +1,4 @@
-defmodule Elixirsessions do
+defmodule ElixirSessions do
   @moduledoc """
   Documentation for Elixirsessions.
   """
