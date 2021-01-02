@@ -28,7 +28,7 @@ defmodule ElixirSessions.ArithmeticServer do
     end
   end
 
-  # @session "send {label} . choice(add: send {number, number, pid} . receive {number})"
+  @session "send {label} . choice(add: send {number, number, pid} . receive {number})"
   def attempt1(server) when is_pid(server) do
     send(server, {:add})
     send(server, {34, 54, self()})
