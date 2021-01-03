@@ -38,12 +38,6 @@ defmodule ElixirSessions.Checking do
         IO.inspect(session)
         IO.inspect(fun)
       end
-      # case sessions do
-      #   [session] ->
-      #     IO.puts("AAAAAAAAAAAAAAAAAAAA")
-      #     IO.inspect(session)
-      #   [] -> :ok
-      # end
     end
     IO.inspect(body)
     :ok
