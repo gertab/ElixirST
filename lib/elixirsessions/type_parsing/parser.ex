@@ -21,8 +21,8 @@ defmodule ElixirSessions.Parser do
           | {:error, {any, :lexer, {any, any}}, any}
   def run() do
     :leex.file('src/lexer.xrl')
-    # source = "receive '{:ping, pid}' . send '{:pong}' . send 'any' . send_choice <lBbel2: send 'any' . receive 'any'>"
-    source = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+    source = "send '{:ping, pid}' . receive '{:pong}'"
+    # source = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
     # source = "send '{label}' . choice<add: send '{number, number, pid}' . receive '{number}'>"
     parse(source)
   end
