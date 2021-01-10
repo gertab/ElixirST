@@ -2,7 +2,7 @@ defmodule ElixirSessions.Parser do
   def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
   def parse(string) do
     with {:ok, tokens, _} <- :lexer.string(string) do
-      IO.inspect tokens
+      # IO.inspect tokens
       :parse.parse(tokens)
     else
       err -> err
@@ -22,8 +22,8 @@ defmodule ElixirSessions.Parser do
   def run() do
     :leex.file('src/lexer.xrl')
     # source = "receive '{:ping, pid}' . send '{:pong}' . send 'any' . send_choice <lBbel2: send 'any' . receive 'any'>"
-    source = "receive '{:ping, pid}' . send '{:pong}' . send 'any' . offer_option <lBbel2: send 'any' . receive 'any', lBbel3: send 'any' . receive 'any'>"
-    # source = "receive '{:ping, pid}'"
+    source = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+    # source = "send '{label}' . choice<add: send '{number, number, pid}' . receive '{number}'>"
     parse(source)
   end
 end

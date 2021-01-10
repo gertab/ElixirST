@@ -2,16 +2,15 @@ Nonterminals
 session sessions label_session label_sessions.
 
 Terminals
-send recv send_choice offer_option sequence types int atom label '[' ']' '<' '>' ':' ','.
+send recv choice branch sequence types int atom label '[' ']' '<' '>' ':' ','.
 
 Rootsymbol sessions.
 
 session -> '<' : '$1'.
 session -> recv types : {recv, unwrap('$2')}.
 session -> send types : {send, unwrap('$2')}.
-session -> send_choice '<' label_session '>' : {send_choice, '$3'}.
-session -> offer_option '<' label_sessions '>' : {send_choice, '$3'}.
-% session -> offer_option '<' label sessions '>' : {send_choice, {unwrap('$3'), '$4'}}.
+session -> choice '<' label_session '>' : {choice, '$3'}.
+session -> branch '<' label_sessions '>' : {branch, '$3'}.
 sessions -> session : ['$1'].
 sessions -> session sessions : ['$1' | '$2' ].
 sessions -> session sequence sessions : ['$1' | '$3' ].

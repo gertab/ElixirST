@@ -36,6 +36,11 @@ defmodule ElixirSessions.Checking do
       if length(sessions) > 0 do
         [session | _ ] = sessions
         IO.inspect(session)
+        case ElixirSessions.Parser.parse(session) do
+          {:ok , s} -> IO.inspect(s)
+          # _ -> IO.puts("Leex error")
+        end
+        ElixirSessions.Parser.parse(session)
         IO.inspect(fun)
       end
     end

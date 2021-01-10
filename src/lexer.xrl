@@ -5,8 +5,8 @@ ATOM       = :[a-z_]+
 WHITESPACE = [\s\t\n\r]
 SEND = send
 RECEIVE = receive
-SEND_CHOICE = send_choice
-OFFER_OPTION = offer_option
+CHOICE = choice
+BRANCH = branch
 SEQUENCE = \.
 TYPES = '([^']*)'
 % TYPES = '([^\\\']|\\.)*'
@@ -15,8 +15,8 @@ Rules.
 
 {SEND}         : {token, {send, TokenLine}}.
 {RECEIVE}      : {token, {recv, TokenLine}}.
-{SEND_CHOICE}  : {token, {send_choice, TokenLine}}.
-{OFFER_OPTION} : {token, {offer_option, TokenLine}}.
+{CHOICE}       : {token, {choice, TokenLine}}.
+{BRANCH}       : {token, {branch, TokenLine}}.
 {SEQUENCE}     : {token, {sequence, TokenLine}}.
 {TYPES}        : {token, {types, TokenLine, lists:sublist(TokenChars, 2, TokenLen - 2)}}.
 {INT}          : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
