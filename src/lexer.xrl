@@ -7,8 +7,9 @@ SEND = send
 RECEIVE = receive
 SEND_CHOICE = send_choice
 OFFER_OPTION = offer_option
-SEQUENCE = .
-TYPES = '([^\\\"]|\\.)*'
+SEQUENCE = \.
+TYPES = '([^']*)'
+% TYPES = '([^\\\']|\\.)*'
 
 Rules.
 
@@ -20,7 +21,7 @@ Rules.
 {TYPES}        : {token, {types, TokenLine, lists:sublist(TokenChars, 2, TokenLen - 2)}}.
 {INT}          : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
 {ATOM}         : {token, {atom, TokenLine, to_atom(TokenChars)}}.
-[a-z_]+:       : {token, {key,  TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen - 1))}}.
+[a-zA-Z0-9_]+: : {token, {label,  TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen - 1))}}.
 \[             : {token, {'[',  TokenLine}}.
 \]             : {token, {']',  TokenLine}}.
 \<             : {token, {'<',  TokenLine}}.
