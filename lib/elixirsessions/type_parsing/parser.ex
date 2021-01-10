@@ -9,20 +9,10 @@ defmodule ElixirSessions.Parser do
     end
   end
 
-
+  #recompile && ElixirSessions.Parser.run
   def run() do
     :leex.file('src/lexer.xrl')
-    source = "[one: 1, two: 2]"
+    source = "[one: 1, two: 2, trt: 4] send <> receive.send_choice<jejnf:'sdds23'>"
     parse(source)
   end
-  # Application.app_dir(:my_app, "priv/lexer.xrl")
-
-  # run(2)
-
-  # {:ok, tokens, _} = source |> String.to_char_list |> :lexer.string
-  # compile("priv/lexer.erl")
-  # :lexer.parse("hello")
-
-  # IO.inspect(tokens)
-
 end
