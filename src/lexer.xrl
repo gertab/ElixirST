@@ -1,7 +1,7 @@
 Definitions.
 
 INT        = [0-9]+
-ATOM       = :[a-z_]+
+ATOM       = :[a-zA-Z_]+
 WHITESPACE = [\s\t\n\r]
 SEND = send
 RECEIVE = receive

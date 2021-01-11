@@ -1,10 +1,5 @@
 @session "send '{:ping, pid}' . receive '{:pong}'"
 
-session_type =
-  {:ok,
-    [send: '{:ping, pid}', recv: '{:pong}']
-  }
-
 def ping(pid) when is_pid(pid) do
   send(pid, {:ping, self()})
 
@@ -13,6 +8,11 @@ def ping(pid) when is_pid(pid) do
       IO.puts("Received pong!")
   end
 end
+
+session_type =
+  {:ok,
+    [send: '{:ping, pid}', recv: '{:pong}']
+  }
 
 AST =
 [

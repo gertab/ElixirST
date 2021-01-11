@@ -33,11 +33,6 @@ label_sessions -> label_session : ['$1'].
 % pairs -> pair : put_tuple('$1').
 % pair -> string colon value : {unwrap('$1'), '$3'}.
 
-% array -> open_array list close_array : '$2'.
-% array -> open_array close_array : [].
-
-% list -> value comma list : ['$1' | '$3'].
-% list -> value : ['$1'].
 
 Erlang code.
 unwrap({_, _, V}) -> V.
