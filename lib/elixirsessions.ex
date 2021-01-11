@@ -8,7 +8,7 @@ defmodule ElixirSessions do
 
   ## Examples
 
-      iex> Elixirsessions.hello()
+      iex> ElixirSessions.hello()
       :world
 
   """

@@ -36,6 +36,6 @@ label_sessions -> label_session : ['$1'].
 
 Erlang code.
 unwrap({_, _, V}) -> V.
-unwrap2({_, V}) -> V.
-put_tuple({Key, Value}) -> maps:put(Key,Value, #{}).
-put_tuple({Key, Value}, Other) -> maps:merge(maps:put(Key,Value, #{}), Other).
+% unwrap2({_, V}) -> V.
+% put_tuple({Key, Value}) -> maps:put(Key,Value, #{}).
+% put_tuple({Key, Value}, Other) -> maps:merge(maps:put(Key,Value, #{}), Other).

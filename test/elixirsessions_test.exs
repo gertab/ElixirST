@@ -1,8 +1,8 @@
-defmodule ElixirsessionsTest do
+defmodule ElixirSessionsTest do
   use ExUnit.Case
-  doctest Elixirsessions
+  doctest ElixirSessions
 
   test "greets the world" do
-    assert Elixirsessions.hello() == :world
+    assert ElixirSessions.hello() == :world
   end
 end

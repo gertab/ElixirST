@@ -2,9 +2,9 @@
 -export([parse/1, parse_and_scan/1, format_error/1]).
 -file("src/parse.yrl", 37).
 unwrap({_, _, V}) -> V.
-unwrap2({_, V}) -> V.
-put_tuple({Key, Value}) -> maps:put(Key,Value, #{}).
-put_tuple({Key, Value}, Other) -> maps:merge(maps:put(Key,Value, #{}), Other).
+% unwrap2({_, V}) -> V.
+% put_tuple({Key, Value}) -> maps:put(Key,Value, #{}).
+% put_tuple({Key, Value}, Other) -> maps:merge(maps:put(Key,Value, #{}), Other).
 -file("/usr/lib/erlang/lib/parsetools-2.1.8/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
