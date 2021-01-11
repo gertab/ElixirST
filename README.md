@@ -1,5 +1,7 @@
 # Elixirsessions
 
+![Elixir CI](https://github.com/gertab/ElixirSessions/workflows/Elixir%20CI/badge.svg)
+
 **TODO: Add description**
 
 ## Installation
