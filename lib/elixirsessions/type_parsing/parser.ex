@@ -22,8 +22,8 @@ defmodule ElixirSessions.Parser do
   def run() do
     :leex.file('src/lexer.xrl')
     # source = "send '{:ping, pid}' . receive '{:pong}'"
-    # source = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
-    source = "send '{label}' . choice<add: send '{number, number, pid}' . receive '{number}'>"
+    # source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+    source = " rec X ( send 'any' . receive 'any' . rec Y. ( send '{number}' . receive '{any}' . rec Z . ( Z ) . receive '{any}' . Y ) . X )"
     parse(source)
   end
 end
