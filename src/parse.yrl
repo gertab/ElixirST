@@ -6,7 +6,6 @@ send recv choice branch sequence types int atom label recurse '[' ']' '<' '>' ':
 
 Rootsymbol sessions.
 
-session -> '<' : '$1'.
 session -> recv types : {recv, unwrap('$2')}.
 session -> send types : {send, unwrap('$2')}.
 session -> label : {call_recurse, unwrap('$1')}.
