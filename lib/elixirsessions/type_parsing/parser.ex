@@ -1,5 +1,23 @@
 defmodule ElixirSessions.Parser do
+  @moduledoc """
+  Documentation for ElixirSessions.Parser.
+  """
+
+  @doc """
+  Parses a session type from a string to an Elixir datatype.
+
+  ## Examples
+
+      iex> ElixirSessions.hello()
+      :world
+
+      iex> s = "send '{number()}' . receive '{number()}'"
+      ...> ElixirSessions.Parser.parse(s)
+      {:ok, [send: '{number()}', recv: '{number()}']}
+
+  """
   def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
+
   def parse(string) do
     with {:ok, tokens, _} <- lexer(string) do
       parser(tokens)
@@ -17,7 +35,7 @@ defmodule ElixirSessions.Parser do
     :parse.parse(tokens)
   end
 
-  #recompile && ElixirSessions.Parser.run
+  # recompile && ElixirSessions.Parser.run
   def run() do
     :leex.file('src/lexer.xrl')
     source = "branch<neg: send 'any', neg2: send 'any'>"
