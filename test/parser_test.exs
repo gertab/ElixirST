@@ -38,7 +38,7 @@ defmodule ParserTest do
   test "branch session type" do
     source = "branch<neg: send 'any', neg2: send 'any'>"
 
-    expected = {:ok, [branch: [neg: [send: 'any'], neg2: [send: 'any']]]}
+    expected = {:ok, [branch: %{neg: [send: 'any'], neg2: [send: 'any']}]}
     result = Parser.parse(source)
     assert expected == result
   end

@@ -1,5 +1,5 @@
 Nonterminals
-session sessions label_session label_sessions.
+session sessions label_sessions.
 
 Terminals
 send recv choice branch sequence types int atom label recurse '[' ']' '<' '>' ':' ',' '(' ')'.
@@ -9,7 +9,7 @@ Rootsymbol sessions.
 session -> recv types : {recv, unwrap('$2')}.
 session -> send types : {send, unwrap('$2')}.
 session -> label : {call_recurse, unwrap('$1')}.
-session -> choice '<' label_session '>' : {choice, '$3'}.
+session -> choice '<' label ':' sessions '>' : {choice, {unwrap('$3'), '$5'}}.
 session -> branch '<' label_sessions '>' : {branch, '$3'}.
 session -> recurse label sequence '(' sessions ')' : {recurse, unwrap('$2'), '$5'}.
 session -> recurse label '(' sessions ')' : {recurse, unwrap('$2'), '$4'}.
@@ -18,9 +18,9 @@ sessions -> session : ['$1'].
 sessions -> session sessions : ['$1' | '$2' ].
 sessions -> session sequence sessions : ['$1' | '$3' ].
 
-label_session -> label ':' sessions : {unwrap('$1'), '$3'}.
-label_sessions -> label_session ',' label_sessions : ['$1' | '$3'].
-label_sessions -> label_session : ['$1'].
+label_sessions -> label ':' sessions ',' label_sessions : '$5'#{unwrap('$1') => '$3'}.
+label_sessions -> label ':' sessions : #{unwrap('$1') => '$3'}.
+
 % value -> object : '$1'.
 % value -> array : '$1'.
 % value -> int : unwrap('$1').

@@ -27,6 +27,12 @@ defmodule ElixirSessions.Duality do
                         {:send, _} -> true
                         _          -> false
                     end
+      {:choice, {_label, _}} ->  case current2 do
+                                  {:branch, _} -> true
+                                  _ -> false
+                                end
+        # [choice: {:neg, [send: 'any']}]
+        # [branch: [neg: [send: 'any'], neg2: [send: 'any']]]
       _ -> {:unknowncase, :false}
     end
   end
