@@ -41,30 +41,23 @@ defmodule ElixirSessions.Duality do
     check({:branch, b}, {:choice, a})
   end
 
-  defp check({:branch, %{}}, {:choice, _}) do
-    false
+  defp check({:branch, options}, {:choice, {label, b}}) do
+    case Map.fetch(options, label) do
+      {:ok, a} -> check(a, b)
+      _ -> false
+    end
   end
 
   defp check(_, _) do
     false
   end
 
-  # defp check([{:choice, {_label, _}}], [current2]) do
-  #   case current2 do
-  #       {:branch, _} -> true
-  #       _ -> false
-  #   end
-  #   # [choice: {:neg, [send: 'any']}]
-  #   # [branch: %{neg: [send: 'any'], neg2: [send: 'any']}]
-  #   # _ -> {:unknowncase, :false}
-  # end
-
-
-
   # recompile && ElixirSessions.Duality.run
   def run() do
-    s1 = "send 'any' . send 'any' . receive 'any'"
-    s2 = "receive 'any' . receive 'any' . send 'any'"
+    # s1 = "send 'any' . send 'any' . receive 'any'"
+    s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+    # s2 = "choice<neg: receive 'any'>"
+    s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
 
 
     session1 = Parser.parse(s1)
