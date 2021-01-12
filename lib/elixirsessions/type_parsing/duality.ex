@@ -13,33 +13,53 @@ defmodule ElixirSessions.Duality do
     result
   end
 
+  defp check([current1 | remaining1], [current2 | remaining2]) do
+    check(current1, current2) && check(remaining1, remaining2)
+  end
+
   defp check([], []) do
     true
   end
 
-  defp check([current1], [current2]) do
-    case current1 do
-      {:send, _} -> case current2 do
-                        {:recv, _} -> true
-                        _          -> false
-                    end
-      {:recv, _} -> case current2 do
-                        {:send, _} -> true
-                        _          -> false
-                    end
-      {:choice, {_label, _}} ->  case current2 do
-                                  {:branch, _} -> true
-                                  _ -> false
-                                end
-        # [choice: {:neg, [send: 'any']}]
-        # [branch: [neg: [send: 'any'], neg2: [send: 'any']]]
-      _ -> {:unknowncase, :false}
-    end
+  defp check({:send, _}, {:recv, _}) do
+    true
   end
 
-  defp check([current1 | remaining1], [current2 | remaining2]) do
-    check([current1], [current2]) && check(remaining1, remaining2)
+  defp check({:send, _}, {:send, _}) do
+    false
   end
+
+  defp check({:recv, _}, {:send, _}) do
+    true
+  end
+
+  defp check({:recv, _}, {:recv, _}) do
+    false
+  end
+
+  defp check({:choice, a}, {:branch, b}) do
+    check({:branch, b}, {:choice, a})
+  end
+
+  defp check({:branch, %{}}, {:choice, _}) do
+    false
+  end
+
+  defp check(_, _) do
+    false
+  end
+
+  # defp check([{:choice, {_label, _}}], [current2]) do
+  #   case current2 do
+  #       {:branch, _} -> true
+  #       _ -> false
+  #   end
+  #   # [choice: {:neg, [send: 'any']}]
+  #   # [branch: %{neg: [send: 'any'], neg2: [send: 'any']}]
+  #   # _ -> {:unknowncase, :false}
+  # end
+
+
 
   # recompile && ElixirSessions.Duality.run
   def run() do
