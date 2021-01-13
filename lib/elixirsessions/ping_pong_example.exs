@@ -9,10 +9,11 @@ def ping(pid) when is_pid(pid) do
   end
 end
 
+#######
+
 session_type =
-  {:ok,
     [send: '{:ping, pid}', recv: '{:pong}']
-  }
+
 
 AST =
 [

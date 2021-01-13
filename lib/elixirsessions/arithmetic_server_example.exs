@@ -1,13 +1,12 @@
 @session "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
 
 session_type = [
-   recv: '{label}',
-   branch: [
-     add: [recv: '{number, number, pid}', send: '{number}'],
-     neg: [recv: '{number, pid}', send: '{number}']
-   ]
+  recv: '{label}',
+  branch: %{
+    add: [recv: '{number, number, pid}', send: '{number}'],
+    neg: [recv: '{number, pid}', send: '{number}']
+  }
 ]
-
 
 
 
@@ -31,28 +30,109 @@ def arith_serv() do
 
 # AST of Elixir arith_serv() function
 AST = [
-  do: {:__block__, [],
+  do: {:receive, [line: 14],
    [
-     {{:., [line: 11], [{:__aliases__, [line: 11], [:IO]}, :puts]}, [line: 11],
-      ["Spawning process"]},
-     {:=, [line: 12],
-      [
-        {:ponger, [line: 12], nil},
-        {:spawn, [line: 12], [{:__MODULE__, [line: 12], nil}, :pong, []]}
-      ]},
-     {{:., [line: 13], [{:__aliases__, [line: 13], [:IO]}, :puts]}, [line: 13],
-      [
-        {:<<>>, [line: 13],
-         [
-           "Process spawned as ",
-           {:"::", [line: 13],
-            [
-              {{:., [line: 13], [Kernel, :to_string]}, [line: 13],
-               [{:inspect, [line: 13], [{:ponger, [line: 13], nil}]}]},
-              {:binary, [line: 13], nil}
-            ]}
-         ]}
-      ]},
-     {:ping, [line: 15], [{:ponger, [line: 15], nil}]}
+     [
+       do: [
+         {:->, [line: 15],
+          [
+            [{:{}, [line: 15], [:add]}],
+            {:receive, [line: 16],
+             [
+               [
+                 do: [
+                   {:->, [line: 17],
+                    [
+                      [
+                        {:{}, [line: 17],
+                         [
+                           {:num1, [line: 17], nil},
+                           {:num2, [line: 17], nil},
+                           {:pid, [line: 17], nil}
+                         ]}
+                      ],
+                      {:__block__, [],
+                       [
+                         {{:., [line: 18],
+                           [{:__aliases__, [line: 18], [:IO]}, :puts]},
+                          [line: 18],
+                          [
+                            {:<<>>, [line: 18],
+                             [
+                               "[server] ",
+                               {:"::", [line: 18],
+                                [
+                                  {{:., [line: 18], [Kernel, :to_string]},
+                                   [line: 18], [{:num1, [line: 18], nil}]},
+                                  {:binary, [line: 18], nil}
+                                ]},
+                               " + ",
+                               {:"::", [line: 18],
+                                [
+                                  {{:., [line: 18], [Kernel, :to_string]},
+                                   [line: 18], [{:num2, [line: 18], nil}]},
+                                  {:binary, [line: 18], nil}
+                                ]}
+                             ]}
+                          ]},
+                         {:send, [line: 19],
+                          [
+                            {:pid, [line: 19], nil},
+                            {:{}, [line: 19],
+                             [
+                               {:+, [line: 19],
+                                [
+                                  {:num1, [line: 19], nil},
+                                  {:num2, [line: 19], nil}
+                                ]}
+                             ]}
+                          ]}
+                       ]}
+                    ]}
+                 ]
+               ]
+             ]}
+          ]},
+         {:->, [line: 22],
+          [
+            [{:{}, [line: 22], [:neg]}],
+            {:receive, [line: 23],
+             [
+               [
+                 do: [
+                   {:->, [line: 24],
+                    [
+                      [{{:num, [line: 24], nil}, {:pid, [line: 24], nil}}],
+                      {:__block__, [],
+                       [
+                         {{:., [line: 25],
+                           [{:__aliases__, [line: 25], [:IO]}, :puts]},
+                          [line: 25],
+                          [
+                            {:<<>>, [line: 25],
+                             [
+                               "[server] neg of ",
+                               {:"::", [line: 25],
+                                [
+                                  {{:., [line: 25], [Kernel, :to_string]},
+                                   [line: 25], [{:num, [line: 25], nil}]},
+                                  {:binary, [line: 25], nil}
+                                ]}
+                             ]}
+                          ]},
+                         {:send, [line: 26],
+                          [
+                            {:pid, [line: 26], nil},
+                            {:{}, [line: 26],
+                             [{:-, [line: 26], [{:num, [line: 26], nil}]}]}
+                          ]}
+                       ]}
+                    ]}
+                 ]
+               ]
+             ]}
+          ]}
+       ]
+     ]
    ]}
 ]

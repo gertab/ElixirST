@@ -38,10 +38,11 @@ defmodule ElixirSessions.Parser do
   # recompile && ElixirSessions.Parser.run
   def run() do
     :leex.file('src/lexer.xrl')
-    source = "branch<neg: send 'any', neg2: send 'any'>"
+    # source = "branch<neg: send 'any', neg2: send 'any'>"
     # source = "send '{:ping, pid}' . receive '{:pong}'"
     # source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
     # source = " send 'any'.  rec X ( send 'any' . receive 'any' . rec Y. ( send '{number}' . receive '{any}' . rec Z . ( Z ) . receive '{any}' . Y ) . X )"
+    source = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
     parse(source)
   end
 end
