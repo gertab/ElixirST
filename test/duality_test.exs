@@ -34,24 +34,33 @@ defmodule DualityTest do
     assert Duality.dual?(session1, session2) == true
   end
 
+  test "branching choice dual" do
+    s1 = "branch<neg: receive '{number, pid}' . send '{number}'>"
+    s2 = "choice<neg: send '{number, pid}' . receive '{number}'>"
 
-  # test "branching choice dual" do
-  #   s1 = "branch<neg: receive '{number, pid}' . send '{number}'>"
-  #   s2 = "choice<neg: send '{number, pid}' . receive '{number}'>"
+    session1 = Parser.parse(s1)
+    session2 = Parser.parse(s2)
 
-  #   session1 = Parser.parse(s1)
-  #   session2 = Parser.parse(s2)
+    assert Duality.dual?(session1, session2) == true
+  end
 
-  #   assert Duality.dual?(session1, session2) == true
-  # end
+  test "sequence and branching choice dual = all need to match (incorrect)" do
+    s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+    s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
 
-  # test "sequence and branching choice dual" do
-  #   s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
-  #   s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+    session1 = Parser.parse(s1)
+    session2 = Parser.parse(s2)
 
-  #   session1 = Parser.parse(s1)
-  #   session2 = Parser.parse(s2)
+    assert Duality.dual?(session1, session2) == false
+  end
 
-  #   assert Duality.dual?(session1, session2) == true
-  # end
+  test "sequence and branching choice dual = all need to match (correct)" do
+    s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+    s2 = "send '{label}' . choice<add: send '{number, number, pid}' . receive '{number}', neg: send '{number, pid}' . receive '{number}'>"
+
+    session1 = Parser.parse(s1)
+    session2 = Parser.parse(s2)
+
+    assert Duality.dual?(session1, session2) == true
+  end
 end

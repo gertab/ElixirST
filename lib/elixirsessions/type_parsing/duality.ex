@@ -55,12 +55,23 @@ defmodule ElixirSessions.Duality do
     check({:branch, b}, {:choice, a}, recurse)
   end
 
-  defp check({:branch, options}, {:choice, {label, b}}, recurse) do
-    case Map.fetch(options, label) do
-      {:ok, a} -> check(a, b, recurse)
-      _ -> Logger.error("Choosing a nonexisting label: #{IO.inspect label}")
-           false
+  defp check({:branch, options1}, {:choice, options2}, recurse) do
+    r = Enum.reduce(options1, true, fn({label, body1}, accumulator) ->
+      result = case Map.fetch(options2, label) do
+        {:ok, body2} -> check(body1, body2, recurse)
+        _ -> Logger.error("Choosing a nonexisting label: #{IO.inspect label}")
+            false
+      end
+
+      accumulator && result # All need to match
+      # accumulator || result # One match is enough
+    end)
+
+    if !r do
+      Logger.error("Choosing a nonexisting label")
     end
+
+    r
   end
 
   # # rec X .(send 'any' . X)
@@ -79,10 +90,11 @@ defmodule ElixirSessions.Duality do
   # recompile && ElixirSessions.Duality.run
   def run() do
     # s1 = "send 'any' . send 'any' . receive 'any'"
-    s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'> . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
     # s2 = "choice<neg: receive 'any'>"
-    s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
-
+    # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'> . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+    # s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
+    s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
+    s2 = "choice<neg2: send '{number, pid}' . receive '{number}'>"
     session1 = Parser.parse(s1)
     session2 = Parser.parse(s2)
 
