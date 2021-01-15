@@ -2,14 +2,14 @@ Nonterminals
 session sessions label_sessions.
 
 Terminals
-send recv choice branch sequence types int atom label recurse '[' ']' '<' '>' ':' ',' '(' ')'.
+send recv choice branch sequence types int atom label recurse '<' '>' ':' ',' '(' ')'.
 
 Rootsymbol sessions.
 
 session -> recv types : {recv, unwrap('$2')}.
 session -> send types : {send, unwrap('$2')}.
 session -> label : {call_recurse, unwrap('$1')}.
-session -> choice '<' label ':' sessions '>' : {choice, {unwrap('$3'), '$5'}}.
+session -> choice '<' label_sessions '>' : {choice, '$3'}.
 session -> branch '<' label_sessions '>' : {branch, '$3'}.
 session -> recurse label sequence '(' sessions ')' : {recurse, unwrap('$2'), '$5'}.
 session -> recurse label '(' sessions ')' : {recurse, unwrap('$2'), '$4'}.
@@ -20,22 +20,6 @@ sessions -> session sequence sessions : ['$1' | '$3' ].
 
 label_sessions -> label ':' sessions ',' label_sessions : '$5'#{unwrap('$1') => '$3'}.
 label_sessions -> label ':' sessions : #{unwrap('$1') => '$3'}.
-
-% value -> object : '$1'.
-% value -> array : '$1'.
-% value -> int : unwrap('$1').
-% value -> float : unwrap('$1').
-% value -> string : unwrap('$1').
-% value -> bool : unwrap('$1').
-% value -> null : unwrap('$1').
-
-% object -> open_curly pairs close_curly : '$2'.
-% object -> open_curly close_curly : #{}.
-
-% pairs -> pair comma pairs : put_tuple('$1', '$3').
-% pairs -> pair : put_tuple('$1').
-% pair -> string colon value : {unwrap('$1'), '$3'}.
-
 
 Erlang code.
 unwrap({_, _, V}) -> V.

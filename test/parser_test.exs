@@ -30,7 +30,7 @@ defmodule ParserTest do
   test "choice session type" do
     source = "choice<neg: send 'any'>"
 
-    expected = {:ok, [choice: {:neg, [send: 'any']}]}
+    expected = {:ok, [choice: %{neg: [send: 'any']}]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -55,7 +55,7 @@ defmodule ParserTest do
     source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
 
     expected =
-      {:ok, [send: '{string}', choice: {:neg, [send: '{number, pid}', recv: '{number}']}]}
+      {:ok, [send: '{string}', choice: %{neg: [send: '{number, pid}', recv: '{number}']}]}
 
     result = Parser.parse(source)
     assert expected == result
