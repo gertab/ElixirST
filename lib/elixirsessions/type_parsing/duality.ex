@@ -103,8 +103,8 @@ defmodule ElixirSessions.Duality do
     false
   end
 
-  # recompile && ElixirSessions.Duality.run
-  def run() do
+  # recompile && ElixirSessions.Duality.run_dual?
+  def run_dual?() do
     # s1 = "send 'any' . send 'any' . receive 'any'"
     # s2 = "choice<neg: receive 'any'>"
     # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'> . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
@@ -118,4 +118,72 @@ defmodule ElixirSessions.Duality do
 
     :ok
   end
+
+  @doc """
+  Returns the dual of the session type `session_type`
+  """
+  def dual(session_type) do
+    compute_dual(session_type)
+  end
+
+  defp compute_dual({:ok, tokens}) do
+    {:ok, compute_dual(tokens)}
+  end
+
+  defp compute_dual({:send, tokens}) do
+    {:recv, tokens}
+  end
+
+  defp compute_dual({:recv, tokens}) do
+    {:send, tokens}
+  end
+
+  defp compute_dual({:branch, tokens}) do
+    m = Enum.map(tokens, fn {label, body} ->
+      {label, compute_dual(body)}
+    end)
+    {:choice, Enum.into(m, %{})}
+  end
+
+  defp compute_dual({:choice, tokens}) do
+    m = Enum.map(tokens, fn {label, body} ->
+      {label, compute_dual(body)}
+    end)
+    {:branch, Enum.into(m, %{})}
+  end
+
+  # defp compute_dual(tokens) when is_map(tokens) do
+  #   Enum.map(tokens, fn
+  #     {label, body} -> Map.replace!(tokens, label, compute_dual(body))
+  #   end)
+  # end
+
+  defp compute_dual(tokens) when is_list(tokens) do
+    Enum.map(tokens, fn
+      x -> compute_dual(x)
+    end)
+  end
+
+  defp compute_dual(tokens) do
+    Logger.error("Unknown input type for #{IO.puts tokens}")
+  end
+
+    # recompile && ElixirSessions.Duality.run_dual
+    def run_dual() do
+      s1 = "send 'any' . send 'any' . receive 'any'"
+      # s1 = "choice<neg: receive 'any'>"
+      # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'> . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+      # s1 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
+      # s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
+      # s1 = "choice<neg2: send '{number, pid}' . receive '{number}'>"
+      session1 = Parser.parse(s1)
+
+      session2 = dual(session1)
+
+      IO.inspect(session1)
+      IO.inspect(session2)
+
+      :ok
+    end
+
 end
