@@ -127,6 +127,6 @@ defmodule DualityTest do
     session = Parser.parse(s)
     actual = {:ok, [send: '{label}', choice: %{add: [send: '{number, number, pid}', recv: '{number}'], neg: [send: '{number, pid}', recv: '{number}']}]}
 
-    assert Duality.dual(session) == actual
+    assert Duality.dual?(Duality.dual(session), actual)
   end
 end
