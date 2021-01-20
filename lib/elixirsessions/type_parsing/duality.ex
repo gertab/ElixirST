@@ -1,6 +1,22 @@
 defmodule ElixirSessions.Duality do
   require Logger
   alias ElixirSessions.Parser
+
+  @moduledoc """
+  Session type duality
+  """
+
+  @doc """
+  `dual?(session1, session2)` checks is the session type `session` is the dual of `session2`
+
+  ## Examples
+      iex> s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
+      ...> s2 = "choice<neg2: send '{number, pid}' . receive '{number}'>"
+      ...> session1 = ElixirSessions.Parser.parse(s1)
+      ...> session2 = ElixirSessions.Parser.parse(s2)
+      ...> ElixirSessions.Duality.dual?(session1, session2)
+      true
+  """
   def dual?(session1, session2) do
     dual2?(session1, session2)
   end
