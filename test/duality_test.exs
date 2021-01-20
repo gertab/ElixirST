@@ -44,25 +44,25 @@ defmodule DualityTest do
     assert Duality.dual?(session1, session2) == true
   end
 
-  test "sequence and branching choice dual = all need to match (incorrect) dual?" do
-    s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
-    s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+  # test "sequence and branching choice dual = all need to match (incorrect) dual?" do
+  #   s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+  #   s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
 
-    session1 = Parser.parse(s1)
-    session2 = Parser.parse(s2)
+  #   session1 = Parser.parse(s1)
+  #   session2 = Parser.parse(s2)
 
-    assert Duality.dual?(session1, session2) == false
-  end
+  #   assert Duality.dual?(session1, session2) == false
+  # end
 
-  test "sequence and branching choice dual = all need to match (correct) dual?" do
-    s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
-    s2 = "send '{label}' . choice<add: send '{number, number, pid}' . receive '{number}', neg: send '{number, pid}' . receive '{number}'>"
+  # test "sequence and branching choice dual = all need to match (correct) dual?" do
+  #   s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+  #   s2 = "send '{label}' . choice<add: send '{number, number, pid}' . receive '{number}', neg: send '{number, pid}' . receive '{number}'>"
 
-    session1 = Parser.parse(s1)
-    session2 = Parser.parse(s2)
+  #   session1 = Parser.parse(s1)
+  #   session2 = Parser.parse(s2)
 
-    assert Duality.dual?(session1, session2) == true
-  end
+  #   assert Duality.dual?(session1, session2) == true
+  # end
 
   # test "duality of recursive types" do
 
@@ -127,6 +127,6 @@ defmodule DualityTest do
     session = Parser.parse(s)
     actual = {:ok, [send: '{label}', choice: %{add: [send: '{number, number, pid}', recv: '{number}'], neg: [send: '{number, pid}', recv: '{number}']}]}
 
-    assert Duality.dual?(Duality.dual(session), actual)
+    assert Duality.dual(session) == actual
   end
 end

@@ -67,11 +67,11 @@ defmodule ElixirSessions.Duality do
     false
   end
 
-  defp check({:choice, a}, {:branch, b}, recurse) do
-    check({:branch, b}, {:choice, a}, recurse)
+  defp check({:branch, a}, {:choice, b}, recurse) do
+    check({:choice, b}, {:branch, a}, recurse)
   end
 
-  defp check({:branch, options1}, {:choice, options2}, recurse) do
+  defp check({:choice, options1}, {:branch, options2}, recurse) do
     r = Enum.reduce(options1, true, fn({label, body1}, accumulator) ->
       result = case Map.fetch(options2, label) do
         {:ok, body2} -> check(body1, body2, recurse)
@@ -157,6 +157,10 @@ defmodule ElixirSessions.Duality do
   #     {label, body} -> Map.replace!(tokens, label, compute_dual(body))
   #   end)
   # end
+
+  defp compute_dual({:call_recurse, label}) do
+    {:call_recurse, label}
+  end
 
   defp compute_dual(tokens) when is_list(tokens) do
     Enum.map(tokens, fn
