@@ -121,6 +121,11 @@ defmodule ElixirSessions.Duality do
 
   @doc """
   Returns the dual of the session type `session_type`
+
+  ## Examples
+      iex> s = {:ok, [choice: %{neg: [recv: 'any']}]}
+      ...> ElixirSessions.Duality.dual(s)
+      {:ok, [branch: %{neg: [send: 'any']}]}
   """
   def dual(session_type) do
     compute_dual(session_type)
@@ -152,11 +157,9 @@ defmodule ElixirSessions.Duality do
     {:branch, Enum.into(m, %{})}
   end
 
-  # defp compute_dual(tokens) when is_map(tokens) do
-  #   Enum.map(tokens, fn
-  #     {label, body} -> Map.replace!(tokens, label, compute_dual(body))
-  #   end)
-  # end
+  defp compute_dual({:recurse, label, body}) do
+    {:call_recurse, label, compute_dual(body)}
+  end
 
   defp compute_dual({:call_recurse, label}) do
     {:call_recurse, label}
@@ -174,8 +177,8 @@ defmodule ElixirSessions.Duality do
 
     # recompile && ElixirSessions.Duality.run_dual
     def run_dual() do
-      s1 = "send 'any' . send 'any' . receive 'any'"
-      # s1 = "choice<neg: receive 'any'>"
+      # s1 = "rec X .(send 'any' . X)"
+      s1 = "choice<neg: receive 'any'>"
       # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'> . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
       # s1 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
       # s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
@@ -189,5 +192,4 @@ defmodule ElixirSessions.Duality do
 
       :ok
     end
-
 end
