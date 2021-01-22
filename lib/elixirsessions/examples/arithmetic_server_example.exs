@@ -1,5 +1,7 @@
+# Input session type
 @session "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
 
+# Processed session types [automated]
 session_type = [
   recv: '{label}',
   branch: %{
@@ -9,7 +11,7 @@ session_type = [
 ]
 
 
-
+# Input function
 def arith_serv() do
     receive do
       {:add} ->
@@ -28,7 +30,7 @@ def arith_serv() do
     end
   end
 
-# AST of Elixir arith_serv() function
+# AST of Elixir arith_serv() function [automated]
 AST = [
   do: {:receive, [line: 14],
    [

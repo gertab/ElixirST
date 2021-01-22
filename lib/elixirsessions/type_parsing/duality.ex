@@ -7,7 +7,7 @@ defmodule ElixirSessions.Duality do
   """
 
   @doc """
-  `dual?(session1, session2)` checks is the session type `session` is the dual of `session2`
+  `dual?(session1, session2)` checks if the session type `session1` is the dual of `session2`
 
   ## Examples
       iex> s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
@@ -178,8 +178,8 @@ defmodule ElixirSessions.Duality do
     # recompile && ElixirSessions.Duality.run_dual
     def run_dual() do
       # s1 = "rec X .(send 'any' . X)"
-      s1 = "choice<neg: receive 'any'>"
-      # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'> . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+      # s1 = "choice<neg: receive 'any'>"
+      s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
       # s1 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
       # s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
       # s1 = "choice<neg2: send '{number, pid}' . receive '{number}'>"

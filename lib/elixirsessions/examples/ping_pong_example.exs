@@ -1,5 +1,12 @@
+# Input session type
 @session "send '{:ping, pid}' . receive '{:pong}'"
 
+# Processed session types [automated]
+session_type =
+  [send: '{:ping, pid}', recv: '{:pong}']
+
+
+# Input function
 def ping(pid) when is_pid(pid) do
   send(pid, {:ping, self()})
 
@@ -9,12 +16,7 @@ def ping(pid) when is_pid(pid) do
   end
 end
 
-#######
-
-session_type =
-    [send: '{:ping, pid}', recv: '{:pong}']
-
-
+# AST of Elixir ping() function [automated]
 AST =
 [
 do: {:__block__, [],
