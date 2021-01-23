@@ -1,6 +1,7 @@
 defmodule ElixirSessions.Parser do
   @moduledoc """
   Documentation for ElixirSessions.Parser.
+  Parses the input to a Elixir data as session types.
   """
 
   @doc """
