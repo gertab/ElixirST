@@ -1,4 +1,5 @@
 defmodule ElixirSessions.Constructs do
+  @moduledoc false
 
   # if
   if false do

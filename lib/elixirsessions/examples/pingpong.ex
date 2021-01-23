@@ -1,12 +1,16 @@
 defmodule ElixirSessions.PingPong do
   use ElixirSessions.Checking
   @moduledoc """
+  Sample module which uses concurrency and session types.
   Ping pong:
   Send 'ping' and receive 'pong'.
 
   ElixirSessions.PingPong.run()
   """
 
+  @doc """
+  Entry point for PingPong.
+  """
   def run() do
     IO.puts("Spawning process")
     ponger = spawn(__MODULE__, :pong, [])
@@ -15,6 +19,9 @@ defmodule ElixirSessions.PingPong do
     ping(ponger)
   end
 
+  @doc """
+  Sends `:pong` when a `:ping` is received.
+  """
   @session "send '{:ping, pid}' . receive '{:pong}'"
   def ping(pid) when is_pid(pid) do
     IO.puts("Sending ping to #{inspect pid}")
@@ -26,6 +33,9 @@ defmodule ElixirSessions.PingPong do
     end
   end
 
+  @doc """
+  Receives a `:ping` and sends a `:pong`.
+  """
   @session "receive '{:ping, pid}' . send '{:pong}'"
   def pong() do
     receive do
