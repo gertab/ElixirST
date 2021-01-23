@@ -46,7 +46,7 @@ defmodule DualityTest do
 
   test "sequence and branching choice dual = all need to match (incorrect) dual?" do
     s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
-    s2 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+    s2 = "receive '{label}' "
 
     session1 = Parser.parse(s1)
     session2 = Parser.parse(s2)
@@ -117,7 +117,6 @@ defmodule DualityTest do
 
     session = Parser.parse(s)
     actual = {:ok, [recv: '{label}', branch: %{neg: [recv: '{number, pid}', send: '{number}']}]}
-
     assert Duality.dual(session) == actual
   end
 

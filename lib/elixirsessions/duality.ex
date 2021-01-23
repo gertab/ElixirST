@@ -3,7 +3,8 @@ defmodule ElixirSessions.Duality do
   alias ElixirSessions.Parser
 
   @moduledoc """
-  Session type duality
+  Session type duality.
+  Given a session type, `dual(s)` is able to get  dual session type of `s`. `dual?(s1, s2)` checks if `s1` is the dual of `s2`.
   """
 
   @doc """
