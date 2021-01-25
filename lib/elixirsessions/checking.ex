@@ -1,4 +1,6 @@
 defmodule ElixirSessions.Checking do
+  require Logger
+
   @moduledoc """
   This module is the starting point of ElixirSessions. It parses the `@session` attribute and starts the AST code comparison with the session type.
   """
@@ -39,16 +41,18 @@ defmodule ElixirSessions.Checking do
 
       if length(sessions) > 0 do
         [session | _ ] = sessions
-        IO.inspect(session)
-        case ElixirSessions.Parser.parse(session) do
-          {:ok , s} -> IO.inspect(s)
-          # _ -> IO.puts("Leex error")
+        # IO.inspect(session)
+        s = ElixirSessions.Parser.parse(session)
+        case s do
+          {:ok , _session_type} -> :ok
+          # {:ok , session_type} -> ElixirSessions.Code.walk_ast(fun, body, session_type)
+          _                    -> Logger.error("Leex error")
         end
-        ElixirSessions.Parser.parse(session)
-        IO.inspect(fun)
+        # ElixirSessions.Parser.parse(session)
+        # IO.inspect(fun)
       end
     end
-    IO.inspect(body)
+    # IO.inspect(body)
     :ok
   end
 

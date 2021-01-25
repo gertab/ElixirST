@@ -5,7 +5,8 @@ defmodule ElixirSessions.PingPong do
   Ping pong:
   Send 'ping' and receive 'pong'.
 
-  ElixirSessions.PingPong.run()
+  To run:
+  `ElixirSessions.PingPong.run()`
   """
 
   @doc """
