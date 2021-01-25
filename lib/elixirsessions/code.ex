@@ -9,6 +9,8 @@ defmodule ElixirSessions.Code do
   def walk_ast(fun, body, session_type) do
     IO.inspect(fun)
     IO.inspect(body)
+    IO.puts(Macro.to_string(body))
+
     IO.inspect(session_type)
 
     # Macro.prewalk(body, fn x -> IO.inspect x end)
@@ -17,39 +19,15 @@ defmodule ElixirSessions.Code do
   # recompile && ElixirSessions.Code.run
   def run() do
     fun = :ping
-    body = [
-      do: {:__block__, [],
-       [
-         {{:., [line: 28], [{:__aliases__, [line: 28], [:IO]}, :puts]}, [line: 28],
-          [
-            {:<<>>, [line: 28],
-             [
-               "Sending ping to ",
-               {:"::", [line: 28],
-                [
-                  {{:., [line: 28], [Kernel, :to_string]}, [line: 28],
-                   [{:inspect, [line: 28], [{:pid, [line: 28], nil}]}]},
-                  {:binary, [line: 28], nil}
-                ]}
-             ]}
-          ]},
-         {:send, [line: 29],
-          [{:pid, [line: 29], nil}, {:ping, {:self, [line: 29], []}}]},
-         {:receive, [line: 31],
-          [
-            [
-              do: [
-                {:->, [line: 32],
-                 [
-                   [{:{}, [line: 32], [:pong]}],
-                   {{:., [line: 33], [{:__aliases__, [line: 33], [:IO]}, :puts]},
-                    [line: 33], ["Received pong!"]}
-                 ]}
-              ]
-            ]
-          ]}
-       ]}
-    ]
+    body = quote do
+      IO.puts("Sending ping to #{inspect pid}")
+      send(pid, {:ping, self()})
+
+      receive do
+        {:pong} ->
+          IO.puts("Received pong!")
+      end
+    end
     session_type = [send: '{:ping, pid}', recv: '{:pong}']
 
     walk_ast(fun, body, session_type)
