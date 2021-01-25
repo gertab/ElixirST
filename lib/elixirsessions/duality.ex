@@ -8,7 +8,87 @@ defmodule ElixirSessions.Duality do
   """
 
   @doc """
+  Returns the dual of the session type `session_type`
+
+  ## Examples
+      iex> s = {:ok, [choice: %{neg: [recv: 'any']}]}
+      ...> ElixirSessions.Duality.dual(s)
+      {:ok, [branch: %{neg: [send: 'any']}]}
+  """
+  def dual(session_type) do
+    compute_dual(session_type)
+  end
+
+  defp compute_dual({:ok, tokens}) do
+    {:ok, compute_dual(tokens)}
+  end
+
+  defp compute_dual({:send, tokens}) do
+    {:recv, tokens}
+  end
+
+  defp compute_dual({:recv, tokens}) do
+    {:send, tokens}
+  end
+
+  defp compute_dual({:branch, tokens}) do
+    m =
+      Enum.map(tokens, fn {label, body} ->
+        {label, compute_dual(body)}
+      end)
+
+    {:choice, Enum.into(m, %{})}
+  end
+
+  defp compute_dual({:choice, tokens}) do
+    m =
+      Enum.map(tokens, fn {label, body} ->
+        {label, compute_dual(body)}
+      end)
+
+    {:branch, Enum.into(m, %{})}
+  end
+
+  defp compute_dual({:recurse, label, body}) do
+    {:recurse, label, compute_dual(body)}
+  end
+
+  defp compute_dual({:call_recurse, label}) do
+    {:call_recurse, label}
+  end
+
+  defp compute_dual(tokens) when is_list(tokens) do
+    Enum.map(tokens, fn
+      x -> compute_dual(x)
+    end)
+  end
+
+  defp compute_dual(tokens) do
+    Logger.error("Unknown input type for #{IO.puts(tokens)}")
+  end
+
+  # recompile && ElixirSessions.Duality.run_dual
+  def run_dual() do
+    s1 = "rec X . (send 'any' . X)"
+    # s1 = "choice<neg: receive 'any'>"
+    # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+    # s1 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
+    # s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
+    # s1 = "choice<neg2: send '{number, pid}' . receive '{number}'>"
+    session1 = Parser.parse(s1)
+
+    session2 = dual(session1)
+
+    IO.inspect(session1)
+    IO.inspect(session2)
+
+    :ok
+  end
+
+  @doc """
   `dual?(session1, session2)` checks if the session type `session1` is the dual of `session2`
+
+  `dual?/2` not working correctly (todo: recursive)
 
   ## Examples
       iex> s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
@@ -40,11 +120,12 @@ defmodule ElixirSessions.Duality do
     true
   end
 
-  defp check([], [_|_], _) do
+  defp check([], [_ | _], _) do
     # If server mode, may never end
     false
   end
-  defp check([_|_], [], _) do
+
+  defp check([_ | _], [], _) do
     false
   end
 
@@ -73,16 +154,22 @@ defmodule ElixirSessions.Duality do
   end
 
   defp check({:choice, options1}, {:branch, options2}, recurse) do
-    r = Enum.reduce(options1, true, fn({label, body1}, accumulator) ->
-      result = case Map.fetch(options2, label) do
-        {:ok, body2} -> check(body1, body2, recurse)
-        _ -> Logger.error("Choosing a nonexisting label: #{IO.inspect label}")
-            false
-      end
+    r =
+      Enum.reduce(options1, true, fn {label, body1}, accumulator ->
+        result =
+          case Map.fetch(options2, label) do
+            {:ok, body2} ->
+              check(body1, body2, recurse)
 
-      accumulator && result # All need to match
-      # accumulator || result # One match is enough
-    end)
+            _ ->
+              Logger.error("Choosing a nonexisting label: #{IO.inspect(label)}")
+              false
+          end
+
+        # All need to match
+        accumulator && result
+        # accumulator || result # One match is enough
+      end)
 
     if !r do
       Logger.error("Choosing a nonexisting label")
@@ -119,78 +206,4 @@ defmodule ElixirSessions.Duality do
 
     :ok
   end
-
-  @doc """
-  Returns the dual of the session type `session_type`
-
-  ## Examples
-      iex> s = {:ok, [choice: %{neg: [recv: 'any']}]}
-      ...> ElixirSessions.Duality.dual(s)
-      {:ok, [branch: %{neg: [send: 'any']}]}
-  """
-  def dual(session_type) do
-    compute_dual(session_type)
-  end
-
-  defp compute_dual({:ok, tokens}) do
-    {:ok, compute_dual(tokens)}
-  end
-
-  defp compute_dual({:send, tokens}) do
-    {:recv, tokens}
-  end
-
-  defp compute_dual({:recv, tokens}) do
-    {:send, tokens}
-  end
-
-  defp compute_dual({:branch, tokens}) do
-    m = Enum.map(tokens, fn {label, body} ->
-      {label, compute_dual(body)}
-    end)
-    {:choice, Enum.into(m, %{})}
-  end
-
-  defp compute_dual({:choice, tokens}) do
-    m = Enum.map(tokens, fn {label, body} ->
-      {label, compute_dual(body)}
-    end)
-    {:branch, Enum.into(m, %{})}
-  end
-
-  defp compute_dual({:recurse, label, body}) do
-    {:recurse, label, compute_dual(body)}
-  end
-
-  defp compute_dual({:call_recurse, label}) do
-    {:call_recurse, label}
-  end
-
-  defp compute_dual(tokens) when is_list(tokens) do
-    Enum.map(tokens, fn
-      x -> compute_dual(x)
-    end)
-  end
-
-  defp compute_dual(tokens) do
-    Logger.error("Unknown input type for #{IO.puts tokens}")
-  end
-
-    # recompile && ElixirSessions.Duality.run_dual
-    def run_dual() do
-      s1 = "rec X . (send 'any' . X)"
-      # s1 = "choice<neg: receive 'any'>"
-      # s1 = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
-      # s1 = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'> . choice<neg: send '{number, pid}' . receive '{number}'>"
-      # s1 = "branch<neg2: receive '{number, pid}' . send '{number}'>"
-      # s1 = "choice<neg2: send '{number, pid}' . receive '{number}'>"
-      session1 = Parser.parse(s1)
-
-      session2 = dual(session1)
-
-      IO.inspect(session1)
-      IO.inspect(session2)
-
-      :ok
-    end
 end
