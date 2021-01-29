@@ -10,6 +10,7 @@ defmodule ElixirSessions.Checking do
       import ElixirSessions.Checking
 
       Module.register_attribute(__MODULE__, :session, accumulate: true)
+      # Module.register_attribute(__MODULE__, :session_hook, accumulate: true)
 
       @on_definition ElixirSessions.Checking
     end
