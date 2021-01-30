@@ -17,16 +17,18 @@ defmodule ElixirSessions.Code do
     # rec = contains_recursion?(body, fun)
     # IO.puts("CONTAINS RECURSION? #{IO.inspect(rec)}")
 
-    code_check_incl_recursion(fun, body, session_type)
+    result = code_check_incl_recursion(fun, body, session_type)
     # code_check(body)
+    IO.inspect(result)
+    result
   end
 
   def code_check_incl_recursion(fun, body, session_type) do
     rec = contains_recursion?(body, fun)
+    # todo maybe add __module__
     info = %{recursion: rec, call_recursion: "X", function_name: fun, session_type: session_type}
     code_check(body, info)
   end
-
 
   #### Checking for AST literals
   # :atom
@@ -65,7 +67,12 @@ defmodule ElixirSessions.Code do
     IO.puts("\n~~Short list (1):")
     IO.inspect(a)
 
-    [code_check(a, info)]
+    res = [code_check(a, info)]
+
+    case Enum.filter(res, &(!is_nil(&1))) do
+      [] -> nil
+      x -> x
+    end
   end
 
   defp code_check([a, b], info) do
@@ -75,7 +82,12 @@ defmodule ElixirSessions.Code do
     IO.inspect(b)
 
     # todo remove nils from list. then if list = [], return nil
-    [code_check(a, info)] ++ [code_check(b, info)]
+    res = [code_check(a, info)] ++ [code_check(b, info)]
+
+    case Enum.filter(res, &(!is_nil(&1))) do
+      [] -> nil
+      x -> x
+    end
   end
 
   defp code_check([a, b, c], info) do
@@ -83,7 +95,12 @@ defmodule ElixirSessions.Code do
     IO.inspect(a)
     IO.inspect(b)
     IO.inspect(c)
-    [code_check(a, info)] ++ [code_check(b, info)] ++ [code_check(c, info)]
+    res = [code_check(a, info)] ++ [code_check(b, info)] ++ [code_check(c, info)]
+
+    case Enum.filter(res, &(!is_nil(&1))) do
+      [] -> nil
+      x -> x
+    end
   end
 
   #### AST checking for non literals
@@ -91,8 +108,10 @@ defmodule ElixirSessions.Code do
     IO.puts("\n~~Block: ")
     IO.inspect(args)
 
-    # todo flatten on a single level
     Enum.map(args, fn x -> code_check(x, info) end)
+    |> Enum.filter(&(!is_nil(&1)))
+
+    # todo flatten on a single level
     # |> List.flatten
   end
 
@@ -103,14 +122,14 @@ defmodule ElixirSessions.Code do
     if contains_send_receive?(ast) do
       IO.puts("\nCONTAINS SEND/RECEIVE")
       # todo check if all cases neen to have send/receive
-      cases = case List.keyfind(body, :do, 0) do
-        {:do, x} -> x
-        _ -> [] # should never happen
-      end
+      cases =
+        case List.keyfind(body, :do, 0) do
+          {:do, x} -> x
+          # should never happen
+          _ -> []
+        end
 
       IO.inspect(cases)
-
-
     else
       IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
 
@@ -127,11 +146,12 @@ defmodule ElixirSessions.Code do
   end
 
   defp code_check({:send, _, _}, _info) do
-    {:send, 'type'} # todo fix type
+    # todo fix type
+    {:send, 'type'}
   end
 
   defp code_check({:receive, _, [body]}, info) do
-  # body contains [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
+    # body contains [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
 
     IO.puts("\nRECEIVE")
 
@@ -141,9 +161,25 @@ defmodule ElixirSessions.Code do
         _ -> []
       end
 
-    # todo replace map with more suitable function (since each element may have more than one item in a list)
-    Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ code_check(x, info) end)
-    # |> List.flatten
+    result =
+      case length(stuff) do
+        0 ->
+          nil
+
+        1 ->
+          {:recv, 'type'}
+
+        _ ->
+          # Greater than 1
+          # todo replace map with more suitable function (since each element may have more than one item in a list)
+          Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ code_check(x, info) end)
+          |> Enum.filter(&(!is_nil(&1)))
+        # |> List.flatten
+      end
+
+    IO.puts("RESULT for receive")
+    IO.inspect(result)
+    result
   end
 
   defp code_check({:->, _, [_head | body]}, _info) do
@@ -187,14 +223,18 @@ defmodule ElixirSessions.Code do
   end
 
   defp contains_send_receive?({:->, _meta, args}) do
-    [_head | tail] = args # head contains info related to 'when'
+    # head contains info related to 'when'
+    [_head | tail] = args
     # IO.puts("Checking tail:")
     # IO.inspect(tail)
     contains_send_receive?(tail)
   end
 
   defp contains_send_receive?({:__block__, _meta, args}) when is_list(args) do
-    {_, result} = Enum.map_reduce(args, false, fn x, acc -> {contains_send_receive?(x), acc || contains_send_receive?(x)} end)
+    {_, result} =
+      Enum.map_reduce(args, false, fn x, acc ->
+        {contains_send_receive?(x), acc || contains_send_receive?(x)}
+      end)
 
     result
   end
@@ -232,22 +272,28 @@ defmodule ElixirSessions.Code do
   end
 
   defp contains_recursion?([a, b, c], function_name) do
-    contains_recursion?(a, function_name) || contains_recursion?(b, function_name) || contains_recursion?(c, function_name)
+    contains_recursion?(a, function_name) || contains_recursion?(b, function_name) ||
+      contains_recursion?(c, function_name)
   end
 
   defp contains_recursion?({:->, _meta, args}, function_name) do
-    [_head | tail] = args # head contains info related to 'when'
+    # head contains info related to 'when'
+    [_head | tail] = args
     contains_recursion?(tail, function_name)
   end
 
   defp contains_recursion?({:__block__, _meta, args}, function_name) when is_list(args) do
-    {_, result} = Enum.map_reduce(args, false, fn x, acc -> {contains_recursion?(x, function_name), acc || contains_recursion?(x, function_name)} end)
+    {_, result} =
+      Enum.map_reduce(args, false, fn x, acc ->
+        {contains_recursion?(x, function_name), acc || contains_recursion?(x, function_name)}
+      end)
 
     result
   end
 
   defp contains_recursion?({function_name, _, _}, function_name) do
     # Recursion occurs here, since {function_name, _, _} calls the current function
+    # todo: case when same function is called via module name e.g. Module.function_name
     true
   end
 
@@ -261,45 +307,56 @@ defmodule ElixirSessions.Code do
 
     body =
       quote do
-        :ok
-        a = 1 + 2
-        ping()
+        # :ok
+        # a = 1 + 2
+        # ping()
 
-        send(self(), 123)
+        # send(self(), 123)
 
-        case a do
-          b when is_list(b) ->
-            :okkkk
+        # case a do
+        #   b when is_list(b) ->
+        #     :okkkk
 
-          a when is_list(a) ->
-            :okkk
-            receive do
-              {:message_type, value} ->
-                value
-              {:message_type2, value} when is_atom(value) ->
-                aaa = value + 1
-                aaa
-            end
+        #   a when is_list(a) ->
+        #     :okkk
+        #     receive do
+        #       {:message_type, value} ->
+        #         value
+        #       {:message_type2, value} when is_atom(value) ->
+        #         aaa = value + 1
+        #         aaa
+        #     end
 
-          a when is_list(a) ->
-            :okkk
+        #   a when is_list(a) ->
+        #     :okkk
 
-        end
+        # end
 
-        send(self(), :ok)
-
-        receive do
-          {:message_type, _value} ->
-            :receievve
-        end
-
-        # IO.puts("Sending ping to #{inspect(pid)}")
-        # send(pid, {:ping, self()})
+        # send(self(), :ok)
 
         # receive do
-        #   {:pong} ->
-        #     IO.puts("Received pong!")
+        #   {:message_type, _value} ->
+        #     :receievve
         # end
+
+        # IO.puts("Sending ping to #{inspect(pid)}")
+        send(pid, {:ping, self()})
+        send(pid, {:ping, self()})
+        send(pid, {:ping, self()})
+
+        case true do
+          true -> :ok
+          false -> :not_ok
+        end
+
+        receive do
+          {:pong} ->
+            IO.puts("Received pong!")
+            send(self(), {:ok})
+          {:ponng} ->
+            IO.puts("Received pong!")
+        end
+
       end
 
     session_type = [send: '{:ping, pid}', recv: '{:pong}']
@@ -311,6 +368,6 @@ defmodule ElixirSessions.Code do
     # IO.inspect(body)
     walk_ast(fun, body, session_type)
 
-    body
+    # body
   end
 end
