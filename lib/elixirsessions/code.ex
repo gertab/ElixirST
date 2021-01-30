@@ -14,10 +14,19 @@ defmodule ElixirSessions.Code do
     IO.inspect(session_type)
 
     # Macro.prewalk(body, fn x -> IO.inspect x end)
-    rec = contains_recursion?(body, fun)
-    IO.puts("CONTAINS RECURSION? #{IO.inspect(rec)}")
+    # rec = contains_recursion?(body, fun)
+    # IO.puts("CONTAINS RECURSION? #{IO.inspect(rec)}")
+
+    code_check_incl_recursion(fun, body, session_type)
     # code_check(body)
   end
+
+  def code_check_incl_recursion(fun, body, session_type) do
+    rec = contains_recursion?(body, fun)
+    info = %{recursion: rec, call_recursion: "X", function_name: fun, session_type: session_type}
+    code_check(body, info)
+  end
+
 
   #### Checking for AST literals
   # :atom
@@ -27,69 +36,123 @@ defmodule ElixirSessions.Code do
   # "string"
   # {:ok, 1}
   # {:ok, [1,2,3]}
-  defp code_check(x) when is_atom(x) do
+  defp code_check(x, _info) when is_atom(x) do
     IO.puts("\n~~ Atom: #{IO.inspect(x)}")
+
+    nil
   end
 
-  defp code_check(x) when is_number(x) do
+  defp code_check(x, _info) when is_number(x) do
     IO.puts("\n~~ Number: #{IO.inspect(x)}")
+
+    nil
   end
 
-  defp code_check(x) when is_binary(x) do
+  defp code_check(x, _info) when is_binary(x) do
     IO.puts("\n~~ Binary/string: #{IO.inspect(x)}")
+
+    nil
   end
 
-  defp code_check({a, b}) do
+  defp code_check({a, b}, _info) do
     IO.puts("\n~~Tuple: {#{IO.inspect(a)}, #{IO.inspect(b)}}")
+
+    nil
   end
 
-  defp code_check([a]) do
+  defp code_check([a], info) do
     # todo: check a
     IO.puts("\n~~Short list (1):")
     IO.inspect(a)
+
+    [code_check(a, info)]
   end
 
-  defp code_check([a, b]) do
+  defp code_check([a, b], info) do
     # todo: check a, b
     IO.puts("\n~~Short list (2):")
     IO.inspect(a)
     IO.inspect(b)
+
+    # todo remove nils from list. then if list = [], return nil
+    [code_check(a, info)] ++ [code_check(b, info)]
   end
 
-  defp code_check([a, b, c]) do
+  defp code_check([a, b, c], info) do
     IO.puts("\n~~Short list (3):")
     IO.inspect(a)
     IO.inspect(b)
     IO.inspect(c)
+    [code_check(a, info)] ++ [code_check(b, info)] ++ [code_check(c, info)]
   end
 
   #### AST checking for non literals
-  defp code_check({:__block__, _meta, args}) do
+  defp code_check({:__block__, _meta, args}, info) do
     IO.puts("\n~~Block: ")
     IO.inspect(args)
 
-    Enum.map(args, fn x -> code_check(x) end)
+    # todo flatten on a single level
+    Enum.map(args, fn x -> code_check(x, info) end)
+    # |> List.flatten
   end
 
-  # todo: when cheking for case AST; if it does not contain send/receive, skip
-  defp code_check({:case, _meta, args} = ast) do
+  # todo: when checking for case AST; if it does not contain send/receive, skip
+  defp code_check({:case, _, [_what_you_are_checking, body]} = ast, _info) when is_list(body) do
     IO.puts("\n~~case:")
-    IO.inspect(args)
 
     if contains_send_receive?(ast) do
       IO.puts("\nCONTAINS SEND/RECEIVE")
+      # todo check if all cases neen to have send/receive
+      cases = case List.keyfind(body, :do, 0) do
+        {:do, x} -> x
+        _ -> [] # should never happen
+      end
+
+      IO.inspect(cases)
+
+
     else
       IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
+
+      nil
     end
   end
 
-  defp code_check({:=, _meta, [_left, right]}) do
+  defp code_check({:=, _meta, [_left, right]}, info) do
     # todo check right hand side
     IO.puts("\n~~pattern matchin (=):")
     IO.inspect(right)
+
+    code_check(right, info)
   end
 
-  defp code_check(x) do
+  defp code_check({:send, _, _}, _info) do
+    {:send, 'type'} # todo fix type
+  end
+
+  defp code_check({:receive, _, [body]}, info) do
+  # body contains [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
+
+    IO.puts("\nRECEIVE")
+
+    stuff =
+      case List.keyfind(body, :do, 0) do
+        {:do, x} -> x
+        _ -> []
+      end
+
+    # todo replace map with more suitable function (since each element may have more than one item in a list)
+    Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ code_check(x, info) end)
+    # |> List.flatten
+  end
+
+  defp code_check({:->, _, [_head | body]}, _info) do
+    IO.inspect(body)
+
+    nil
+  end
+
+  defp code_check(x, _info) do
     IO.puts("\n~~Unknown:")
     IO.inspect(x)
   end
@@ -183,8 +246,9 @@ defmodule ElixirSessions.Code do
     result
   end
 
-  defp contains_recursion?({description, _, _}, function_name) do
-    description == function_name
+  defp contains_recursion?({function_name, _, _}, function_name) do
+    # Recursion occurs here, since {function_name, _, _} calls the current function
+    true
   end
 
   defp contains_recursion?(_, _function_name) do
@@ -201,13 +265,21 @@ defmodule ElixirSessions.Code do
         a = 1 + 2
         ping()
 
+        send(self(), 123)
+
         case a do
           b when is_list(b) ->
             :okkkk
 
           a when is_list(a) ->
             :okkk
-            send(self(), 123)
+            receive do
+              {:message_type, value} ->
+                value
+              {:message_type2, value} when is_atom(value) ->
+                aaa = value + 1
+                aaa
+            end
 
           a when is_list(a) ->
             :okkk

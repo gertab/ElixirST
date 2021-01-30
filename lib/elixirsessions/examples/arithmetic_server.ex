@@ -39,6 +39,18 @@ defmodule ElixirSessions.ArithmeticServer do
     end
   end
 
+  # def arith_serv() do
+  #   receive do
+  #     {:add, num1, num2, pid} ->
+  #           IO.puts("[server] #{num1} + #{num2}")
+  #           send(pid, {num1 + num2})
+
+  #     {:neg, num, pid} ->
+  #           IO.puts("[server] neg of #{num}")
+  #           send(pid, {-num})
+  #   end
+  # end
+
   @doc """
   Client which interacts with `arith_serv()`.
   """
