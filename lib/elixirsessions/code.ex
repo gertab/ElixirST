@@ -41,51 +41,49 @@ defmodule ElixirSessions.Code do
   defp code_check(x, _info) when is_atom(x) do
     IO.puts("\n~~ Atom: #{IO.inspect(x)}")
 
-    nil
+    [nil]
   end
 
   defp code_check(x, _info) when is_number(x) do
     IO.puts("\n~~ Number: #{IO.inspect(x)}")
 
-    nil
+    [nil]
   end
 
   defp code_check(x, _info) when is_binary(x) do
     IO.puts("\n~~ Binary/string: #{IO.inspect(x)}")
 
-    nil
+    [nil]
   end
 
   defp code_check({a, b}, _info) do
     IO.puts("\n~~Tuple: {#{IO.inspect(a)}, #{IO.inspect(b)}}")
 
-    nil
+    [nil]
   end
 
   defp code_check([a], info) do
-    # todo: check a
     IO.puts("\n~~Short list (1):")
     IO.inspect(a)
 
-    res = [code_check(a, info)]
+    res = code_check(a, info)
 
     case Enum.filter(res, &(!is_nil(&1))) do
-      [] -> nil
+      [] -> [nil]
       x -> x
     end
   end
 
   defp code_check([a, b], info) do
-    # todo: check a, b
     IO.puts("\n~~Short list (2):")
     IO.inspect(a)
     IO.inspect(b)
 
     # todo remove nils from list. then if list = [], return nil
-    res = [code_check(a, info)] ++ [code_check(b, info)]
+    res = code_check(a, info) ++ code_check(b, info)
 
     case Enum.filter(res, &(!is_nil(&1))) do
-      [] -> nil
+      [] -> [nil]
       x -> x
     end
   end
@@ -95,10 +93,10 @@ defmodule ElixirSessions.Code do
     IO.inspect(a)
     IO.inspect(b)
     IO.inspect(c)
-    res = [code_check(a, info)] ++ [code_check(b, info)] ++ [code_check(c, info)]
+    res = code_check(a, info) ++ code_check(b, info) ++ code_check(c, info)
 
     case Enum.filter(res, &(!is_nil(&1))) do
-      [] -> nil
+      [] -> [nil]
       x -> x
     end
   end
@@ -108,11 +106,12 @@ defmodule ElixirSessions.Code do
     IO.puts("\n~~Block: ")
     IO.inspect(args)
 
-    Enum.map(args, fn x -> code_check(x, info) end)
+    # Enum.map(args, fn x -> code_check(x, info) end)
+    res = Enum.reduce(args, [], fn x, acc -> acc ++ code_check(x, info) end)
     |> Enum.filter(&(!is_nil(&1)))
 
-    # todo flatten on a single level
-    # |> List.flatten
+    IO.puts("\n~~Block (result): ")
+    IO.inspect(res)
   end
 
   # todo: when checking for case AST; if it does not contain send/receive, skip
@@ -133,7 +132,7 @@ defmodule ElixirSessions.Code do
     else
       IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
 
-      nil
+      [nil]
     end
   end
 
@@ -147,7 +146,7 @@ defmodule ElixirSessions.Code do
 
   defp code_check({:send, _, _}, _info) do
     # todo fix type
-    {:send, 'type'}
+    [{:send, 'type'}]
   end
 
   defp code_check({:receive, _, [body]}, info) do
@@ -161,20 +160,22 @@ defmodule ElixirSessions.Code do
         _ -> []
       end
 
-    result =
+      IO.puts("Receive body size = #{length(stuff)}")
+      result =
       case length(stuff) do
         0 ->
-          nil
+          [nil]
 
         1 ->
-          {:recv, 'type'}
+          [{:recv, 'type'}]
 
         _ ->
           # Greater than 1
-          # todo replace map with more suitable function (since each element may have more than one item in a list)
           Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ code_check(x, info) end)
-          |> Enum.filter(&(!is_nil(&1)))
-        # |> List.flatten
+          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)  # Remove any :nils
+          # |> Enum.with_index
+          # |> Map.new
+
       end
 
     IO.puts("RESULT for receive")
@@ -182,16 +183,28 @@ defmodule ElixirSessions.Code do
     result
   end
 
-  defp code_check({:->, _, [_head | body]}, _info) do
-    IO.inspect(body)
+  defp code_check({:->, _, [_head | body]}, info) do
+    IO.puts("\n~~\-\>:")
+    res = code_check(body, info)
 
-    nil
+    IO.puts("\n~~\-\> (result):")
+    IO.inspect(res)
+    res
   end
 
   defp code_check(x, _info) do
     IO.puts("\n~~Unknown:")
     IO.inspect(x)
+
+    [nil]
   end
+
+  defp to_fix([a]) do
+    a
+  end
+
+  #########################################################
+
 
   # todo: replace contains_send_receive? and contains_recursion? with Macro.prewalk()
   ### Checks if (case) contains send/receive
@@ -352,9 +365,12 @@ defmodule ElixirSessions.Code do
         receive do
           {:pong} ->
             IO.puts("Received pong!")
-            send(self(), {:ok})
+            send(pid, {:ping, self()})
+            send(pid, {:ping, self()})
+            send(pid, {:ping, self()})
+            send(pid, {:ping, self()})
           {:ponng} ->
-            IO.puts("Received pong!")
+            IO.puts("Received ponnng!")
         end
 
       end
