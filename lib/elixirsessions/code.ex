@@ -14,8 +14,9 @@ defmodule ElixirSessions.Code do
     IO.inspect(session_type)
 
     # Macro.prewalk(body, fn x -> IO.inspect x end)
-
-    code_check(body)
+    rec = contains_recursion?(body, fun)
+    IO.puts("CONTAINS RECURSION? #{IO.inspect(rec)}")
+    # code_check(body)
   end
 
   #### Checking for AST literals
@@ -71,11 +72,11 @@ defmodule ElixirSessions.Code do
   end
 
   # todo: when cheking for case AST; if it does not contain send/receive, skip
-  defp code_check({:case, meta, args}) do
+  defp code_check({:case, _meta, args} = ast) do
     IO.puts("\n~~case:")
     IO.inspect(args)
 
-    if contains_send_receive?({:case, meta, args}) do
+    if contains_send_receive?(ast) do
       IO.puts("\nCONTAINS SEND/RECEIVE")
     else
       IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
@@ -89,10 +90,11 @@ defmodule ElixirSessions.Code do
   end
 
   defp code_check(x) do
-    IO.puts("~~Unknown:")
+    IO.puts("\n~~Unknown:")
     IO.inspect(x)
   end
 
+  # todo: replace contains_send_receive? and contains_recursion? with Macro.prewalk()
   ### Checks if (case) contains send/receive
   defp contains_send_receive?({:case, _, [_what_you_are_checking, body]})
        when is_list(body) do
@@ -134,15 +136,58 @@ defmodule ElixirSessions.Code do
     result
   end
 
-  defp contains_send_receive?({:send, _, _}) do
-    true
-  end
-
-  defp contains_send_receive?({:receive, _, _}) do
+  defp contains_send_receive?({definition, _, _}) when definition in [:send, :receive] do
     true
   end
 
   defp contains_send_receive?(_) do
+    false
+  end
+
+  ### Checks if contains send/receive
+  defp contains_recursion?({:case, _, [_what_you_are_checking, body]}, function_name)
+       when is_list(body) do
+    # [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
+
+    stuff =
+      case List.keyfind(body, :do, 0) do
+        {:do, x} -> x
+        _ -> []
+      end
+
+    IO.puts("\nCHECKING IF CONTAINS RECURSION")
+    IO.inspect(stuff)
+    contains_recursion?(stuff, function_name)
+  end
+
+  defp contains_recursion?([a], function_name) do
+    contains_recursion?(a, function_name)
+  end
+
+  defp contains_recursion?([a, b], function_name) do
+    contains_recursion?(a, function_name) || contains_recursion?(b, function_name)
+  end
+
+  defp contains_recursion?([a, b, c], function_name) do
+    contains_recursion?(a, function_name) || contains_recursion?(b, function_name) || contains_recursion?(c, function_name)
+  end
+
+  defp contains_recursion?({:->, _meta, args}, function_name) do
+    [_head | tail] = args # head contains info related to 'when'
+    contains_recursion?(tail, function_name)
+  end
+
+  defp contains_recursion?({:__block__, _meta, args}, function_name) when is_list(args) do
+    {_, result} = Enum.map_reduce(args, false, fn x, acc -> {contains_recursion?(x, function_name), acc || contains_recursion?(x, function_name)} end)
+
+    result
+  end
+
+  defp contains_recursion?({description, _, _}, function_name) do
+    description == function_name
+  end
+
+  defp contains_recursion?(_, _function_name) do
     false
   end
 
@@ -154,6 +199,7 @@ defmodule ElixirSessions.Code do
       quote do
         :ok
         a = 1 + 2
+        ping()
 
         case a do
           b when is_list(b) ->
@@ -161,7 +207,7 @@ defmodule ElixirSessions.Code do
 
           a when is_list(a) ->
             :okkk
-            send(self(), :ok)
+            send(self(), 123)
 
           a when is_list(a) ->
             :okkk
