@@ -13,6 +13,8 @@ defmodule ElixirSessions.Checking do
       # Module.register_attribute(__MODULE__, :session_hook, accumulate: true)
 
       @on_definition ElixirSessions.Checking
+
+      IO.puts("ElixirSession started in #{IO.inspect __MODULE__}")
     end
   end
 
@@ -26,7 +28,6 @@ defmodule ElixirSessions.Checking do
 
       if length(sessions) > 0 do
         [session | _ ] = sessions
-        # IO.inspect(session)
         s = ElixirSessions.Parser.parse(session)
         case s do
           {:ok , _session_type} -> :ok
