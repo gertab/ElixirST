@@ -1,4 +1,6 @@
 defmodule ElixirSessions.Code do
+  require Logger
+
   @moduledoc """
   Performs the AST comparison with the session types.
   """
@@ -106,9 +108,9 @@ defmodule ElixirSessions.Code do
     IO.puts("\n~~Block: ")
     IO.inspect(args)
 
-    # Enum.map(args, fn x -> code_check(x, info) end)
-    res = Enum.reduce(args, [], fn x, acc -> acc ++ code_check(x, info) end)
-    |> Enum.filter(&(!is_nil(&1)))
+    res =
+      Enum.reduce(args, [], fn x, acc -> acc ++ code_check(x, info) end)
+      |> Enum.filter(&(!is_nil(&1)))
 
     IO.puts("\n~~Block (result): ")
     IO.inspect(res)
@@ -123,9 +125,13 @@ defmodule ElixirSessions.Code do
       # todo check if all cases neen to have send/receive
       cases =
         case List.keyfind(body, :do, 0) do
-          {:do, x} -> x
-          # should never happen
-          _ -> []
+          {:do, x} ->
+            x
+
+          _ ->
+            # should never happen
+            Logger.error("In case, cannot find 'do'")
+            []
         end
 
       IO.inspect(cases)
@@ -137,7 +143,6 @@ defmodule ElixirSessions.Code do
   end
 
   defp code_check({:=, _meta, [_left, right]}, info) do
-    # todo check right hand side
     IO.puts("\n~~pattern matchin (=):")
     IO.inspect(right)
 
@@ -160,8 +165,9 @@ defmodule ElixirSessions.Code do
         _ -> []
       end
 
-      IO.puts("Receive body size = #{length(stuff)}")
-      result =
+    IO.puts("Receive body size = #{length(stuff)}")
+
+    result =
       case length(stuff) do
         0 ->
           [nil]
@@ -171,11 +177,20 @@ defmodule ElixirSessions.Code do
 
         _ ->
           # Greater than 1
-          Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ code_check(x, info) end)
-          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)  # Remove any :nils
-          # |> Enum.with_index
-          # |> Map.new
+          keys =
+            Enum.map(stuff, fn
+              {:->, _, [[{:{}, _, matching_name}] | _]} -> IO.inspect(hd(matching_name))
+              # todo add line number in error
+              _ -> Logger.error("Error: Pattern matching in 'receive' not correct")
+            end)
 
+          Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ code_check(x, info) end)
+          # Remove any :nils
+          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+          |> Enum.with_index()
+          |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
+          |> Map.new()
+          |> to_list
       end
 
     IO.puts("RESULT for receive")
@@ -199,12 +214,9 @@ defmodule ElixirSessions.Code do
     [nil]
   end
 
-  defp to_fix([a]) do
-    a
-  end
+  #todo macro expand (including expand if statements)
 
   #########################################################
-
 
   # todo: replace contains_send_receive? and contains_recursion? with Macro.prewalk()
   ### Checks if (case) contains send/receive
@@ -314,6 +326,10 @@ defmodule ElixirSessions.Code do
     false
   end
 
+  defp to_list(a) do
+    [a]
+  end
+
   # recompile && ElixirSessions.Code.run
   def run() do
     fun = :ping
@@ -352,7 +368,7 @@ defmodule ElixirSessions.Code do
         #     :receievve
         # end
 
-        # IO.puts("Sending ping to #{inspect(pid)}")
+        IO.puts("Sending ping to #{inspect(pid)}")
         send(pid, {:ping, self()})
         send(pid, {:ping, self()})
         send(pid, {:ping, self()})
@@ -363,16 +379,29 @@ defmodule ElixirSessions.Code do
         end
 
         receive do
-          {:pong} ->
+          {:pong, 1, 2, 3} ->
             IO.puts("Received pong!")
             send(pid, {:ping, self()})
             send(pid, {:ping, self()})
             send(pid, {:ping, self()})
+
+            receive do
+              {:pong, 1, 2, 3} ->
+                IO.puts("Received pong!")
+                send(pid, {:ping, self()})
+                send(pid, {:ping, self()})
+                send(pid, {:ping, self()})
+                send(pid, {:ping, self()})
+
+              {:ponng} ->
+                IO.puts("Received ponnng!")
+            end
+
             send(pid, {:ping, self()})
+
           {:ponng} ->
             IO.puts("Received ponnng!")
         end
-
       end
 
     session_type = [send: '{:ping, pid}', recv: '{:pong}']
