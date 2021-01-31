@@ -36,7 +36,7 @@ defmodule ElixirSessions.Code do
     }
 
     case recursion do
-      true -> {:recurse, X, infer_session_type(body, info)}
+      true -> [{:recurse, X, infer_session_type(body, info)}]
       false -> infer_session_type(body, info)
     end
   end
@@ -60,20 +60,21 @@ defmodule ElixirSessions.Code do
   end
 
   def infer_session_type(x, _info) when is_number(x) do
-    IO.puts("\n~~ Number: #{IO.inspect(x)}")
+    IO.puts("\n~~ Number: #{IO.puts(x)}")
 
     []
   end
 
   def infer_session_type(x, _info) when is_binary(x) do
-    IO.puts("\n~~ Binary/string: #{IO.inspect(x)}")
+    IO.puts("\n~~ Binary/string:")
 
     []
   end
 
-  def infer_session_type({a, b}, _info) do
-    IO.puts("\n~~Tuple: {#{IO.inspect(a)}, #{IO.inspect(b)}}")
+  def infer_session_type({_a, _b}, _info) do
+    IO.puts("\n~~Tuple: ")
 
+    # todo check if ok
     []
   end
 
@@ -90,7 +91,6 @@ defmodule ElixirSessions.Code do
     IO.inspect(a)
     IO.inspect(b)
 
-    # todo remove nils from list. then if list = [], return nil
     (infer_session_type(a, info) ++ infer_session_type(b, info))
     |> Enum.filter(&(!is_nil(&1)))
   end
@@ -131,6 +131,7 @@ defmodule ElixirSessions.Code do
       cases =
         case List.keyfind(body, :do, 0) do
           {:do, x} ->
+            _ = Logger.error("WARNING: function not finished yet.")
             x
 
           _ ->
@@ -187,6 +188,16 @@ defmodule ElixirSessions.Code do
               {:->, _, [[{:{}, _, matching_name}] | _]} ->
                 IO.inspect(hd(matching_name))
 
+              {:->, _, [[{matching_name, _}] | _]} ->
+                IO.inspect(matching_name)
+
+              {:->, _, [[{matching_name}] | _]} ->
+                _ =
+                  Logger.warn(
+                    "Warning: Receiving only {:label}, without value ({:label, value})"
+                  )
+                IO.inspect(matching_name)
+
               # todo add line number in error
               _ ->
                 _ =
@@ -197,11 +208,11 @@ defmodule ElixirSessions.Code do
 
           Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ infer_session_type(x, info) end)
           # Remove any :nils
-          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
-          |> Enum.with_index()
-          |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
-          |> Map.new()
-          |> to_list
+          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)  # Remove nils
+          |> Enum.with_index()                                     # Add indices
+          |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)   # Fetch keys by index
+          |> Map.new()                                             # Convert to map
+          |> to_list                                               # [map]
       end
 
     IO.puts("RESULT for receive")
