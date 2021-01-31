@@ -146,7 +146,7 @@ defmodule ElixirSessions.Code do
 
           _ ->
             # should never happen
-            Logger.error("In case, cannot find 'do'")
+            _ = Logger.error("In case, cannot find 'do'")
             []
         end
 
@@ -200,7 +200,7 @@ defmodule ElixirSessions.Code do
 
               # todo add line number in error
               _ ->
-                Logger.error(
+                _ = Logger.error(
                   "Error: Pattern matching in 'receive' is incorrect. Should be in the following format: {:label, value}."
                 )
             end)
@@ -237,7 +237,7 @@ defmodule ElixirSessions.Code do
 
   def infer_session_type({function_name, _, _}, %{recursion: false, function_name: function_name}) do
     # Should never be called
-    Logger.error("Error while recursing")
+    _ = Logger.error("Error while recursing")
     [nil]
   end
 

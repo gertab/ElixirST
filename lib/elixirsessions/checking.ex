@@ -32,7 +32,8 @@ defmodule ElixirSessions.Checking do
         case s do
           {:ok , _session_type} -> :ok
           # {:ok , session_type} -> ElixirSessions.Code.walk_ast(name, body, session_type)
-          _                    -> Logger.error("Leex error")
+          _                    -> _ = Logger.error("Leex error")
+                                  :ok
         end
         # ElixirSessions.Parser.parse(session)
         # IO.inspect(name)

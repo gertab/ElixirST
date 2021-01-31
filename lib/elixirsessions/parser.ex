@@ -3,6 +3,7 @@ defmodule ElixirSessions.Parser do
   Documentation for ElixirSessions.Parser.
   Parses the input to a Elixir data as session types.
   """
+  require Logger
 
   @doc """
   Parses a session type from a string to an Elixir datatype.
@@ -21,7 +22,7 @@ defmodule ElixirSessions.Parser do
 
   def parse(string) do
     with {:ok, tokens, _} <- lexer(string) do
-      parser(tokens)
+      :parse.parse(tokens)
     else
       err -> err
     end
@@ -32,18 +33,23 @@ defmodule ElixirSessions.Parser do
     :lexer.string(string)
   end
 
-  defp parser(tokens) do
-    :parse.parse(tokens)
-  end
-
   # recompile && ElixirSessions.Parser.run
   def run() do
-    :leex.file('src/lexer.xrl')
+    _leex_res = :leex.file('src/lexer.xrl')
+    # returns {ok, Scannerfile} | {ok, Scannerfile, Warnings} | error | {error, Errors, Warnings}
+
     # source = "branch<neg: send 'any', neg2: send 'any'>"
     # source = "send '{:ping, pid}' . receive '{:pong}'"
     # source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
     # source = " send 'any'.  rec X ( send 'any' . receive 'any' . rec Y. ( send '{number}' . receive '{any}' . rec Z . ( Z ) . receive '{any}' . Y ) . X )"
-    source = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+    source =
+      "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+
     parse(source)
   end
+end
+
+defmodule Helpers do
+  def extract_token({_token, _line, value}), do: value
+  def to_atom(':' ++ atom), do: List.to_atom(atom)
 end

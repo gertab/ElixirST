@@ -64,7 +64,7 @@ defmodule ElixirSessions.Duality do
   end
 
   defp compute_dual(tokens) do
-    Logger.error("Unknown input type for #{IO.puts(tokens)}")
+    _ = Logger.error("Unknown input type for #{IO.puts(tokens)}")
   end
 
   # recompile && ElixirSessions.Duality.run_dual
@@ -134,7 +134,7 @@ defmodule ElixirSessions.Duality do
   end
 
   defp check({:send, _}, {:send, _}, _) do
-    Logger.error("Expected send and receive; got send and send")
+    _ = Logger.error("Expected send and receive; got send and send")
 
     false
   end
@@ -144,7 +144,7 @@ defmodule ElixirSessions.Duality do
   end
 
   defp check({:recv, _}, {:recv, _}, _) do
-    Logger.error("Expected receive and receive; got receive and receive")
+    _ = Logger.error("Expected receive and receive; got receive and receive")
 
     false
   end
@@ -162,7 +162,7 @@ defmodule ElixirSessions.Duality do
               check(body1, body2, recurse)
 
             _ ->
-              Logger.error("Choosing a nonexisting label: #{IO.inspect(label)}")
+              _ = Logger.error("Choosing a nonexisting label: #{IO.inspect(label)}")
               false
           end
 
@@ -171,9 +171,16 @@ defmodule ElixirSessions.Duality do
         # accumulator || result # One match is enough
       end)
 
-    if !r do
-      Logger.error("Choosing a nonexisting label")
-    end
+    # case r do
+    #   :ok ->
+    #     :ok
+
+    #   {:error, _} ->
+    #     _ = Logger.error("Choosing a nonexisting label")
+
+    #   nil ->
+    #     _ = Logger.error("Choosing a nonexisting label")
+    # end
 
     r
   end
