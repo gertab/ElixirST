@@ -38,8 +38,7 @@ jobs:
     - name: Create PLTs
       if: steps.plt-cache.outputs.cache-hit != 'true'
       run:
-        mkdir -p priv/plts
-        mix dialyzer --plt
+        mkdir -p priv/plts && mix dialyzer --plt
     - name: Run dialyzer
       run: mix dialyzer --no-check --halt-exit-status
 
