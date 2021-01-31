@@ -56,37 +56,33 @@ defmodule ElixirSessions.Code do
   def infer_session_type(x, _info) when is_atom(x) do
     IO.puts("\n~~ Atom: #{IO.inspect(x)}")
 
-    [nil]
+    []
   end
 
   def infer_session_type(x, _info) when is_number(x) do
     IO.puts("\n~~ Number: #{IO.inspect(x)}")
 
-    [nil]
+    []
   end
 
   def infer_session_type(x, _info) when is_binary(x) do
     IO.puts("\n~~ Binary/string: #{IO.inspect(x)}")
 
-    [nil]
+    []
   end
 
   def infer_session_type({a, b}, _info) do
     IO.puts("\n~~Tuple: {#{IO.inspect(a)}, #{IO.inspect(b)}}")
 
-    [nil]
+    []
   end
 
   def infer_session_type([a], info) do
     IO.puts("\n~~Short list (1):")
     IO.inspect(a)
 
-    res = infer_session_type(a, info)
-
-    case Enum.filter(res, &(!is_nil(&1))) do
-      [] -> [nil]
-      x -> x
-    end
+    infer_session_type(a, info)
+    |> Enum.filter(&(!is_nil(&1)))
   end
 
   def infer_session_type([a, b], info) do
@@ -95,12 +91,8 @@ defmodule ElixirSessions.Code do
     IO.inspect(b)
 
     # todo remove nils from list. then if list = [], return nil
-    res = infer_session_type(a, info) ++ infer_session_type(b, info)
-
-    case Enum.filter(res, &(!is_nil(&1))) do
-      [] -> [nil]
-      x -> x
-    end
+    (infer_session_type(a, info) ++ infer_session_type(b, info))
+    |> Enum.filter(&(!is_nil(&1)))
   end
 
   def infer_session_type([a, b, c], info) do
@@ -109,13 +101,8 @@ defmodule ElixirSessions.Code do
     IO.inspect(b)
     IO.inspect(c)
 
-    res =
-      infer_session_type(a, info) ++ infer_session_type(b, info) ++ infer_session_type(c, info)
-
-    case Enum.filter(res, &(!is_nil(&1))) do
-      [] -> [nil]
-      x -> x
-    end
+    (infer_session_type(a, info) ++ infer_session_type(b, info) ++ infer_session_type(c, info))
+    |> Enum.filter(&(!is_nil(&1)))
   end
 
   #### AST checking for non literals
@@ -129,6 +116,8 @@ defmodule ElixirSessions.Code do
 
     IO.puts("\n~~Block (result): ")
     IO.inspect(res)
+
+    res
   end
 
   # todo: when checking for case AST; if it does not contain send/receive, skip
@@ -154,7 +143,7 @@ defmodule ElixirSessions.Code do
     else
       IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
 
-      [nil]
+      []
     end
   end
 
@@ -186,7 +175,7 @@ defmodule ElixirSessions.Code do
     result =
       case length(stuff) do
         0 ->
-          [nil]
+          []
 
         1 ->
           [{:recv, 'type'}]
@@ -200,9 +189,10 @@ defmodule ElixirSessions.Code do
 
               # todo add line number in error
               _ ->
-                _ = Logger.error(
-                  "Error: Pattern matching in 'receive' is incorrect. Should be in the following format: {:label, value}."
-                )
+                _ =
+                  Logger.error(
+                    "Error: Pattern matching in 'receive' is incorrect. Should be in the following format: {:label, value}."
+                  )
             end)
 
           Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ infer_session_type(x, info) end)
@@ -238,14 +228,15 @@ defmodule ElixirSessions.Code do
   def infer_session_type({function_name, _, _}, %{recursion: false, function_name: function_name}) do
     # Should never be called
     _ = Logger.error("Error while recursing")
-    [nil]
+
+    []
   end
 
   def infer_session_type(x, _info) do
     IO.puts("\n~~Unknown:")
     IO.inspect(x)
 
-    [nil]
+    []
   end
 
   # todo macro expand (including expand if statements)
