@@ -193,9 +193,8 @@ defmodule ElixirSessions.Code do
 
               {:->, _, [[{matching_name}] | _]} ->
                 _ =
-                  Logger.warn(
-                    "Warning: Receiving only {:label}, without value ({:label, value})"
-                  )
+                  Logger.warn("Warning: Receiving only {:label}, without value ({:label, value})")
+
                 IO.inspect(matching_name)
 
               # todo add line number in error
@@ -208,11 +207,16 @@ defmodule ElixirSessions.Code do
 
           Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ infer_session_type(x, info) end)
           # Remove any :nils
-          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)  # Remove nils
-          |> Enum.with_index()                                     # Add indices
-          |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)   # Fetch keys by index
-          |> Map.new()                                             # Convert to map
-          |> to_list                                               # [map]
+          # Remove nils
+          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+          # Add indices
+          |> Enum.with_index()
+          # Fetch keys by index
+          |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
+          # Convert to map
+          |> Map.new()
+          # [map]
+          |> to_list
       end
 
     IO.puts("RESULT for receive")
@@ -241,6 +245,12 @@ defmodule ElixirSessions.Code do
     _ = Logger.error("Error while recursing")
 
     []
+  end
+
+  def infer_session_type({:|>, _, [left, right]}, info) do
+    # Pipe operator
+    (infer_session_type(left, info) ++ infer_session_type(right, info))
+    |> Enum.filter(&(!is_nil(&1)))
   end
 
   def infer_session_type(x, _info) do
@@ -372,74 +382,40 @@ defmodule ElixirSessions.Code do
 
     body =
       quote do
-        # :ok
-        # a = 1 + 2
-        # ping()
-
-        # send(self(), 123)
-
-        # case a do
-        #   b when is_list(b) ->
-        #     :okkkk
-
-        #   a when is_list(a) ->
-        #     :okkk
-        #     receive do
-        #       {:message_type, value} ->
-        #         value
-        #       {:message_type2, value} when is_atom(value) ->
-        #         aaa = value + 1
-        #         aaa
-        #     end
-
-        #   a when is_list(a) ->
-        #     :okkk
-
-        # end
-
-        # send(self(), :ok)
-
-        # receive do
-        #   {:message_type, _value} ->
-        #     :receievve
-        # end
-
-        IO.puts("Sending ping to #{inspect(pid)}")
-        send(pid, {:ping, self()})
-        send(pid, {:ping, self()})
-        send(pid, {:ping, self()})
+        send(self(), {:ping, self()})
+        send(self(), {:ping, self()})
+        send(self(), {:ping, self()})
 
         case true do
           true -> :ok
-          false -> :not_ok
         end
 
         receive do
           {:pong, 1, 2, 3} ->
             IO.puts("Received pong!")
-            send(pid, {:ping, self()})
-            send(pid, {:ping, self()})
-            send(pid, {:ping, self()})
+            send(self(), {:ping, self()})
+            send(self(), {:ping, self()})
+            send(self(), {:ping, self()})
 
             receive do
               {:pong, 1, 2, 3} ->
                 IO.puts("Received pong!")
-                send(pid, {:ping, self()})
-                send(pid, {:ping, self()})
-                send(pid, {:ping, self()})
-                send(pid, {:ping, self()})
+                send(self(), {:ping, self()})
+                send(self(), {:ping, self()})
+                send(self(), {:ping, self()})
+                send(self(), {:ping, self()})
 
               {:ponng} ->
                 IO.puts("Received ponnng!")
             end
 
-            send(pid, {:ping, self()})
+            send(self(), {:ping, self()})
 
           {:ponng} ->
             IO.puts("Received ponnng!")
         end
 
-        send(pid, {:ping, self()})
+        send(self(), {:ping, self()})
         ping()
       end
 

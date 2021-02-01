@@ -224,4 +224,22 @@ defmodule CodeTest do
     assert inferred_session_type == expected_session_type
   end
 
+  test "pipe infer" do
+
+    fun = :ping
+    body =
+      quote do
+        send(self(), :okkk)
+        |> send(self(), :okkk)
+        |> send(self(), :okkk)
+        |> send(self(), :okkk)
+
+      end
+
+    expected_session_type = [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}, {:send, 'type'}]
+    inferred_session_type = ElixirSessions.Code.infer_session_type_incl_recursion(fun, body, expected_session_type)
+
+    assert inferred_session_type == expected_session_type
+  end
+
 end
