@@ -515,23 +515,23 @@ defmodule ElixirSessions.Code do
   # {1, 2}                   # {1,2}
   # {:{}, [], [1, 2, 3]}     # {1,2,3}
   # {:{}, [], [1, 2, 3, 4]}  # {1,2,3,4}
-  defp first_elem_in_tuple_node(x) when is_atom(x) do
+  def first_elem_in_tuple_node(x) when is_atom(x) do
     x
   end
 
-  defp first_elem_in_tuple_node({x, _}) do
+  def first_elem_in_tuple_node({x, _}) do
     x
   end
 
-  defp first_elem_in_tuple_node({:{}, [], [x]}) do
+  def first_elem_in_tuple_node({:{}, [], [x]}) do
     x
   end
 
-  defp first_elem_in_tuple_node({:{}, [], [x | nil]}) do
+  def first_elem_in_tuple_node({:{}, [], [x | _]}) do
     x
   end
 
-  defp first_elem_in_tuple_node(_) do
+  def first_elem_in_tuple_node(_) do
     nil
   end
 
@@ -602,6 +602,8 @@ defmodule ElixirSessions.Code do
             send(self(), :ok2ddd)
 
           _ ->
+            send(self(), {:abc, 12, :jhidf})
+
             send(self(), {:ok2, 12, 23, 4, 45, 535, 63_463_453, 8, :okkdsnjdf})
         end
 
