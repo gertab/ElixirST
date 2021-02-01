@@ -180,7 +180,7 @@ defmodule CodeTest do
         end
       end
 
-    expected_session_type = [{:send, 'type'}, %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}]
+    expected_session_type = [{:send, 'type'}, {:branch, %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}}]
     inferred_session_type = ElixirSessions.Code.infer_session_type_incl_recursion(fun, body, expected_session_type)
 
     assert inferred_session_type == expected_session_type
@@ -202,7 +202,7 @@ defmodule CodeTest do
         end
       end
 
-    expected_session_type = [{:send, 'type'}, %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}]
+    expected_session_type = [{:send, 'type'}, {:branch, %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}}]
     inferred_session_type = ElixirSessions.Code.infer_session_type_incl_recursion(fun, body, expected_session_type)
 
     assert inferred_session_type == expected_session_type

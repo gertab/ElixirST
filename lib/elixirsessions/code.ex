@@ -80,7 +80,7 @@ defmodule ElixirSessions.Code do
 
   def infer_session_type([a], info) do
     IO.puts("\n~~Short list (1):")
-    IO.inspect(a)
+    # IO.inspect(a)
 
     infer_session_type(a, info)
     |> Enum.filter(&(!is_nil(&1)))
@@ -88,8 +88,8 @@ defmodule ElixirSessions.Code do
 
   def infer_session_type([a, b], info) do
     IO.puts("\n~~Short list (2):")
-    IO.inspect(a)
-    IO.inspect(b)
+    # IO.inspect(a)
+    # IO.inspect(b)
 
     (infer_session_type(a, info) ++ infer_session_type(b, info))
     |> Enum.filter(&(!is_nil(&1)))
@@ -97,9 +97,9 @@ defmodule ElixirSessions.Code do
 
   def infer_session_type([a, b, c], info) do
     IO.puts("\n~~Short list (3):")
-    IO.inspect(a)
-    IO.inspect(b)
-    IO.inspect(c)
+    # IO.inspect(a)
+    # IO.inspect(b)
+    # IO.inspect(c)
 
     (infer_session_type(a, info) ++ infer_session_type(b, info) ++ infer_session_type(c, info))
     |> Enum.filter(&(!is_nil(&1)))
@@ -108,30 +108,30 @@ defmodule ElixirSessions.Code do
   #### AST checking for non literals
   def infer_session_type({:__block__, _meta, args}, info) do
     IO.puts("\n~~Block: ")
-    IO.inspect(args)
+    # IO.inspect(args)
 
     res =
       Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type(x, info) end)
       |> Enum.filter(&(!is_nil(&1)))
 
     IO.puts("\n~~Block (result): ")
-    IO.inspect(res)
+    # IO.inspect(res)
 
     res
   end
 
   # todo: when checking for case AST; if it does not contain send/receive, skip
-  def infer_session_type({:case, _, [_what_you_are_checking, body]} = ast, _info)
+  def infer_session_type({:case, _, [_what_you_are_checking, body]} = ast, info)
       when is_list(body) do
     IO.puts("\n~~case:")
 
     if contains_send_receive?(ast) do
       IO.puts("\nCONTAINS SEND/RECEIVE")
       # todo check if all cases neen to have send/receive
-      cases =
+      stuff =
         case List.keyfind(body, :do, 0) do
           {:do, x} ->
-            _ = Logger.error("WARNING: function not finished yet.")
+            _ = Logger.warn("WARNING: function not finished yet.")
             x
 
           _ ->
@@ -140,7 +140,37 @@ defmodule ElixirSessions.Code do
             []
         end
 
-      IO.inspect(cases)
+      result =
+        case length(stuff) do
+          0 ->
+            []
+
+          1 ->
+            # todo check if ok with just 1 options
+            infer_session_type(stuff, info)
+
+          _ ->
+            # Greater than 1
+
+            Enum.map(stuff, fn x -> infer_session_type(x, info) end)
+            # Remove any :nils
+            |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+            # Ensure that all cases start with a 'send'
+            |> ensure_send
+            # Add indices
+            |> Enum.with_index()
+            # Fetch keys by index
+            |> Enum.map(fn {x, y} -> {y, x} end)
+            # |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
+            # Convert to map
+            |> Map.new()
+            # {:choice, map}
+            |> to_choice
+            # [{:choice, map}]
+            |> to_list
+        end
+
+      result
     else
       IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
 
@@ -150,7 +180,7 @@ defmodule ElixirSessions.Code do
 
   def infer_session_type({:=, _meta, [_left, right]}, info) do
     IO.puts("\n~~pattern matchin (=):")
-    IO.inspect(right)
+    # IO.inspect(right)
 
     infer_session_type(right, info)
   end
@@ -186,16 +216,19 @@ defmodule ElixirSessions.Code do
           keys =
             Enum.map(stuff, fn
               {:->, _, [[{:{}, _, matching_name}] | _]} ->
-                IO.inspect(hd(matching_name))
+                # IO.inspect(hd(matching_name))
+                hd(matching_name)
 
               {:->, _, [[{matching_name, _}] | _]} ->
-                IO.inspect(matching_name)
+                # IO.inspect(matching_name)
+                matching_name
 
               {:->, _, [[{matching_name}] | _]} ->
                 _ =
                   Logger.warn("Warning: Receiving only {:label}, without value ({:label, value})")
 
-                IO.inspect(matching_name)
+                # IO.inspect(matching_name)
+                matching_name
 
               # todo add line number in error
               _ ->
@@ -207,7 +240,6 @@ defmodule ElixirSessions.Code do
 
           Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ infer_session_type(x, info) end)
           # Remove any :nils
-          # Remove nils
           |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
           # Add indices
           |> Enum.with_index()
@@ -215,12 +247,14 @@ defmodule ElixirSessions.Code do
           |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
           # Convert to map
           |> Map.new()
-          # [map]
+          # {:branch, map}
+          |> to_branch
+          # [{:branch, map}]
           |> to_list
       end
 
     IO.puts("RESULT for receive")
-    IO.inspect(result)
+    # IO.inspect(result)
     result
   end
 
@@ -229,7 +263,7 @@ defmodule ElixirSessions.Code do
     res = infer_session_type(body, info)
 
     IO.puts("\n~~-> (result):")
-    IO.inspect(res)
+    # IO.inspect(res)
     res
   end
 
@@ -253,9 +287,9 @@ defmodule ElixirSessions.Code do
     |> Enum.filter(&(!is_nil(&1)))
   end
 
-  def infer_session_type(x, _info) do
+  def infer_session_type(_, _info) do
     IO.puts("\n~~Unknown:")
-    IO.inspect(x)
+    # IO.inspect(x)
 
     []
   end
@@ -277,7 +311,7 @@ defmodule ElixirSessions.Code do
       end
 
     IO.puts("\nCHECKING IF CONTAINS SEND RECEIVE")
-    IO.inspect(stuff)
+    # IO.inspect(stuff)
     contains_send_receive?(stuff)
   end
 
@@ -329,8 +363,8 @@ defmodule ElixirSessions.Code do
         _ -> []
       end
 
-    IO.puts("\nCHECKING IF CONTAINS RECURSION")
-    IO.inspect(stuff)
+    # IO.puts("\nCHECKING IF CONTAINS RECURSION")
+    # IO.inspect(stuff)
     contains_recursion?(stuff, function_name)
   end
 
@@ -376,47 +410,94 @@ defmodule ElixirSessions.Code do
     [a]
   end
 
+  defp to_branch(a) do
+    {:branch, a}
+  end
+
+  defp to_choice(a) do
+    {:choice, a}
+  end
+
+  defp ensure_send(cases) do
+    check =
+      Enum.map(cases, fn
+        [x] ->
+          if elem(x, 0) == :send do
+            :ok
+          else
+            :error
+          end
+
+        [x | _] ->
+          if elem(x, 0) == :send do
+            :ok
+          else
+            :error
+          end
+
+        _ ->
+          :error
+      end)
+
+    if :error in check do
+      _ =
+        Logger.error(
+          "When making a choice (in case statement), you have to send a tuple containing"
+        )
+    end
+
+    cases
+  end
+
   # recompile && ElixirSessions.Code.run
   def run() do
     fun = :ping
 
     body =
       quote do
-        send(self(), {:ping, self()})
-        send(self(), {:ping, self()})
-        send(self(), {:ping, self()})
+        # send(self(), {:ping, self()})
+        # send(self(), {:ping, self()})
 
-        case true do
-          true -> :ok
+        # a = true
+
+        case a do
+          true -> send(self(), :ok)
+          _ -> send(self(), :ok)
         end
 
-        receive do
-          {:pong, 1, 2, 3} ->
-            IO.puts("Received pong!")
-            send(self(), {:ping, self()})
-            send(self(), {:ping, self()})
-            send(self(), {:ping, self()})
+        # send(self(), {:ping, self()})
 
-            receive do
-              {:pong, 1, 2, 3} ->
-                IO.puts("Received pong!")
-                send(self(), {:ping, self()})
-                send(self(), {:ping, self()})
-                send(self(), {:ping, self()})
-                send(self(), {:ping, self()})
+        # case true do
+        #   true -> :ok
+        # end
 
-              {:ponng} ->
-                IO.puts("Received ponnng!")
-            end
+        # receive do
+        #   {:pong, 1, 2, 3} ->
+        #     IO.puts("Received pong!")
+        #     send(self(), {:ping, self()})
+        #     send(self(), {:ping, self()})
+        #     send(self(), {:ping, self()})
 
-            send(self(), {:ping, self()})
+        #     receive do
+        #       {:pong, 1, 2, 3} ->
+        #         IO.puts("Received pong!")
+        #         send(self(), {:ping, self()})
+        #         send(self(), {:ping, self()})
+        #         send(self(), {:ping, self()})
+        #         send(self(), {:ping, self()})
 
-          {:ponng} ->
-            IO.puts("Received ponnng!")
-        end
+        #       {:ponng} ->
+        #         IO.puts("Received ponnng!")
+        #     end
 
-        send(self(), {:ping, self()})
-        ping()
+        #     send(self(), {:ping, self()})
+
+        #   {:ponng} ->
+        #     IO.puts("Received ponnng!")
+        # end
+
+        # send(self(), {:ping, self()})
+        # ping()
       end
 
     session_type = [send: '{:ping, pid}', recv: '{:pong}']
