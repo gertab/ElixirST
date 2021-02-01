@@ -152,22 +152,35 @@ defmodule ElixirSessions.Code do
           _ ->
             # Greater than 1
 
-            Enum.map(stuff, fn x -> infer_session_type(x, info) end)
-            # Remove any :nils
-            |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+            keys =
+              Enum.map(stuff, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
+
+            choice_session_type =
+              Enum.map(stuff, fn x -> infer_session_type(x, info) end)
+              # Remove any :nils
+              |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+
             # Ensure that all cases start with a 'send'
-            |> ensure_send
-            # Add indices
-            |> Enum.with_index()
-            # Fetch keys by index
-            |> Enum.map(fn {x, y} -> {y, x} end)
-            # |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
-            # Convert to map
-            |> Map.new()
-            # {:choice, map}
-            |> to_choice
-            # [{:choice, map}]
-            |> to_list
+
+            if ensure_send(choice_session_type) == :ok do
+              choice_session_type
+              # Add indices
+              |> Enum.with_index()
+              # Fetch keys by index
+              # |> Enum.map(fn {x, y} -> {y, x} end)
+              |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
+              # Convert to map
+              |> Map.new()
+              # {:choice, map}
+              |> to_choice
+              # [{:choice, map}]
+              |> to_list
+            else
+              _ =
+                Logger.error(
+                  "When making a choice (in case statement), you have a 'send' as the first item"
+                )
+            end
         end
 
       result
@@ -406,19 +419,136 @@ defmodule ElixirSessions.Code do
     false
   end
 
-  defp to_list(a) do
-    [a]
+  ### Returns the label of the first send encountered: send(pid, {:label, data, ...})
+  defp get_label_of_first_send({:case, _, [_what_you_are_checking, body]})
+       when is_list(body) do
+    # [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
+
+    stuff =
+      case List.keyfind(body, :do, 0) do
+        {:do, x} -> x
+        _ -> []
+      end
+
+    get_label_of_first_send(stuff)
   end
 
-  defp to_branch(a) do
-    {:branch, a}
+  defp get_label_of_first_send([a]) do
+    get_label_of_first_send(a)
   end
 
-  defp to_choice(a) do
-    {:choice, a}
+  defp get_label_of_first_send([a, b]) do
+    x = get_label_of_first_send(a)
+
+    if x == nil do
+      get_label_of_first_send(b)
+    else
+      x
+    end
   end
 
-  defp ensure_send(cases) do
+  defp get_label_of_first_send([a, b, c]) do
+    # Returns the first non nil result
+    x = get_label_of_first_send(a)
+
+    if x == nil do
+      y = get_label_of_first_send(b)
+
+      if x == nil do
+        get_label_of_first_send(c)
+      else
+        y
+      end
+    else
+      x
+    end
+  end
+
+  defp get_label_of_first_send({:->, _meta, args}) do
+    # head contains info related to 'when'
+    [_head | tail] = args
+    get_label_of_first_send(tail)
+  end
+
+  defp get_label_of_first_send({:send, _meta, [_to, data]}) do
+    case first_elem_in_tuple_node(data) do
+      nil ->
+        _ = Logger.error("The data in send should be of the format: {:label, ...}")
+
+      x ->
+        x
+    end
+  end
+
+  defp get_label_of_first_send({:__block__, _meta, args}) when is_list(args) do
+    Enum.map(args, fn x -> get_label_of_first_send(x) end)
+    |> first_non_nil()
+    |> IO.inspect()
+
+    # Returns the first non nil result
+
+    # result
+  end
+
+  defp get_label_of_first_send(_) do
+    nil
+  end
+
+  ####### Helper functions
+
+  defp to_list(x) do
+    [x]
+  end
+
+  defp to_branch(x) do
+    {:branch, x}
+  end
+
+  defp to_choice(x) do
+    {:choice, x}
+  end
+
+  # Returns the first element from a tuple in AST form
+  # :atom                    # :atom
+  # {:{}, [], []}            # {}
+  # {:{}, [], [1]}           # {1}
+  # {1, 2}                   # {1,2}
+  # {:{}, [], [1, 2, 3]}     # {1,2,3}
+  # {:{}, [], [1, 2, 3, 4]}  # {1,2,3,4}
+  defp first_elem_in_tuple_node(x) when is_atom(x) do
+    x
+  end
+
+  defp first_elem_in_tuple_node({x, _}) do
+    x
+  end
+
+  defp first_elem_in_tuple_node({:{}, [], [x]}) do
+    x
+  end
+
+  defp first_elem_in_tuple_node({:{}, [], [x | nil]}) do
+    x
+  end
+
+  defp first_elem_in_tuple_node(_) do
+    nil
+  end
+
+  # Returns first non nil element in a list
+  defp first_non_nil(a) when is_list(a) do
+    Enum.reduce(a, nil, fn x, acc ->
+      if acc == nil do
+        x
+      else
+        acc
+      end
+    end)
+  end
+
+  @doc false
+  # Given a list (of list), checks each inner list and ensure that it contains {:send, type} as the first element
+  def ensure_send(cases) do
     check =
       Enum.map(cases, fn
         [x] ->
@@ -440,13 +570,10 @@ defmodule ElixirSessions.Code do
       end)
 
     if :error in check do
-      _ =
-        Logger.error(
-          "When making a choice (in case statement), you have to send a tuple containing"
-        )
+      :error
+    else
+      :ok
     end
-
-    cases
   end
 
   # recompile && ElixirSessions.Code.run
@@ -461,8 +588,21 @@ defmodule ElixirSessions.Code do
         # a = true
 
         case a do
-          true -> send(self(), :ok)
-          _ -> send(self(), :ok)
+          true ->
+            :okkkk
+            a = 1 + 3
+
+            send(self(), {:ok1})
+
+            receive do
+              {:message_type, value} ->
+                :jksdfsdn
+            end
+
+            send(self(), :ok2ddd)
+
+          _ ->
+            send(self(), {:ok2, 12, 23, 4, 45, 535, 63_463_453, 8, :okkdsnjdf})
         end
 
         # send(self(), {:ping, self()})

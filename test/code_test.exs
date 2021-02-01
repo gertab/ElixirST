@@ -242,4 +242,24 @@ defmodule CodeTest do
     assert inferred_session_type == expected_session_type
   end
 
+
+  test "ensure_send - ok" do
+
+    cases = [[{:send, 'type'}, {:send, 'type'}, {:send, 'type'}], [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}], [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}]]
+
+    result = ElixirSessions.Code.ensure_send(cases)
+    expected_result = :ok
+
+    assert result == expected_result
+  end
+
+  test "ensure_send - error" do
+
+    cases = [[{:branch, %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}}, {:send, 'type'}, {:send, 'type'}], [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}], [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}]]
+
+    result = ElixirSessions.Code.ensure_send(cases)
+    expected_result = :error
+
+    assert result == expected_result
+  end
 end
