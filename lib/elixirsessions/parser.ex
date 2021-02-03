@@ -10,9 +10,6 @@ defmodule ElixirSessions.Parser do
 
   ## Examples
 
-      iex> ElixirSessions.hello()
-      :world
-
       iex> s = "send '{number()}' . receive '{number()}'"
       ...> ElixirSessions.Parser.parse(s)
       {:ok, [send: '{number()}', recv: '{number()}']}
