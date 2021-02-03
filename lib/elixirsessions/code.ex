@@ -178,8 +178,10 @@ defmodule ElixirSessions.Code do
             else
               _ =
                 Logger.error(
-                  "When making a choice (in case statement), you have a 'send' as the first item"
+                  "When making a choice (in case statement), you need to have a 'send' as the first item"
                 )
+
+              []
             end
         end
 
@@ -204,7 +206,7 @@ defmodule ElixirSessions.Code do
   end
 
   def infer_session_type({:receive, _, [body]}, info) do
-    # body contains [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
+    # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
 
     IO.puts("\nRECEIVE")
 
@@ -515,25 +517,11 @@ defmodule ElixirSessions.Code do
   # {1, 2}                   # {1,2}
   # {:{}, [], [1, 2, 3]}     # {1,2,3}
   # {:{}, [], [1, 2, 3, 4]}  # {1,2,3,4}
-  def first_elem_in_tuple_node(x) when is_atom(x) do
-    x
-  end
-
-  def first_elem_in_tuple_node({x, _}) do
-    x
-  end
-
-  def first_elem_in_tuple_node({:{}, [], [x]}) do
-    x
-  end
-
-  def first_elem_in_tuple_node({:{}, [], [x | _]}) do
-    x
-  end
-
-  def first_elem_in_tuple_node(_) do
-    nil
-  end
+  def first_elem_in_tuple_node(x) when is_atom(x), do: x
+  def first_elem_in_tuple_node({x, _}), do: x
+  def first_elem_in_tuple_node({:{}, [], [x]}), do: x
+  def first_elem_in_tuple_node({:{}, [], [x | _]}), do: x
+  def first_elem_in_tuple_node(_), do: nil
 
   # Returns first non nil element in a list
   defp first_non_nil(a) when is_list(a) do
@@ -601,45 +589,46 @@ defmodule ElixirSessions.Code do
 
             send(self(), :ok2ddd)
 
+          # false -> :kdnfkjs
           _ ->
             send(self(), {:abc, 12, :jhidf})
 
             send(self(), {:ok2, 12, 23, 4, 45, 535, 63_463_453, 8, :okkdsnjdf})
         end
 
-        # send(self(), {:ping, self()})
+        send(self(), {:ping, self()})
 
-        # case true do
-        #   true -> :ok
-        # end
+        case true do
+          true -> :ok
+        end
 
-        # receive do
-        #   {:pong, 1, 2, 3} ->
-        #     IO.puts("Received pong!")
-        #     send(self(), {:ping, self()})
-        #     send(self(), {:ping, self()})
-        #     send(self(), {:ping, self()})
+        receive do
+          {:pong, 1, 2, 3} ->
+            IO.puts("Received pong!")
+            send(self(), {:ping, self()})
+            send(self(), {:ping, self()})
+            send(self(), {:ping, self()})
 
-        #     receive do
-        #       {:pong, 1, 2, 3} ->
-        #         IO.puts("Received pong!")
-        #         send(self(), {:ping, self()})
-        #         send(self(), {:ping, self()})
-        #         send(self(), {:ping, self()})
-        #         send(self(), {:ping, self()})
+            receive do
+              {:pong, 1, 2, 3} ->
+                IO.puts("Received pong!")
+                send(self(), {:ping, self()})
+                send(self(), {:ping, self()})
+                send(self(), {:ping, self()})
+                send(self(), {:ping, self()})
 
-        #       {:ponng} ->
-        #         IO.puts("Received ponnng!")
-        #     end
+              {:ponng} ->
+                IO.puts("Received ponnng!")
+            end
 
-        #     send(self(), {:ping, self()})
+            send(self(), {:ping, self()})
 
-        #   {:ponng} ->
-        #     IO.puts("Received ponnng!")
-        # end
+          {:ponng} ->
+            IO.puts("Received ponnng!")
+        end
 
-        # send(self(), {:ping, self()})
-        # ping()
+        send(self(), {:ping, self()})
+        ping()
       end
 
     session_type = [send: '{:ping, pid}', recv: '{:pong}']

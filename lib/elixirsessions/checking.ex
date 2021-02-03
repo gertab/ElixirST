@@ -13,6 +13,8 @@ defmodule ElixirSessions.Checking do
       # Module.register_attribute(__MODULE__, :session_hook, accumulate: true)
 
       @on_definition ElixirSessions.Checking
+      # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
+      #__after_compile__/2 runs after elixir has compiled the AST into BEAM bytecode
 
       IO.puts("ElixirSession started in #{IO.inspect __MODULE__}")
     end
