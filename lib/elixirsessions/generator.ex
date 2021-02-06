@@ -1,10 +1,10 @@
 defmodule ElixirSessions.Generator do
   @moduledoc """
-  Given a session type, it generated the Elixir code/AST automatically.
+  Given a session type, it generates the quoted Elixir code (or AST) automatically.
 
   ## Examples
 
-      iex>  session_type = [send: 'type', recv: 'type']
+      iex> session_type = [send: 'type', recv: 'type']
       ...> ElixirSessions.Generator.generate_to_string(session_type) |> IO.puts()
       #def func() do
         send(self(), {:data})
@@ -13,6 +13,17 @@ defmodule ElixirSessions.Generator do
             :ok
         end
       #end
+
+      iex> session_type = [
+      ...>     send: 'type',
+      ...>     branch: %{
+      ...>       do_something: [recv: 'type'],
+      ...>       do_something_else: [recv: 'type', send: 'type']
+      ...>     }
+      ...>   ]
+      ...>
+      ...> ElixirSessions.Generator.generate_to_string(session_type) |> IO.puts
+      :ok
 
   Todo/To improve: Reduce number of conversions between strings and ASTs (Macro.to_string() and Code.string_to_quoted()).
     For recursion, replace func with the actual function name.
@@ -172,5 +183,4 @@ defmodule ElixirSessions.Generator do
   end
 
   # def(unquote(fundef),unquote([do: metered]))
-
 end

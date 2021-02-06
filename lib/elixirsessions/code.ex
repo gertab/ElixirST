@@ -95,7 +95,7 @@ defmodule ElixirSessions.Code do
   end
 
   @doc """
-  Infers the session type of the function `fun` given its `body` (including recursion).
+  Uses `infer_session_type/2` to infer the session type (includes recursion).
 
   ## Examples
           iex> ast = quote do
@@ -109,7 +109,6 @@ defmodule ElixirSessions.Code do
           [
             {:recurse, :X, [{:send, 'type'}, {:call_recurse, :X}]}
           ]
-
   """
   @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type()
   def infer_session_type_incl_recursion(fun, body) do
@@ -127,7 +126,7 @@ defmodule ElixirSessions.Code do
   end
 
   @doc """
-  Given an AST and the info, `infer_session_type/2` infers its session type (excluding recursion).
+  Given an AST, `infer_session_type/2` infers its session type (excluding recursion).
 
   ## Examples
           iex> ast = quote do
@@ -221,10 +220,10 @@ defmodule ElixirSessions.Code do
             |> to_list
 
           :error ->
-            _ =
-              Logger.error(
-                "When making a choice (in case statement), you need to have a 'send' as the first item"
-              )
+            # _ =
+            #   Logger.error(
+            #     "When making a choice (in case statement), you need to have a 'send' as the first item"
+            #   )
 
             []
         end
@@ -494,7 +493,7 @@ defmodule ElixirSessions.Code do
   end
 
   @doc """
-  Run a self-contained example.
+  Runs a self-contained example.
 
   `recompile && ElixirSessions.Code.run`
   """
