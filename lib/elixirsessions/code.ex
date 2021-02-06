@@ -9,10 +9,10 @@ defmodule ElixirSessions.Code do
   @type info() :: %{
           # recursion: boolean(),
           call_recursion: String.t(),
-          function_name: any,
-          session_type: any
+          function_name: any
+          # session_type: any
+          # todo maybe add __module__
         }
-
   @type branch_type() :: %{atom => session_type}
   @type choice_type() :: %{atom => session_type}
   @type session_type() ::
@@ -29,39 +29,26 @@ defmodule ElixirSessions.Code do
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.
   """
   @spec walk_ast(atom(), ast(), session_type()) :: session_type()
-  def walk_ast(fun, body, session_type) do
+  def walk_ast(fun, body, _session_type) do
     IO.inspect(fun)
     IO.inspect(body)
-    # IO.puts(Macro.to_string(body))
 
-    IO.inspect(session_type)
-
-    # Macro.prewalk(body, fn x -> IO.inspect x end)
-
-    result = infer_session_type_incl_recursion(fun, body, session_type)
-    IO.inspect(result)
-    result
+    infer_session_type_incl_recursion(fun, body)
   end
 
   @doc """
   Infers the session type of the function `fun` given its `body` (including recursion).
   """
-  @spec infer_session_type_incl_recursion(atom(), ast(), session_type()) :: session_type()
-  def infer_session_type_incl_recursion(fun, body, expected_session_type) do
-    # todo maybe add __module__
+  @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type()
+  def infer_session_type_incl_recursion(fun, body) do
     info = %{
-      # recursion: recursion,
       call_recursion: "X",
-      function_name: fun,
-      session_type: expected_session_type
+      function_name: fun
     }
 
     inferred_session_type = infer_session_type(body, info)
-    recursion = contains_recursion?(inferred_session_type)
 
-    IO.puts("CONTAINSSSSSS rec #{recursion}")
-
-    case recursion do
+    case contains_recursion?(inferred_session_type) do
       true -> [{:recurse, X, inferred_session_type}]
       false -> inferred_session_type
     end
@@ -74,49 +61,36 @@ defmodule ElixirSessions.Code do
   @spec infer_session_type(ast, info) :: session_type()
   #### Checking for AST literals
   # :atoms, 123, 3.12 (numbers), [1,2,3] (list), "string", {:ok, 1} (short tuples)
-  def infer_session_type(x, _info) when is_atom(x) do
-    IO.puts("\n~~ Atom: #{IO.inspect(x)}")
-
-    []
-  end
-
-  def infer_session_type(x, _info) when is_number(x) do
-    IO.puts("\n~~ Number: #{IO.puts(x)}")
-
-    []
-  end
-
-  def infer_session_type(x, _info) when is_binary(x) do
-    IO.puts("\n~~ Binary/string:")
+  def infer_session_type(x, _info) when is_atom(x) or is_number(x) or is_binary(x) do
+    IO.puts("\nAtom/Number/String: #{IO.inspect(x)}")
 
     []
   end
 
   def infer_session_type({_a, _b}, _info) do
-    IO.puts("\n~~Tuple: ")
+    IO.puts("\nTuple: ")
 
     # todo check if ok, maybe check each element
     []
   end
 
   def infer_session_type(args, info) when is_list(args) do
-    IO.puts("\n~~list:")
+    IO.puts("\nlist:")
 
     Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type(x, info) end)
-    |> Enum.filter(&(!is_nil(&1)))
+    |> remove_nils()
   end
 
   #### AST checking for non literals
   def infer_session_type({:__block__, _meta, args}, info) do
-    IO.puts("\n~~Block: ")
+    IO.puts("\nBlock: ")
 
     infer_session_type(args, info)
-    # IO.inspect(infer_session_type(args, info))
   end
 
   def infer_session_type({:case, _meta, [_what_you_are_checking, body]}, info)
       when is_list(body) do
-    IO.puts("\n~~case:")
+    IO.puts("\ncase:")
 
     cases =
       case List.keyfind(body, :do, 0) do
@@ -125,32 +99,32 @@ defmodule ElixirSessions.Code do
 
         _ ->
           # should never happen
-          _ = Logger.error("In case, cannot find 'do'")
+          _ = Logger.error("In 'case', cannot find 'do'")
           []
       end
 
-    result =
-      case length(cases) do
-        0 ->
-          []
+    case length(cases) do
+      0 ->
+        []
 
-        1 ->
-          # todo check if ok with just 1 options
-          infer_session_type(cases, info)
+      1 ->
+        # todo check if ok with just 1 options
+        infer_session_type(cases, info)
 
-        _ ->
-          # Greater than 1
+      _ ->
+        # Greater than 1
 
-          keys = Enum.map(cases, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
+        keys = Enum.map(cases, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
 
-          choice_session_type =
-            Enum.map(cases, fn x -> infer_session_type(x, info) end)
-            # Remove any :nils
-            |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+        choice_session_type =
+          Enum.map(cases, fn x -> infer_session_type(x, info) end)
+          # Remove any :nils
+          |> Enum.map(fn x -> remove_nils(x) end)
 
-          # Ensure that all cases start with a 'send'
+        # Ensure that all cases start with a 'send'
 
-          if ensure_send(choice_session_type) == :ok do
+        case ensure_send(choice_session_type) do
+          :ok ->
             choice_session_type
             # Add indices
             |> Enum.with_index()
@@ -163,21 +137,20 @@ defmodule ElixirSessions.Code do
             |> to_choice
             # [{:choice, map}]
             |> to_list
-          else
+
+          :error ->
             _ =
               Logger.error(
                 "When making a choice (in case statement), you need to have a 'send' as the first item"
               )
 
             []
-          end
-      end
-
-    result
+        end
+    end
   end
 
   def infer_session_type({:=, _meta, [_left, right]}, info) do
-    IO.puts("\n~~pattern matchin (=):")
+    IO.puts("\npattern matchin (=):")
     # IO.inspect(right)
 
     infer_session_type(right, info)
@@ -238,7 +211,7 @@ defmodule ElixirSessions.Code do
 
           Enum.map(stuff, fn x -> [{:recv, 'type'}] ++ infer_session_type(x, info) end)
           # Remove any :nils
-          |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+          |> Enum.map(fn x -> remove_nils(x) end)
           # Add indices
           |> Enum.with_index()
           # Fetch keys by index
@@ -257,10 +230,10 @@ defmodule ElixirSessions.Code do
   end
 
   def infer_session_type({:->, _meta, [_head | body]}, info) do
-    IO.puts("\n~~->:")
+    IO.puts("\n->:")
     res = infer_session_type(body, info)
 
-    IO.puts("\n~~-> (result):")
+    IO.puts("\n-> (result):")
     # IO.inspect(res)
     res
   end
@@ -272,14 +245,13 @@ defmodule ElixirSessions.Code do
     [{:call_recurse, :X}]
   end
 
-  def infer_session_type({:|>, _meta, [left, right]}, info) do
+  def infer_session_type({:|>, _meta, args}, info) do
     # Pipe operator
-    (infer_session_type(left, info) ++ infer_session_type(right, info))
-    |> Enum.filter(&(!is_nil(&1)))
+    infer_session_type(args, info)
   end
 
   def infer_session_type(_, _info) do
-    IO.puts("\n~~Unknown:")
+    IO.puts("\nUnknown:")
     # IO.inspect(x)
 
     []
@@ -348,9 +320,13 @@ defmodule ElixirSessions.Code do
   end
 
   defp contains_recursion?({x, args}) when x in [:branch, :choice] and is_map(args) do
+    # args = %{label1: [do_stuff, ...], ...}
     args
+    # {[label1, ...], [[do_stuff, ...]]}
     |> Enum.unzip()
+    # [[do_stuff, ...]]
     |> elem(1)
+    # [do_stuff, ...]
     |> List.flatten()
     |> contains_recursion?()
   end
@@ -376,6 +352,11 @@ defmodule ElixirSessions.Code do
 
   defp to_choice(x) do
     {:choice, x}
+  end
+
+  defp remove_nils(args) when is_list(args) do
+    args
+    |> Enum.filter(fn x -> !is_nil(x) end)
   end
 
   # Returns the first element from a tuple in AST form
@@ -441,8 +422,8 @@ defmodule ElixirSessions.Code do
 
     body =
       quote do
-        # send(self(), {:ping, self()})
-        # send(self(), {:ping, self()})
+        send(self(), {:ping, self()})
+        send(self(), {:ping, self()})
 
         a = true
 
@@ -471,6 +452,7 @@ defmodule ElixirSessions.Code do
 
         case true do
           true -> :ok
+          false -> :not_okkkk
         end
 
         receive do
@@ -503,14 +485,8 @@ defmodule ElixirSessions.Code do
       end
 
     session_type = [send: '{:ping, pid}', recv: '{:pong}']
-    # a = Macro.prewalk(body, fn x -> Macro.expand(x, __ENV__) end)
-    # IO.inspect(a)
 
-    # IO.inspect Macro.expand(body, __ENV__)
-    # IO.puts("_b = ")
-    # IO.inspect(body)
     walk_ast(fun, body, session_type)
-
     # body
   end
 end
