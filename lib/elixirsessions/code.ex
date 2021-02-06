@@ -5,9 +5,30 @@ defmodule ElixirSessions.Code do
   Performs the AST comparison with the session types.
   """
 
+  @type ast() :: Macro.t()
+  @type info() :: %{
+          # recursion: boolean(),
+          call_recursion: String.t,
+          function_name: any,
+          session_type: any
+        }
+
+  @type branch_type() :: %{atom => session_type}
+  @type choice_type() :: %{atom => session_type}
+  @type session_type() ::
+          [
+            {:recv, any}
+            | {:send, any}
+            | {:branch, branch_type}
+            | {:call_recurse, any}
+            | {:choice, choice_type}
+            | {:recurse, any, session_type}
+          ]
+
   @doc """
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.
   """
+  @spec walk_ast(atom(), ast(), session_type()) :: session_type()
   def walk_ast(fun, body, session_type) do
     IO.inspect(fun)
     IO.inspect(body)
@@ -23,34 +44,34 @@ defmodule ElixirSessions.Code do
   end
 
   @doc """
-  Infers the session type of the function `fun` given its `body`.
+  Infers the session type of the function `fun` given its `body` (including recursion).
   """
+  @spec infer_session_type_incl_recursion(atom(), ast(), session_type()) :: session_type()
   def infer_session_type_incl_recursion(fun, body, expected_session_type) do
-    recursion = contains_recursion?(body, fun)
     # todo maybe add __module__
     info = %{
-      recursion: recursion,
+      # recursion: recursion,
       call_recursion: "X",
       function_name: fun,
       session_type: expected_session_type
     }
 
+    inferred_session_type = infer_session_type(body, info)
+    recursion = contains_recursion?(inferred_session_type)
+
+    IO.puts("CONTAINSSSSSS rec #{recursion}")
+
     case recursion do
-      true -> [{:recurse, X, infer_session_type(body, info)}]
-      false -> infer_session_type(body, info)
+      true -> [{:recurse, X, inferred_session_type}]
+      false -> inferred_session_type
     end
   end
 
-  @type ast() :: Macro.t()
-  @type info() :: %{
-          recursion: boolean(),
-          call_recursion: String.t(),
-          function_name: any,
-          session_type: any()
-        }
-  @spec infer_session_type(ast, info) :: any
+  @doc """
+  Given an AST and the info, `infer_session_type/2` infers its session type (excluding recursion).
+  """
   def infer_session_type(node, info)
-
+  @spec infer_session_type(ast, info) :: session_type()
   #### Checking for AST literals
   # :atoms, 123, 3.12 (numbers), [1,2,3] (list), "string", {:ok, 1} (short tuples)
   def infer_session_type(x, _info) when is_atom(x) do
@@ -120,77 +141,66 @@ defmodule ElixirSessions.Code do
     res
   end
 
-  # todo: when checking for case AST; if it does not contain send/receive, skip
-  def infer_session_type({:case, _, [_what_you_are_checking, body]} = ast, info)
+  def infer_session_type({:case, _, [_what_you_are_checking, body]}, info)
       when is_list(body) do
     IO.puts("\n~~case:")
 
-    if contains_send_receive?(ast) do
-      IO.puts("\nCONTAINS SEND/RECEIVE")
-      # todo check if all cases neen to have send/receive
-      stuff =
-        case List.keyfind(body, :do, 0) do
-          {:do, x} ->
-            _ = Logger.warn("WARNING: function not finished yet.")
-            x
+    cases =
+      case List.keyfind(body, :do, 0) do
+        {:do, x} ->
+          x
 
-          _ ->
-            # should never happen
-            _ = Logger.error("In case, cannot find 'do'")
+        _ ->
+          # should never happen
+          _ = Logger.error("In case, cannot find 'do'")
+          []
+      end
+
+    result =
+      case length(cases) do
+        0 ->
+          []
+
+        1 ->
+          # todo check if ok with just 1 options
+          infer_session_type(cases, info)
+
+        _ ->
+          # Greater than 1
+
+          keys = Enum.map(cases, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
+
+          choice_session_type =
+            Enum.map(cases, fn x -> infer_session_type(x, info) end)
+            # Remove any :nils
+            |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
+
+          # Ensure that all cases start with a 'send'
+
+          if ensure_send(choice_session_type) == :ok do
+            choice_session_type
+            # Add indices
+            |> Enum.with_index()
+            # Fetch keys by index
+            # |> Enum.map(fn {x, y} -> {y, x} end)
+            |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
+            # Convert to map
+            |> Map.new()
+            # {:choice, map}
+            |> to_choice
+            # [{:choice, map}]
+            |> to_list
+          else
+            _ =
+              Logger.error(
+                "When making a choice (in case statement), you need to have a 'send' as the first item"
+              )
+
             []
-        end
+          end
+      end
 
-      result =
-        case length(stuff) do
-          0 ->
-            []
-
-          1 ->
-            # todo check if ok with just 1 options
-            infer_session_type(stuff, info)
-
-          _ ->
-            # Greater than 1
-
-            keys =
-              Enum.map(stuff, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
-
-            choice_session_type =
-              Enum.map(stuff, fn x -> infer_session_type(x, info) end)
-              # Remove any :nils
-              |> Enum.map(fn x -> Enum.filter(x, &(!is_nil(&1))) end)
-
-            # Ensure that all cases start with a 'send'
-
-            if ensure_send(choice_session_type) == :ok do
-              choice_session_type
-              # Add indices
-              |> Enum.with_index()
-              # Fetch keys by index
-              # |> Enum.map(fn {x, y} -> {y, x} end)
-              |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
-              # Convert to map
-              |> Map.new()
-              # {:choice, map}
-              |> to_choice
-              # [{:choice, map}]
-              |> to_list
-            else
-              _ =
-                Logger.error(
-                  "When making a choice (in case statement), you need to have a 'send' as the first item"
-                )
-
-              []
-            end
-        end
-
-      result
-    else
-      IO.puts("\nDOES NOT CONTAIN SEND/RECEIVE")
-
-      []
-    end
+    result
   end
 
   def infer_session_type({:=, _meta, [_left, right]}, info) do
@@ -282,18 +292,11 @@ defmodule ElixirSessions.Code do
     res
   end
 
-  def infer_session_type({function_name, _, _}, %{recursion: true, function_name: function_name}) do
+  def infer_session_type({function_name, _, _}, %{function_name: function_name}) do
     IO.puts("\nRecurse on #{IO.inspect(function_name)}:")
 
     # todo replace instead of (only) X
     [{:call_recurse, :X}]
-  end
-
-  def infer_session_type({function_name, _, _}, %{recursion: false, function_name: function_name}) do
-    # Should never be called
-    _ = Logger.error("Error while recursing")
-
-    []
   end
 
   def infer_session_type({:|>, _, [left, right]}, info) do
@@ -312,114 +315,6 @@ defmodule ElixirSessions.Code do
   # todo macro expand (including expand if statements)
 
   #########################################################
-
-  # todo: replace contains_send_receive? and contains_recursion? with Macro.prewalk()
-  ### Checks if (case) contains send/receive
-  defp contains_send_receive?({:case, _, [_what_you_are_checking, body]})
-       when is_list(body) do
-    # [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
-
-    stuff =
-      case List.keyfind(body, :do, 0) do
-        {:do, x} -> x
-        _ -> []
-      end
-
-    IO.puts("\nCHECKING IF CONTAINS SEND RECEIVE")
-    # IO.inspect(stuff)
-    contains_send_receive?(stuff)
-  end
-
-  defp contains_send_receive?([a]) do
-    contains_send_receive?(a)
-  end
-
-  defp contains_send_receive?([a, b]) do
-    contains_send_receive?(a) || contains_send_receive?(b)
-  end
-
-  defp contains_send_receive?([a, b, c]) do
-    contains_send_receive?(a) || contains_send_receive?(b) || contains_send_receive?(c)
-  end
-
-  defp contains_send_receive?({:->, _meta, args}) do
-    # head contains info related to 'when'
-    [_head | tail] = args
-    # IO.puts("Checking tail:")
-    # IO.inspect(tail)
-    contains_send_receive?(tail)
-  end
-
-  defp contains_send_receive?({:__block__, _meta, args}) when is_list(args) do
-    {_, result} =
-      Enum.map_reduce(args, false, fn x, acc ->
-        {contains_send_receive?(x), acc || contains_send_receive?(x)}
-      end)
-
-    result
-  end
-
-  defp contains_send_receive?({definition, _, _}) when definition in [:send, :receive] do
-    true
-  end
-
-  defp contains_send_receive?(_) do
-    false
-  end
-
-  ### Checks if contains send/receive
-  defp contains_recursion?({:case, _, [_what_you_are_checking, body]}, function_name)
-       when is_list(body) do
-    # [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
-
-    stuff =
-      case List.keyfind(body, :do, 0) do
-        {:do, x} -> x
-        _ -> []
-      end
-
-    # IO.puts("\nCHECKING IF CONTAINS RECURSION")
-    # IO.inspect(stuff)
-    contains_recursion?(stuff, function_name)
-  end
-
-  defp contains_recursion?([a], function_name) do
-    contains_recursion?(a, function_name)
-  end
-
-  defp contains_recursion?([a, b], function_name) do
-    contains_recursion?(a, function_name) || contains_recursion?(b, function_name)
-  end
-
-  defp contains_recursion?([a, b, c], function_name) do
-    contains_recursion?(a, function_name) || contains_recursion?(b, function_name) ||
-      contains_recursion?(c, function_name)
-  end
-
-  defp contains_recursion?({:->, _meta, args}, function_name) do
-    # head contains info related to 'when'
-    [_head | tail] = args
-    contains_recursion?(tail, function_name)
-  end
-
-  defp contains_recursion?({:__block__, _meta, args}, function_name) when is_list(args) do
-    {_, result} =
-      Enum.map_reduce(args, false, fn x, acc ->
-        {contains_recursion?(x, function_name), acc || contains_recursion?(x, function_name)}
-      end)
-
-    result
-  end
-
-  defp contains_recursion?({function_name, _, _}, function_name) do
-    # Recursion occurs here, since {function_name, _, _} calls the current function
-    # todo: case when same function is called via module name e.g. Module.function_name
-    true
-  end
-
-  defp contains_recursion?(_, _function_name) do
-    false
-  end
 
   ### Returns the label of the first send encountered: send(pid, {:label, data, ...})
   defp get_label_of_first_send({:case, _, [_what_you_are_checking, body]})
@@ -496,6 +391,35 @@ defmodule ElixirSessions.Code do
     nil
   end
 
+  # Check if it contains {call_recurse, :X}
+  @spec contains_recursion?(ast) :: boolean()
+  defp contains_recursion?(ast)
+
+  defp contains_recursion?(x) when is_list(x) do
+    Enum.reduce(x, false, fn elem, acc -> acc || contains_recursion?(elem) end)
+  end
+
+  defp contains_recursion?({x, _}) when x in [:send, :recv] do
+    false
+  end
+
+  defp contains_recursion?({x, args}) when x in [:branch, :choice] and is_map(args) do
+    args
+    |> Enum.unzip()
+    |> elem(1)
+    |> List.flatten()
+    |> contains_recursion?()
+  end
+
+  defp contains_recursion?({:call_recurse, _}) do
+    true
+  end
+
+  defp contains_recursion?(_) do
+    _ = Logger.error("Unknown input for contains_recursion?/1")
+    false
+  end
+
   ####### Helper functions
 
   defp to_list(x) do
@@ -565,6 +489,7 @@ defmodule ElixirSessions.Code do
   end
 
   # recompile && ElixirSessions.Code.run
+  @spec run :: session_type()
   def run() do
     fun = :ping
 
@@ -573,7 +498,7 @@ defmodule ElixirSessions.Code do
         # send(self(), {:ping, self()})
         # send(self(), {:ping, self()})
 
-        # a = true
+        a = true
 
         case a do
           true ->

@@ -170,4 +170,7 @@ defmodule ElixirSessions.Generator do
         )
     end
   end
+
+  # def(unquote(fundef),unquote([do: metered]))
+
 end

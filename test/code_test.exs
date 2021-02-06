@@ -275,6 +275,29 @@ defmodule CodeTest do
     assert inferred_session_type == expected_session_type
   end
 
+  test "case with no send/receive" do
+    fun = :ping
+
+    body =
+      quote do
+        send(self(), :okkk)
+
+        a = true
+
+        case a do
+          true -> 1 + 3
+          false -> 1..3 |> Enum.map(&(&1 * 2))
+        end
+      end
+
+    expected_session_type = [send: 'type']
+
+    inferred_session_type =
+      ElixirSessions.Code.infer_session_type_incl_recursion(fun, body, expected_session_type)
+
+    assert inferred_session_type == expected_session_type
+  end
+
   test "ensure_send - ok" do
     cases = [
       [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}],
