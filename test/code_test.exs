@@ -248,7 +248,7 @@ defmodule CodeTest do
         ping()
       end
 
-    expected_session_type = [{:recurse, X, [send: 'type', call_recurse: :X]}]
+    expected_session_type = [{:recurse, :X, [send: 'type', call_recurse: :X]}]
 
     inferred_session_type =
       ElixirSessions.Code.infer_session_type_incl_recursion(fun, body)
@@ -268,6 +268,25 @@ defmodule CodeTest do
       end
 
     expected_session_type = [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}, {:send, 'type'}]
+
+    inferred_session_type =
+      ElixirSessions.Code.infer_session_type_incl_recursion(fun, body)
+
+    assert inferred_session_type == expected_session_type
+  end
+
+  test "function infer" do
+    fun = :ping
+
+    body =
+      quote do
+        def ping() do
+          send(self(), {:ok})
+          :done
+        end
+      end
+
+    expected_session_type = [{:send, 'type'}]
 
     inferred_session_type =
       ElixirSessions.Code.infer_session_type_incl_recursion(fun, body)
