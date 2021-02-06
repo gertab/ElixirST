@@ -8,7 +8,7 @@ defmodule ElixirSessions.Code do
   @type ast() :: Macro.t()
   @type info() :: %{
           # recursion: boolean(),
-          call_recursion: String.t,
+          call_recursion: String.t(),
           function_name: any,
           session_type: any
         }
@@ -95,53 +95,26 @@ defmodule ElixirSessions.Code do
   def infer_session_type({_a, _b}, _info) do
     IO.puts("\n~~Tuple: ")
 
-    # todo check if ok
+    # todo check if ok, maybe check each element
     []
   end
 
-  def infer_session_type([a], info) do
-    IO.puts("\n~~Short list (1):")
-    # IO.inspect(a)
+  def infer_session_type(args, info) when is_list(args) do
+    IO.puts("\n~~list:")
 
-    infer_session_type(a, info)
-    |> Enum.filter(&(!is_nil(&1)))
-  end
-
-  def infer_session_type([a, b], info) do
-    IO.puts("\n~~Short list (2):")
-    # IO.inspect(a)
-    # IO.inspect(b)
-
-    (infer_session_type(a, info) ++ infer_session_type(b, info))
-    |> Enum.filter(&(!is_nil(&1)))
-  end
-
-  def infer_session_type([a, b, c], info) do
-    IO.puts("\n~~Short list (3):")
-    # IO.inspect(a)
-    # IO.inspect(b)
-    # IO.inspect(c)
-
-    (infer_session_type(a, info) ++ infer_session_type(b, info) ++ infer_session_type(c, info))
+    Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type(x, info) end)
     |> Enum.filter(&(!is_nil(&1)))
   end
 
   #### AST checking for non literals
   def infer_session_type({:__block__, _meta, args}, info) do
     IO.puts("\n~~Block: ")
-    # IO.inspect(args)
 
-    res =
-      Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type(x, info) end)
-      |> Enum.filter(&(!is_nil(&1)))
-
-    IO.puts("\n~~Block (result): ")
-    # IO.inspect(res)
-
-    res
+    infer_session_type(args, info)
+    # IO.inspect(infer_session_type(args, info))
   end
 
-  def infer_session_type({:case, _, [_what_you_are_checking, body]}, info)
+  def infer_session_type({:case, _meta, [_what_you_are_checking, body]}, info)
       when is_list(body) do
     IO.puts("\n~~case:")
 
@@ -210,12 +183,12 @@ defmodule ElixirSessions.Code do
     infer_session_type(right, info)
   end
 
-  def infer_session_type({:send, _, _}, _info) do
+  def infer_session_type({:send, _meta, _}, _info) do
     # todo fix type
     [{:send, 'type'}]
   end
 
-  def infer_session_type({:receive, _, [body]}, info) do
+  def infer_session_type({:receive, _meta, [body]}, info) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
 
     IO.puts("\nRECEIVE")
@@ -283,7 +256,7 @@ defmodule ElixirSessions.Code do
     result
   end
 
-  def infer_session_type({:->, _, [_head | body]}, info) do
+  def infer_session_type({:->, _meta, [_head | body]}, info) do
     IO.puts("\n~~->:")
     res = infer_session_type(body, info)
 
@@ -292,14 +265,14 @@ defmodule ElixirSessions.Code do
     res
   end
 
-  def infer_session_type({function_name, _, _}, %{function_name: function_name}) do
+  def infer_session_type({function_name, _meta, _}, %{function_name: function_name}) do
     IO.puts("\nRecurse on #{IO.inspect(function_name)}:")
 
     # todo replace instead of (only) X
     [{:call_recurse, :X}]
   end
 
-  def infer_session_type({:|>, _, [left, right]}, info) do
+  def infer_session_type({:|>, _meta, [left, right]}, info) do
     # Pipe operator
     (infer_session_type(left, info) ++ infer_session_type(right, info))
     |> Enum.filter(&(!is_nil(&1)))
@@ -317,8 +290,11 @@ defmodule ElixirSessions.Code do
   #########################################################
 
   ### Returns the label of the first send encountered: send(pid, {:label, data, ...})
-  defp get_label_of_first_send({:case, _, [_what_you_are_checking, body]})
-       when is_list(body) do
+  @spec get_label_of_first_send(ast()) :: atom()
+  def get_label_of_first_send(ast)
+
+  def get_label_of_first_send({:case, _, [_what_you_are_checking, body]})
+      when is_list(body) do
     # [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
 
     stuff =
@@ -330,44 +306,18 @@ defmodule ElixirSessions.Code do
     get_label_of_first_send(stuff)
   end
 
-  defp get_label_of_first_send([a]) do
-    get_label_of_first_send(a)
+  def get_label_of_first_send(args) when is_list(args) do
+    Enum.map(args, fn x -> get_label_of_first_send(x) end)
+    |> first_non_nil()
   end
 
-  defp get_label_of_first_send([a, b]) do
-    x = get_label_of_first_send(a)
-
-    if x == nil do
-      get_label_of_first_send(b)
-    else
-      x
-    end
-  end
-
-  defp get_label_of_first_send([a, b, c]) do
-    # Returns the first non nil result
-    x = get_label_of_first_send(a)
-
-    if x == nil do
-      y = get_label_of_first_send(b)
-
-      if x == nil do
-        get_label_of_first_send(c)
-      else
-        y
-      end
-    else
-      x
-    end
-  end
-
-  defp get_label_of_first_send({:->, _meta, args}) do
+  def get_label_of_first_send({:->, _meta, args}) do
     # head contains info related to 'when'
     [_head | tail] = args
     get_label_of_first_send(tail)
   end
 
-  defp get_label_of_first_send({:send, _meta, [_to, data]}) do
+  def get_label_of_first_send({:send, _meta, [_to, data]}) do
     case first_elem_in_tuple_node(data) do
       nil ->
         _ = Logger.error("The data in send should be of the format: {:label, ...}")
@@ -377,23 +327,17 @@ defmodule ElixirSessions.Code do
     end
   end
 
-  defp get_label_of_first_send({:__block__, _meta, args}) when is_list(args) do
-    Enum.map(args, fn x -> get_label_of_first_send(x) end)
-    |> first_non_nil()
-    |> IO.inspect()
-
-    # Returns the first non nil result
-
-    # result
+  def get_label_of_first_send({:__block__, _meta, args}) when is_list(args) do
+    get_label_of_first_send(args)
   end
 
-  defp get_label_of_first_send(_) do
+  def get_label_of_first_send(_) do
     nil
   end
 
-  # Check if it contains {call_recurse, :X}
-  @spec contains_recursion?(ast) :: boolean()
-  defp contains_recursion?(ast)
+  # Check if a given  contains {call_recurse, :X}
+  @spec contains_recursion?(session_type()) :: boolean()
+  defp contains_recursion?(session_type)
 
   defp contains_recursion?(x) when is_list(x) do
     Enum.reduce(x, false, fn elem, acc -> acc || contains_recursion?(elem) end)
@@ -441,6 +385,7 @@ defmodule ElixirSessions.Code do
   # {1, 2}                   # {1,2}
   # {:{}, [], [1, 2, 3]}     # {1,2,3}
   # {:{}, [], [1, 2, 3, 4]}  # {1,2,3,4}
+  @spec first_elem_in_tuple_node(ast()) :: atom()
   def first_elem_in_tuple_node(x) when is_atom(x), do: x
   def first_elem_in_tuple_node({x, _}), do: x
   def first_elem_in_tuple_node({:{}, [], [x]}), do: x
@@ -460,6 +405,7 @@ defmodule ElixirSessions.Code do
 
   @doc false
   # Given a list (of list), checks each inner list and ensure that it contains {:send, type} as the first element
+  @spec ensure_send(ast()) :: :error | :ok
   def ensure_send(cases) do
     check =
       Enum.map(cases, fn
