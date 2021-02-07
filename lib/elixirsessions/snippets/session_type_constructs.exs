@@ -1,4 +1,3 @@
-
 # Send type
 send = "send 'any'"
 send_session_type = [send: 'any']

@@ -30,19 +30,22 @@ defmodule ElixirSessions.Checking do
         [session | _] = sessions
         s = ElixirSessions.Parser.parse(session)
 
-        inferred_session_type =
-          case s do
-            # {:ok , _session_type} -> :ok
-            {:ok, session_type} ->
-              ElixirSessions.Code.walk_ast(name, body[:do], session_type)
+        case s do
+          {:ok, _session_type} ->
+            :ok
 
-            _ ->
-              _ = Logger.error("Leex error")
-              :ok
-          end
+          # {:ok, session_type} ->
+          # ElixirSessions.Code.walk_ast(name, body[:do], session_type)
 
-          IO.puts("Inferred sesssion type for: #{name}")
-          IO.inspect(inferred_session_type)
+          _ ->
+            _ = Logger.error("Leex error")
+            :ok
+        end
+
+        inferred_session_type = ElixirSessions.Code.walk_ast(name, body[:do], [])
+
+        IO.puts("\nInferred sesssion type for: #{name}")
+        IO.inspect(inferred_session_type)
         # ElixirSessions.Parser.parse(session)
         # IO.inspect(name)
       end

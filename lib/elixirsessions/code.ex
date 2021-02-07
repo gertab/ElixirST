@@ -446,8 +446,7 @@ defmodule ElixirSessions.Code do
   @spec first_elem_in_tuple_node(ast()) :: atom()
   def first_elem_in_tuple_node(x) when is_atom(x), do: x
   def first_elem_in_tuple_node({x, _}), do: x
-  def first_elem_in_tuple_node({:{}, [], [x]}), do: x
-  def first_elem_in_tuple_node({:{}, [], [x | _]}), do: x
+  def first_elem_in_tuple_node({:{}, _, x}) when is_list(x), do: hd(x)
   def first_elem_in_tuple_node(_), do: nil
 
   # Returns first non nil element in a list

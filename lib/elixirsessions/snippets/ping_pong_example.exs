@@ -16,6 +16,14 @@ def ping(pid) when is_pid(pid) do
   end
 end
 
+# Inferred session type:
+inferred_session_type =
+  [send: 'type', recv: 'type']
+
+
+
+
+
 # AST of Elixir ping() function [automated]
 AST =
 [
