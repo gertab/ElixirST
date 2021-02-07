@@ -21,24 +21,6 @@ defmodule ElixirSessions.ArithmeticServer do
   A simple artihmetic server that is able to do addition and negation of numbers.
   """
   @session "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
-  # def arith_serv() do
-  #   receive do
-  #     {:add} ->
-  #       receive do
-  #         {num1, num2, pid} ->
-  #           IO.puts("[server] #{num1} + #{num2}")
-  #           send(pid, {num1 + num2})
-  #       end
-
-  #     {:neg} ->
-  #       receive do
-  #         {num, pid} ->
-  #           IO.puts("[server] neg of #{num}")
-  #           send(pid, {-num})
-  #       end
-  #   end
-  # end
-
   def arith_serv() do
     receive do
       {:add, num1, num2, pid} ->

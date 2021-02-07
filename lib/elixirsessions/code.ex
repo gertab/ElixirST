@@ -88,8 +88,8 @@ defmodule ElixirSessions.Code do
   """
   @spec walk_ast(atom(), ast(), session_type()) :: session_type()
   def walk_ast(fun, body, _session_type) do
-    IO.inspect(fun)
-    IO.inspect(body)
+    # IO.inspect(fun)
+    # IO.inspect(body)
 
     infer_session_type_incl_recursion(fun, body)
   end
@@ -153,20 +153,20 @@ defmodule ElixirSessions.Code do
   #### Checking for AST literals
   # :atoms, 123, 3.12 (numbers), [1,2,3] (list), "string", {:ok, 1} (short tuples)
   def infer_session_type(x, _info) when is_atom(x) or is_number(x) or is_binary(x) do
-    IO.puts("\nAtom/Number/String: #{IO.inspect(x)}")
+    # IO.puts("\nAtom/Number/String: #{IO.inspect(x)}")
 
     []
   end
 
   def infer_session_type({_a, _b}, _info) do
-    IO.puts("\nTuple: ")
+    # IO.puts("\nTuple: ")
 
     # todo check if ok, maybe check each element
     []
   end
 
   def infer_session_type(args, info) when is_list(args) do
-    IO.puts("\nlist:")
+    # IO.puts("\nlist:")
 
     Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type(x, info) end)
     |> remove_nils()
@@ -174,14 +174,14 @@ defmodule ElixirSessions.Code do
 
   #### AST checking for non literals
   def infer_session_type({:__block__, _meta, args}, info) do
-    IO.puts("\nBlock: ")
+    # IO.puts("\nBlock: ")
 
     infer_session_type(args, info)
   end
 
   def infer_session_type({:case, _meta, [_what_you_are_checking, body]}, info)
       when is_list(body) do
-    IO.puts("\ncase:")
+    # IO.puts("\ncase:")
 
     cases = body[:do]
 
@@ -231,7 +231,7 @@ defmodule ElixirSessions.Code do
   end
 
   def infer_session_type({:=, _meta, [_left, right]}, info) do
-    IO.puts("\npattern matchin (=):")
+    # IO.puts("\npattern matchin (=):")
     # IO.inspect(right)
 
     infer_session_type(right, info)
@@ -245,11 +245,11 @@ defmodule ElixirSessions.Code do
   def infer_session_type({:receive, _meta, [body]}, info) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
 
-    IO.puts("\nRECEIVE")
+    # IO.puts("\nRECEIVE")
 
     cases = body[:do]
 
-    IO.puts("Receive body size = #{length(cases)}")
+    # IO.puts("Receive body size = #{length(cases)}")
 
     case length(cases) do
       0 ->
@@ -301,19 +301,19 @@ defmodule ElixirSessions.Code do
   end
 
   def infer_session_type({:->, _meta, [_head | body]}, info) do
-    IO.puts("\n->:")
-    res = infer_session_type(body, info)
+    # IO.puts("\n->:")
+    infer_session_type(body, info)
 
-    IO.puts("\n-> (result):")
+    # IO.puts("\n-> (result):")
     # IO.inspect(res)
-    res
+    # res
   end
 
   def infer_session_type({function_name, _meta, _}, %{
         function_name: function_name,
         call_recursion: recurse
       }) do
-    IO.puts("\nRecurse on #{IO.inspect(function_name)}:")
+    # IO.puts("\nRecurse on #{IO.inspect(function_name)}:")
 
     # todo replace instead of (only) X
     [{:call_recurse, recurse}]
@@ -330,7 +330,7 @@ defmodule ElixirSessions.Code do
   end
 
   def infer_session_type(_, _info) do
-    IO.puts("\nUnknown:")
+    # IO.puts("\nUnknown:")
     []
   end
 
