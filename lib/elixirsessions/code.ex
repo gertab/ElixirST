@@ -256,7 +256,7 @@ defmodule ElixirSessions.Code do
         []
 
       1 ->
-        [{:recv, 'type'}]
+        [{:recv, 'type'}] ++ infer_session_type(cases, info)
 
       _ ->
         # Greater than 1

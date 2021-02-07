@@ -37,7 +37,7 @@ defmodule ElixirSessions.PingPong do
   @doc """
   Receives a `:ping` and sends a `:pong`.
   """
-  @session "receive '{:ping, pid}' . send '{:pong}'"
+  # @session "receive '{:ping, pid}' . send '{:pong}'"
   def pong() do
     receive do
       {:ping, pid} ->

@@ -238,6 +238,27 @@ defmodule CodeTest do
     assert inferred_session_type == expected_session_type
   end
 
+
+  test "receive 1 case infer" do
+    fun = :ping
+
+    body =
+      quote do
+        receive do
+          {:ping, pid} ->
+            IO.puts("Received ping from #{inspect pid}. Replying pong from #{inspect self()} to #{inspect pid}")
+            send(pid, {:pong})
+        end
+      end
+
+    expected_session_type = [recv: 'type', send: 'type']
+
+    inferred_session_type =
+      ElixirSessions.Code.infer_session_type_incl_recursion(fun, body)
+
+    assert inferred_session_type == expected_session_type
+  end
+
   test "recursion infer" do
     fun = :ping
 
