@@ -26,12 +26,15 @@ defmodule ElixirSessions.PingPong do
   @session "send '{:ping, pid}' . receive '{:pong}'"
   def ping(pid) when is_pid(pid) do
     IO.puts("Sending ping to #{inspect pid}")
+
     send(pid, {:ping, self()})
 
     receive do
       {:pong} ->
         IO.puts("Received pong!")
     end
+
+    ping(pid)
   end
 
   @doc """

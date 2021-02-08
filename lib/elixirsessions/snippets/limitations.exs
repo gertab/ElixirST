@@ -29,3 +29,5 @@ end
 
 # certain macrcos are not currently included [todo: expand to case]
 e.g. if clause, unless clause, ...
+
+# works using Elixir AST/macros -> any changes in the Elixir lang might break this project

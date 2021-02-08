@@ -37,6 +37,7 @@ defmodule ElixirSessions.Code do
 
 
   todo: AST comparison (not just inference) with the expected session types.
+  Add runtime check for types: e.g. is_integer, is_atom, ...
   """
 
   @typedoc """

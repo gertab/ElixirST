@@ -27,10 +27,14 @@ defmodule ElixirSessions.Checking do
   def __on_definition__(env, _access, name, _args, _guards, body) do
     if sessions = Module.get_attribute(env.module, :session) do
       if length(sessions) > 0 do
-        [session | _] = sessions
+        session = hd(sessions)
         s = ElixirSessions.Parser.parse(session)
 
         case s do
+          # {:ok, session_type} ->
+          #   IO.puts("\nSession type: #{session}")
+          #   IO.inspect(session_type)
+
           {:ok, _session_type} ->
             :ok
 
