@@ -50,7 +50,7 @@ defmodule ElixirSessions.ArithmeticServer do
   @doc """
   Another client which interacts with `arith_serv()`.
   """
-  @session "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
+  @session "send '{label}'. choice<neg: send '{number, pid}' . receive '{number}'>"
   def attempt2(server) when is_pid(server) do
     send(server, {:neg})
     send(server, {54, self()})

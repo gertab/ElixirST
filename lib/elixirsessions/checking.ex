@@ -31,27 +31,26 @@ defmodule ElixirSessions.Checking do
         s = ElixirSessions.Parser.parse(session)
 
         case s do
-          # {:ok, session_type} ->
-          #   IO.puts("\nSession type: #{session}")
-          #   IO.inspect(session_type)
-
-          {:ok, _session_type} ->
+          {:error, {line, _, message}} ->
+            _ = Logger.error("Session type parsing error on line #{line}: #{inspect(message)}")
             :ok
 
-          # {:ok, session_type} ->
-          # ElixirSessions.Inference.walk_ast(name, body[:do], session_type)
+          {:error, x} ->
+            _ = Logger.error("Session type parsing error: #{inspect(x)}")
+            :ok
 
-          _ ->
-            _ = Logger.error("Leex error")
+          session_type when is_list(session_type) ->
+            ElixirSessions.SessionTypechecking.walk_ast(name, body[:do], session_type)
+            :ok
+
+          x ->
+            _ = Logger.error("Leex/Yecc error #{inspect(x)}")
             :ok
         end
 
-        inferred_session_type = ElixirSessions.Inference.walk_ast(name, body[:do], [])
-
-        IO.puts("\nInferred sesssion type for: #{name}")
-        IO.inspect(inferred_session_type)
-        # ElixirSessions.Parser.parse(session)
-        # IO.inspect(name)
+        # inferred_session_type = ElixirSessions.Inference.walk_ast(name, body[:do], [])
+        # IO.puts("\nInferred sesssion type for: #{name}")
+        # IO.inspect(inferred_session_type)
       end
     end
 
