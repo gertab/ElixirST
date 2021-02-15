@@ -23,3 +23,5 @@ erl_crash.dump
 elixirsessions-*.tar
 
 notes.txt
+
+/src/*.erl

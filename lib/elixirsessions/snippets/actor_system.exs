@@ -100,4 +100,32 @@ defmodule ActorSystem do
 
     # todo rec, branch,
   end
+
+  defmodule Check do
+    # Send functions
+
+    def start() do
+      i = spawn(fn -> i() end)
+      j = spawn(fn -> j(i) end)
+    end
+
+    def i() do
+      receive do
+        {:function, add} ->
+          IO.puts(add(1,4))
+
+        after 1000 ->
+          IO.puts("timout")
+      end
+
+    end
+
+    def j(i) do
+      send(i, {:function, &add/2})
+    end
+
+    def add(x, y) do
+      x + y
+    end
+  end
 end
