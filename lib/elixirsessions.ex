@@ -2,7 +2,7 @@ defmodule ElixirSessions do
   @moduledoc """
   Documentation for Elixirsessions.
 
-  Session type inference is done in `ElixirSessions.Code`.
+  Session type inference is done in `ElixirSessions.Inference`.
   """
 
   @doc """

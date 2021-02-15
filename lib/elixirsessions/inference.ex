@@ -1,4 +1,4 @@
-defmodule ElixirSessions.Code do
+defmodule ElixirSessions.Inference do
   require Logger
 
   @moduledoc """
@@ -22,7 +22,7 @@ defmodule ElixirSessions.Code do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Code.walk_ast(:ping, ast, [])
+          ...> ElixirSessions.Inference.walk_ast(:ping, ast, [])
           [
             send: 'type',
             branch: %{
@@ -84,7 +84,7 @@ defmodule ElixirSessions.Code do
           ...>     send(self(), {:hello})
           ...>   end
           ...> end
-          ...> ElixirSessions.Code.walk_ast(:ping, ast, nil)
+          ...> ElixirSessions.Inference.walk_ast(:ping, ast, nil)
           [send: 'type']
   """
   @spec walk_ast(atom(), ast(), session_type()) :: session_type()
@@ -106,7 +106,7 @@ defmodule ElixirSessions.Code do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Code.walk_ast(:ping, ast, [])
+          ...> ElixirSessions.Inference.walk_ast(:ping, ast, [])
           [
             {:recurse, :X, [{:send, 'type'}, {:call_recurse, :X}]}
           ]
@@ -140,7 +140,7 @@ defmodule ElixirSessions.Code do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Code.infer_session_type(ast, %{})
+          ...> ElixirSessions.Inference.infer_session_type(ast, %{})
           [
             send: 'type',
             branch: %{
@@ -495,7 +495,7 @@ defmodule ElixirSessions.Code do
   @doc """
   Runs a self-contained example.
 
-  `recompile && ElixirSessions.Code.run`
+  `recompile && ElixirSessions.Inference.run`
   """
   @spec run :: session_type()
   def run() do

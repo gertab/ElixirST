@@ -39,14 +39,14 @@ defmodule ElixirSessions.Checking do
             :ok
 
           # {:ok, session_type} ->
-          # ElixirSessions.Code.walk_ast(name, body[:do], session_type)
+          # ElixirSessions.Inference.walk_ast(name, body[:do], session_type)
 
           _ ->
             _ = Logger.error("Leex error")
             :ok
         end
 
-        inferred_session_type = ElixirSessions.Code.walk_ast(name, body[:do], [])
+        inferred_session_type = ElixirSessions.Inference.walk_ast(name, body[:do], [])
 
         IO.puts("\nInferred sesssion type for: #{name}")
         IO.inspect(inferred_session_type)
