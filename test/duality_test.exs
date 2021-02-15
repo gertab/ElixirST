@@ -80,7 +80,7 @@ defmodule DualityTest do
     s = "send 'any'"
 
     session = Parser.parse(s)
-    actual = {:ok, [recv: 'any']}
+    actual = [recv: 'any']
 
     assert Duality.dual(session) == actual
   end
@@ -89,7 +89,7 @@ defmodule DualityTest do
     s = "receive 'any'"
 
     session = Parser.parse(s)
-    actual = {:ok, [send: 'any']}
+    actual = [send: 'any']
 
     assert Duality.dual(session) == actual
   end
@@ -98,7 +98,7 @@ defmodule DualityTest do
     s = "send 'any' . send 'any' . receive 'any'"
 
     session = Parser.parse(s)
-    actual = {:ok, [recv: 'any', recv: 'any', send: 'any']}
+    actual = [recv: 'any', recv: 'any', send: 'any']
 
     assert Duality.dual(session) == actual
   end
@@ -107,7 +107,7 @@ defmodule DualityTest do
     s = "branch<neg: receive '{number, pid}' . send '{number}'>"
 
     session = Parser.parse(s)
-    actual = {:ok, [choice: %{neg: [send: '{number, pid}', recv: '{number}']}]}
+    actual = [choice: %{neg: [send: '{number, pid}', recv: '{number}']}]
 
     assert Duality.dual(session) == actual
   end
@@ -116,7 +116,7 @@ defmodule DualityTest do
     s = "send '{label}' . choice<neg: send '{number, pid}' . receive '{number}'>"
 
     session = Parser.parse(s)
-    actual = {:ok, [recv: '{label}', branch: %{neg: [recv: '{number, pid}', send: '{number}']}]}
+    actual = [recv: '{label}', branch: %{neg: [recv: '{number, pid}', send: '{number}']}]
     assert Duality.dual(session) == actual
   end
 
@@ -124,7 +124,7 @@ defmodule DualityTest do
     s = "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
 
     session = Parser.parse(s)
-    actual = {:ok, [send: '{label}', choice: %{add: [send: '{number, number, pid}', recv: '{number}'], neg: [send: '{number, pid}', recv: '{number}']}]}
+    actual = [send: '{label}', choice: %{add: [send: '{number, number, pid}', recv: '{number}'], neg: [send: '{number, pid}', recv: '{number}']}]
 
     assert Duality.dual(session) == actual
   end

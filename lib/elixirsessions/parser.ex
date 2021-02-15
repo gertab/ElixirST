@@ -12,14 +12,15 @@ defmodule ElixirSessions.Parser do
 
       iex> s = "send '{number()}' . receive '{number()}'"
       ...> ElixirSessions.Parser.parse(s)
-      {:ok, [send: '{number()}', recv: '{number()}']}
+      [send: '{number()}', recv: '{number()}']
 
   """
   def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
 
   def parse(string) do
     with {:ok, tokens, _} <- lexer(string) do
-      :parse.parse(tokens)
+      {:ok, session_type} = :parse.parse(tokens)
+      session_type
     else
       err -> err
     end

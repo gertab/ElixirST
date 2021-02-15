@@ -5,7 +5,7 @@ defmodule ElixirSessions.LargerExample do
     spawn(__MODULE__, :example1, [])
   end
 
-  @session ""
+  @session "send 'any'"
   def example1() do
     pid =
       receive do

@@ -102,7 +102,7 @@ defmodule ElixirSessions.Duality do
     dual2?(session1, session2)
   end
 
-  defp dual2?({:ok, tokens1}, {:ok, tokens2}) do
+  defp dual2?(tokens1, tokens2) do
     IO.inspect(tokens1)
     IO.inspect(tokens2)
     result = check(tokens1, tokens2, %{})

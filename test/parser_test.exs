@@ -6,7 +6,7 @@ defmodule ParserTest do
   test "send session type" do
     source = "send 'any'"
 
-    expected = {:ok, [send: 'any']}
+    expected = [send: 'any']
     result = Parser.parse(source)
     assert expected == result
   end
@@ -14,7 +14,7 @@ defmodule ParserTest do
   test "receive session type" do
     source = "receive 'any'"
 
-    expected = {:ok, [recv: 'any']}
+    expected = [recv: 'any']
     result = Parser.parse(source)
     assert expected == result
   end
@@ -22,7 +22,7 @@ defmodule ParserTest do
   test "simple session type" do
     source = "send '{:ping, pid}' . receive '{:pong}'"
 
-    expected = {:ok, [send: '{:ping, pid}', recv: '{:pong}']}
+    expected = [send: '{:ping, pid}', recv: '{:pong}']
     result = Parser.parse(source)
     assert expected == result
   end
@@ -30,7 +30,7 @@ defmodule ParserTest do
   test "choice session type" do
     source = "choice<neg: send 'any'>"
 
-    expected = {:ok, [choice: %{neg: [send: 'any']}]}
+    expected = [choice: %{neg: [send: 'any']}]
     result = Parser.parse(source)
     assert expected == result
   end
@@ -38,7 +38,7 @@ defmodule ParserTest do
   test "branch session type" do
     source = "branch<neg: send 'any', neg2: send 'any'>"
 
-    expected = {:ok, [branch: %{neg: [send: 'any'], neg2: [send: 'any']}]}
+    expected = [branch: %{neg: [send: 'any'], neg2: [send: 'any']}]
     result = Parser.parse(source)
     assert expected == result
   end
@@ -46,7 +46,7 @@ defmodule ParserTest do
   test "recurse session type" do
     source = "rec X .(send 'any' . X)"
 
-    expected = {:ok, [{:recurse, :X, [send: 'any', call_recurse: :X]}]}
+    expected = [{:recurse, :X, [send: 'any', call_recurse: :X]}]
     result = Parser.parse(source)
     assert expected == result
   end
@@ -55,7 +55,7 @@ defmodule ParserTest do
     source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
 
     expected =
-      {:ok, [send: '{string}', choice: %{neg: [send: '{number, pid}', recv: '{number}']}]}
+      [send: '{string}', choice: %{neg: [send: '{number, pid}', recv: '{number}']}]
 
     result = Parser.parse(source)
     assert expected == result
@@ -66,7 +66,6 @@ defmodule ParserTest do
       " send 'any'.  rec X ( send 'any' . receive 'any' . rec Y. ( send '{number}' . receive '{any}' . rec Z . ( Z ) . receive '{any}' . Y ) . X )"
 
     expected =
-      {:ok,
        [
          {:send, 'any'},
          {:recurse, :X,
@@ -83,7 +82,7 @@ defmodule ParserTest do
              ]},
             {:call_recurse, :X}
           ]}
-       ]}
+       ]
 
     result = Parser.parse(source)
     assert expected == result
