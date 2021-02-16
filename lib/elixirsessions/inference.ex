@@ -1,5 +1,6 @@
 defmodule ElixirSessions.Inference do
   require Logger
+  require ElixirSessions.Common
 
   @moduledoc """
   Performs session type inference of a given AST.
@@ -22,7 +23,7 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Inference.walk_ast(:ping, ast, [])
+          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
           [
             send: 'type',
             branch: %{
@@ -39,41 +40,12 @@ defmodule ElixirSessions.Inference do
   todo: AST comparison (not just inference) with the expected session types.
   Add runtime check for types: e.g. is_integer, is_atom, ...
   """
-
-  @typedoc """
-  Abstract Syntax Tree (AST)
-  """
-  @type ast() :: Macro.t()
-  @typedoc """
-  Information related to a function body.
-  """
-
-  @type info() :: %{
-          # recursion: boolean(),
-          call_recursion: atom,
-          function_name: atom
-          # session_type: any
-          # todo maybe add __module__
-        }
-
-  @typep branch_type() :: %{atom => session_type}
-
-  @typep choice_type() :: %{atom => session_type}
-
-  @typedoc """
-  A session type list of session operations.
-
-  A session type may: `receive` (or dually `send` data), `branch` (or make a `choice`) or `recurse`.
-  """
-  @type session_type() ::
-          [
-            {:recv, any}
-            | {:send, any}
-            | {:branch, branch_type}
-            | {:call_recurse, any}
-            | {:choice, choice_type}
-            | {:recurse, any, session_type}
-          ]
+  @typedoc false
+  @type ast :: ElixirSessions.Common.ast()
+  @typedoc false
+  @type info :: ElixirSessions.Common.info()
+  @typedoc false
+  @type session_type :: ElixirSessions.Common.session_type()
 
   @doc """
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.
@@ -84,11 +56,11 @@ defmodule ElixirSessions.Inference do
           ...>     send(self(), {:hello})
           ...>   end
           ...> end
-          ...> ElixirSessions.Inference.walk_ast(:ping, ast, nil)
+          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
           [send: 'type']
   """
-  @spec walk_ast(atom(), ast(), session_type()) :: session_type()
-  def walk_ast(fun, body, _session_type) do
+  @spec infer_session_type(atom(), ast()) :: session_type()
+  def infer_session_type(fun, body) do
     # IO.inspect(fun)
     # IO.inspect(body)
 
@@ -96,7 +68,7 @@ defmodule ElixirSessions.Inference do
   end
 
   @doc """
-  Uses `infer_session_type/2` to infer the session type (includes recursion).
+  Uses `infer_session_type_ast/2` to infer the session type (includes recursion).
 
   ## Examples
           iex> ast = quote do
@@ -106,7 +78,7 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Inference.walk_ast(:ping, ast, [])
+          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
           [
             {:recurse, :X, [{:send, 'type'}, {:call_recurse, :X}]}
           ]
@@ -118,7 +90,7 @@ defmodule ElixirSessions.Inference do
       function_name: fun
     }
 
-    inferred_session_type = infer_session_type(body, info)
+    inferred_session_type = infer_session_type_ast(body, info)
 
     case contains_recursion?(inferred_session_type) do
       true -> [{:recurse, :X, inferred_session_type}]
@@ -127,7 +99,7 @@ defmodule ElixirSessions.Inference do
   end
 
   @doc """
-  Given an AST, `infer_session_type/2` infers its session type (excluding recursion).
+  Given an AST, `infer_session_type_ast/2` infers its session type (excluding recursion).
 
   ## Examples
           iex> ast = quote do
@@ -140,7 +112,7 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Inference.infer_session_type(ast, %{})
+          ...> ElixirSessions.Inference.infer_session_type_ast(ast, %{})
           [
             send: 'type',
             branch: %{
@@ -149,38 +121,38 @@ defmodule ElixirSessions.Inference do
             }
           ]
   """
-  def infer_session_type(node, info)
-  @spec infer_session_type(ast, info) :: session_type()
+  def infer_session_type_ast(node, info)
+  @spec infer_session_type_ast(ast, info) :: session_type()
   #### Checking for AST literals
   # :atoms, 123, 3.12 (numbers), [1,2,3] (list), "string", {:ok, 1} (short tuples)
-  def infer_session_type(x, _info) when is_atom(x) or is_number(x) or is_binary(x) do
+  def infer_session_type_ast(x, _info) when is_atom(x) or is_number(x) or is_binary(x) do
     # IO.puts("\nAtom/Number/String: #{IO.inspect(x)}")
 
     []
   end
 
-  def infer_session_type({_a, _b}, _info) do
+  def infer_session_type_ast({_a, _b}, _info) do
     # IO.puts("\nTuple: ")
 
     # todo check if ok, maybe check each element
     []
   end
 
-  def infer_session_type(args, info) when is_list(args) do
+  def infer_session_type_ast(args, info) when is_list(args) do
     # IO.puts("\nlist:")
 
-    Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type(x, info) end)
+    Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type_ast(x, info) end)
     |> remove_nils()
   end
 
   #### AST checking for non literals
-  def infer_session_type({:__block__, _meta, args}, info) do
+  def infer_session_type_ast({:__block__, _meta, args}, info) do
     # IO.puts("\nBlock: ")
 
-    infer_session_type(args, info)
+    infer_session_type_ast(args, info)
   end
 
-  def infer_session_type({:case, _meta, [_what_you_are_checking, body]}, info)
+  def infer_session_type_ast({:case, _meta, [_what_you_are_checking, body]}, info)
       when is_list(body) do
     # IO.puts("\ncase:")
 
@@ -192,7 +164,7 @@ defmodule ElixirSessions.Inference do
 
       1 ->
         # todo check if ok with just 1 options
-        infer_session_type(cases, info)
+        infer_session_type_ast(cases, info)
 
       _ ->
         # Greater than 1
@@ -200,7 +172,7 @@ defmodule ElixirSessions.Inference do
         keys = Enum.map(cases, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
 
         choice_session_type =
-          Enum.map(cases, fn x -> infer_session_type(x, info) end)
+          Enum.map(cases, fn x -> infer_session_type_ast(x, info) end)
           # Remove any :nils
           |> Enum.map(fn x -> remove_nils(x) end)
 
@@ -231,19 +203,19 @@ defmodule ElixirSessions.Inference do
     end
   end
 
-  def infer_session_type({:=, _meta, [_left, right]}, info) do
+  def infer_session_type_ast({:=, _meta, [_left, right]}, info) do
     # IO.puts("\npattern matchin (=):")
     # IO.inspect(right)
 
-    infer_session_type(right, info)
+    infer_session_type_ast(right, info)
   end
 
-  def infer_session_type({:send, _meta, _}, _info) do
+  def infer_session_type_ast({:send, _meta, _}, _info) do
     # todo fix type
     [{:send, 'type'}]
   end
 
-  def infer_session_type({:receive, _meta, [body]}, info) do
+  def infer_session_type_ast({:receive, _meta, [body]}, info) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
 
     # IO.puts("\nRECEIVE")
@@ -257,7 +229,7 @@ defmodule ElixirSessions.Inference do
         []
 
       1 ->
-        [{:recv, 'type'}] ++ infer_session_type(cases, info)
+        [{:recv, 'type'}] ++ infer_session_type_ast(cases, info)
 
       _ ->
         # Greater than 1
@@ -285,7 +257,7 @@ defmodule ElixirSessions.Inference do
                 )
           end)
 
-        Enum.map(cases, fn x -> [{:recv, 'type'}] ++ infer_session_type(x, info) end)
+        Enum.map(cases, fn x -> [{:recv, 'type'}] ++ infer_session_type_ast(x, info) end)
         # Remove any :nils
         |> Enum.map(fn x -> remove_nils(x) end)
         # Add indices
@@ -301,16 +273,16 @@ defmodule ElixirSessions.Inference do
     end
   end
 
-  def infer_session_type({:->, _meta, [_head | body]}, info) do
+  def infer_session_type_ast({:->, _meta, [_head | body]}, info) do
     # IO.puts("\n->:")
-    infer_session_type(body, info)
+    infer_session_type_ast(body, info)
 
     # IO.puts("\n-> (result):")
     # IO.inspect(res)
     # res
   end
 
-  def infer_session_type({function_name, _meta, _}, %{
+  def infer_session_type_ast({function_name, _meta, _}, %{
         function_name: function_name,
         call_recursion: recurse
       }) do
@@ -320,17 +292,18 @@ defmodule ElixirSessions.Inference do
     [{:call_recurse, recurse}]
   end
 
-  def infer_session_type({:|>, _meta, args}, info) do
+  def infer_session_type_ast({:|>, _meta, args}, info) do
     # Pipe operator
-    infer_session_type(args, info)
+    infer_session_type_ast(args, info)
   end
 
-  def infer_session_type({fun, _meta, [_function_name, body]}, info) when fun in [:def, :defp] do
+  def infer_session_type_ast({fun, _meta, [_function_name, body]}, info)
+      when fun in [:def, :defp] do
     # todo compare function_name to info[:function_name]
-    infer_session_type(body[:do], info)
+    infer_session_type_ast(body[:do], info)
   end
 
-  def infer_session_type(_, _info) do
+  def infer_session_type_ast(_, _info) do
     # IO.puts("\nUnknown:")
     []
   end
@@ -565,9 +538,7 @@ defmodule ElixirSessions.Inference do
         ping()
       end
 
-    session_type = [send: '{:ping, pid}', recv: '{:pong}']
-
-    walk_ast(fun, body, session_type)
+    infer_session_type(fun, body)
     # body
   end
 end

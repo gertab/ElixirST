@@ -10,7 +10,7 @@ defmodule ElixirSessions.Checking do
       import ElixirSessions.Checking
 
       Module.register_attribute(__MODULE__, :session, accumulate: true)
-      # Module.register_attribute(__MODULE__, :session_hook, accumulate: true)
+      # todo add @infer_session true
 
       @on_definition ElixirSessions.Checking
       # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
@@ -24,7 +24,7 @@ defmodule ElixirSessions.Checking do
   def __on_definition__(_env, _access, _name, _args, _guards, nil), do: nil
   def __on_definition__(_env, _access, _name, _args, _guards, []), do: nil
 
-  def __on_definition__(env, _access, name, _args, _guards, body) do
+  def __on_definition__(env, _access, name, args, _guards, body) do
     if sessions = Module.get_attribute(env.module, :session) do
       if length(sessions) > 0 do
         session = hd(sessions)
@@ -40,7 +40,7 @@ defmodule ElixirSessions.Checking do
             :ok
 
           session_type when is_list(session_type) ->
-            ElixirSessions.SessionTypechecking.walk_ast(name, body[:do], session_type)
+            ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
             :ok
 
           x ->
@@ -48,7 +48,7 @@ defmodule ElixirSessions.Checking do
             :ok
         end
 
-        # inferred_session_type = ElixirSessions.Inference.walk_ast(name, body[:do], [])
+        # inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
         # IO.puts("\nInferred sesssion type for: #{name}")
         # IO.inspect(inferred_session_type)
       end
