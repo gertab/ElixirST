@@ -87,7 +87,8 @@ defmodule ElixirSessions.Inference do
   def infer_session_type_incl_recursion(fun, body) do
     info = %{
       call_recursion: :X,
-      function_name: fun
+      function_name: fun,
+      arity: 0 # todo fix with proper arity
     }
 
     inferred_session_type = infer_session_type_ast(body, info)
