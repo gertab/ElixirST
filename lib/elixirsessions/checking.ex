@@ -27,26 +27,26 @@ defmodule ElixirSessions.Checking do
   def __on_definition__(env, _access, name, args, _guards, body) do
     if sessions = Module.get_attribute(env.module, :session) do
       if length(sessions) > 0 do
-        # session = hd(sessions)
-        # s = ElixirSessions.Parser.parse(session)
+        session = hd(sessions)
+        s = ElixirSessions.Parser.parse(session)
 
-        # case s do
-        #   {:error, {line, _, message}} ->
-        #     _ = Logger.error("Session type parsing error on line #{line}: #{inspect(message)}")
-        #     :ok
+        case s do
+          {:error, {line, _, message}} ->
+            _ = Logger.error("Session type parsing error on line #{line}: #{inspect(message)}")
+            :ok
 
-        #   {:error, x} ->
-        #     _ = Logger.error("Session type parsing error: #{inspect(x)}")
-        #     :ok
+          {:error, x} ->
+            _ = Logger.error("Session type parsing error: #{inspect(x)}")
+            :ok
 
-        #   session_type when is_list(session_type) ->
-        #     ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
-        #     :ok
+          session_type when is_list(session_type) ->
+            ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
+            :ok
 
-        #   x ->
-        #     _ = Logger.error("Leex/Yecc error #{inspect(x)}")
-        #     :ok
-        # end
+          x ->
+            _ = Logger.error("Leex/Yecc error #{inspect(x)}")
+            :ok
+        end
 
         # inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
         # IO.puts("\nInferred sesssion type for: #{name}")

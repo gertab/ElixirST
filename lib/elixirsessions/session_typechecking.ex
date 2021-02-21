@@ -34,7 +34,8 @@ defmodule ElixirSessions.SessionTypechecking do
       arity: arity
     }
 
-    session_typecheck_ast(body, session_type, info, %{})
+    IO.puts("Session typechecking: #{inspect session_type}")
+    _ = session_typecheck_ast(body, session_type, info, %{})
 
     # case contains_recursion?(inferred_session_type) do
     #   true -> [{:recurse, :X, inferred_session_type}]
@@ -62,6 +63,11 @@ defmodule ElixirSessions.SessionTypechecking do
 
     # todo check if ok, maybe check each element
     {false, session_type}
+  end
+
+  def session_typecheck_ast({type, _, _} = ast, [session_type], info, session_context) when type not in [:__block__]do
+    # session_type is a list of size 1
+    session_typecheck_ast(ast, session_type, info, session_context)
   end
 
   def session_typecheck_ast(args, session_type, info, session_context)
@@ -130,22 +136,37 @@ defmodule ElixirSessions.SessionTypechecking do
     {false, session_type}
   end
 
-  def session_typecheck_ast({:send, _meta, _}, session_type, _info, _session_context) do
+  def session_typecheck_ast({:send, meta, _}, session_type, _info, _session_context) do
+    IO.puts("[in send] #{inspect session_type}")
+
+    line = if meta[:line] do
+      meta[:line]
+    else
+      "unknown"
+    end
+
     case session_type do
-      {:recv, type} -> throw("Session type error: expected a 'send' but found a 'recv #{IO.inspect type}'.")
+      {:recv, type} -> throw("Session type error [line #{line}]: expected a 'receive #{IO.inspect type}' but found a send statement.")
       {:send, _type} -> :ok
-      s_t when is_list(s_t) -> throw("todo: Good but not implemented yet")
+      s_t when is_list(s_t) -> throw("[send] todo: good but not implemented yet")
     end
 
     {false, session_type}
   end
 
-  def session_typecheck_ast({:receive, _meta, [_body]}, session_type, _info, _session_context) do
+  def session_typecheck_ast({:receive, meta, [_body]}, session_type, _info, _session_context) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
+
+    line = if meta[:line] do
+      meta[:line]
+    else
+      "unknown"
+    end
+
     case session_type do
-      {:send, type} -> throw("Session type error: expected a 'receive' but found a 'send #{IO.inspect type}'.")
+      {:send, type} -> throw("Session type error [line #{line}]: expected a 'send #{IO.inspect type}' but found a receive statement.")
       {:recv, _type} -> :ok
-      s_t when is_list(s_t) -> throw("todo: Good but not implemented yet")
+      s_t when is_list(s_t) -> throw("[receive] todo: Good but not implemented yet")
     end
 
 
