@@ -132,7 +132,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   def session_typecheck_ast({:send, _meta, _}, session_type, _info, _session_context) do
     case session_type do
-      {:recv, type} -> throw("Session type error: expected a 'send' but found a 'receive #{IO.inspect type}'.")
+      {:recv, type} -> throw("Session type error: expected a 'send' but found a 'recv #{IO.inspect type}'.")
       {:send, _type} -> :ok
       s_t when is_list(s_t) -> throw("todo: Good but not implemented yet")
     end
@@ -142,6 +142,12 @@ defmodule ElixirSessions.SessionTypechecking do
 
   def session_typecheck_ast({:receive, _meta, [_body]}, session_type, _info, _session_context) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
+    case session_type do
+      {:send, type} -> throw("Session type error: expected a 'receive' but found a 'send #{IO.inspect type}'.")
+      {:recv, _type} -> :ok
+      s_t when is_list(s_t) -> throw("todo: Good but not implemented yet")
+    end
+
 
     {false, session_type}
   end
@@ -176,11 +182,16 @@ defmodule ElixirSessions.SessionTypechecking do
       quote do
         send(self(), {:ping, self()})
         send(self(), {:ping, self()})
+        receive do
+          {:message_type, value} ->
+            :ok
+        end
+
         send(self(), {:ping, self()})
       end
 
     # session_type = [send: 'int']
-    session_type = [send: 'int', send: 'int', send: 'int']
+    session_type = [send: 'int', send: 'int', send: 'type', send: 'int']
 
     session_typecheck(fun, 0, body, session_type)
 
