@@ -4,6 +4,7 @@ WHITESPACE  = [\s\t\n\r]
 SEND        = send|\!
 RECEIVE     = receive|\?
 CHOICE      = choice|\+
+% todo replace choice w/ select
 BRANCH      = branch|\&
 SEQUENCE    = \.
 TYPES       = (any|atom|binary|bitstring|boolean|exception|float|function|integer|list|map|nil|number|pid|port|reference|struct|tuple|string)

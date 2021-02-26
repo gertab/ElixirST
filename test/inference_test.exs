@@ -13,10 +13,9 @@ defmodule CodeTest do
         send(pid, {:ping, self()})
       end
 
-    expected_session_type = [send: 'type']
+    expected_session_type = [{:send, :ping, [:any]}]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -37,10 +36,15 @@ defmodule CodeTest do
         end
       end
 
-    expected_session_type = [send: 'type', send: 'type', send: 'type', send: 'type', recv: 'type']
+    expected_session_type = [
+      {:send, :ping, [:any]},
+      {:send, :ping, [:any]},
+      {:send, :ping, [:any]},
+      {:send, :ping, [:any]},
+      {:recv, :valie, [:any]}
+    ]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -55,8 +59,7 @@ defmodule CodeTest do
 
     expected_session_type = []
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -71,8 +74,7 @@ defmodule CodeTest do
 
     expected_session_type = []
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -87,8 +89,7 @@ defmodule CodeTest do
 
     expected_session_type = []
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -103,8 +104,7 @@ defmodule CodeTest do
 
     expected_session_type = []
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -120,8 +120,7 @@ defmodule CodeTest do
 
     expected_session_type = []
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -131,15 +130,18 @@ defmodule CodeTest do
 
     body =
       quote do
-        send(self(), :ok)
-        send(self(), :ok)
-        send(self(), :ok)
+        send(self(), {:label1, :ok})
+        send(self(), {:label2, :ok})
+        send(self(), {:label3, :ok})
       end
 
-    expected_session_type = [send: 'type', send: 'type', send: 'type']
+    expected_session_type = [
+      {:send, :label1, [:any]},
+      {:send, :label2, [:any]},
+      {:send, :label3, [:any]}
+    ]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -159,8 +161,7 @@ defmodule CodeTest do
 
     expected_session_type = []
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -174,10 +175,9 @@ defmodule CodeTest do
         {:abc, 123} = send(self(), {:abc, 123})
       end
 
-    expected_session_type = [send: 'type', send: 'type']
+    expected_session_type = [{:send, :abc, [:any]}, {:send, :abc, [:any]}]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -187,25 +187,27 @@ defmodule CodeTest do
 
     body =
       quote do
-        send(self(), :okkk)
+        send(self(), {:okkk})
 
         receive do
           {:message_type, _value} ->
-            send(self(), :okkk)
+            send(self(), {:label1, :okkk})
 
           {:message_type2, _value} ->
-            send(self(), :okkk)
+            send(self(), {:label2, :okkk})
         end
       end
 
     expected_session_type = [
-      {:send, 'type'},
+      {:send, :okkk, []},
       {:branch,
-       %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}}
+       [
+         [{:recv, :message_type, [:any]}, {:send, :label1, [:any]}],
+         [{:recv, :message_type2, [:any]}, {:send, :label2, [:any]}]
+       ]}
     ]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -215,29 +217,30 @@ defmodule CodeTest do
 
     body =
       quote do
-        send(self(), :okkk)
+        send(self(), {:okkk})
 
         receive do
           {:message_type, _value, _other_value} ->
-            send(self(), :okkk)
+            send(self(), {:okkk})
 
           {:message_type2, _value} ->
-            send(self(), :okkk)
+            send(self(), {:okkk})
         end
       end
 
     expected_session_type = [
-      {:send, 'type'},
+      {:send, :okkk, []},
       {:branch,
-       %{message_type: [recv: 'type', send: 'type'], message_type2: [recv: 'type', send: 'type']}}
+       [
+         [{:recv, :message_type, [:any, :any, :any]}, {:send, :okkk, []}],
+         [{:recv, :message_type2, [:any]}, {:send, :okkk, []}]
+       ]}
     ]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
-
 
   test "receive 1 case infer" do
     fun = :ping
@@ -246,15 +249,19 @@ defmodule CodeTest do
       quote do
         receive do
           {:ping, pid} ->
-            IO.puts("Received ping from #{inspect pid}. Replying pong from #{inspect self()} to #{inspect pid}")
+            IO.puts(
+              "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} to #{
+                inspect(pid)
+              }"
+            )
+
             send(pid, {:pong})
         end
       end
 
-    expected_session_type = [recv: 'type', send: 'type']
+    expected_session_type = [{:recv, :ping, [:any]}, {:send, :pong, []}]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -264,15 +271,14 @@ defmodule CodeTest do
 
     body =
       quote do
-        send(self(), :okkk)
+        send(self(), {:okkk})
 
         ping()
       end
 
-    expected_session_type = [{:recurse, :X, [send: 'type', call_recurse: :X]}]
+    expected_session_type = [{:recurse, :X, [{:send, :okkk, []}, {:call_recurse, :X}]}]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -282,16 +288,20 @@ defmodule CodeTest do
 
     body =
       quote do
-        send(self(), :okkk)
-        |> send(self(), :okkk)
-        |> send(self(), :okkk)
-        |> send(self(), :okkk)
+        send(self(), {:okkk})
+        |> send(self(), {:okkk})
+        |> send(self(), {:okkk})
+        |> send(self(), {:okkk})
       end
 
-    expected_session_type = [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}, {:send, 'type'}]
+    expected_session_type = [
+      {:send, :okkk, []},
+      {:send, :okkk, []},
+      {:send, :okkk, []},
+      {:send, :okkk, []}
+    ]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -307,10 +317,9 @@ defmodule CodeTest do
         end
       end
 
-    expected_session_type = [{:send, 'type'}]
+    expected_session_type = [{:send, :ok, []}]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
@@ -320,7 +329,7 @@ defmodule CodeTest do
 
     body =
       quote do
-        send(self(), :okkk)
+        send(self(), {:okkk})
 
         a = true
 
@@ -330,19 +339,18 @@ defmodule CodeTest do
         end
       end
 
-    expected_session_type = [send: 'type']
+    expected_session_type = [{:send, :okkk, []}]
 
-    inferred_session_type =
-      ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
 
     assert inferred_session_type == expected_session_type
   end
 
   test "ensure_send - ok" do
     cases = [
-      [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}],
-      [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}],
-      [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}]
+      [{:send, :ok1, [:any]}, {:send, :ok1, [:any]}, {:send, :ok1, [:any]}],
+      [{:send, :ok1, [:any]}, {:send, :ok1, [:any]}, {:send, :ok1, [:any]}],
+      [{:send, :ok1, [:any]}, {:send, :ok1, [:any]}, {:send, :ok1, [:any]}]
     ]
 
     result = ElixirSessions.Inference.ensure_send(cases)
@@ -357,65 +365,18 @@ defmodule CodeTest do
     cases = [
       [
         {:branch,
-         %{
-           message_type: [recv: 'type', send: 'type'],
-           message_type2: [recv: 'type', send: 'type']
-         }},
-        {:send, 'type'},
-        {:send, 'type'}
+         [
+          [{:recv, :ok1, [:any]}, {:send, :ok1, [:any]}],
+          [{:recv, :ok2, [:any]}, {:send, :ok1, [:any]}],
+         ]},
+         {:send, :ok1, [:any]}
       ],
-      [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}],
-      [{:send, 'type'}, {:send, 'type'}, {:send, 'type'}]
+      [{:send, :ok1, [:any]}, {:send, :ok1, [:any]}],
+      [{:send, :ok1, [:any]}]
     ]
 
     result = ElixirSessions.Inference.ensure_send(cases)
     expected_result = :error
-
-    assert result == expected_result
-  end
-
-  test "first_elem_in_tuple_node - atom/nil" do
-    value = :abc
-    x = Macro.escape(value)
-
-    result = ElixirSessions.Inference.first_elem_in_tuple_node(x)
-    expected_result = :abc
-
-    assert result == expected_result
-
-    value = 3267
-    x = Macro.escape(value)
-
-    result = ElixirSessions.Inference.first_elem_in_tuple_node(x)
-    expected_result = nil
-
-    assert result == expected_result
-  end
-
-  test "first_elem_in_tuple_node - size = 2" do
-    value = {:abc, 23}
-    x = Macro.escape(value)
-
-    result = ElixirSessions.Inference.first_elem_in_tuple_node(x)
-    expected_result = :abc
-
-    assert result == expected_result
-  end
-
-  test "first_elem_in_tuple_node - size = 1, 3" do
-    value = {:abc}
-    x = Macro.escape(value)
-
-    result = ElixirSessions.Inference.first_elem_in_tuple_node(x)
-    expected_result = :abc
-
-    assert result == expected_result
-
-    value = {:abc, 123, 456}
-    x = Macro.escape(value)
-
-    result = ElixirSessions.Inference.first_elem_in_tuple_node(x)
-    expected_result = :abc
 
     assert result == expected_result
   end

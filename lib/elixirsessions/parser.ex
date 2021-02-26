@@ -10,9 +10,9 @@ defmodule ElixirSessions.Parser do
 
   ## Examples
 
-      iex> s = "send '{number()}' . receive '{number()}'"
+      iex> s = "!Hello() . ?Receive(Integer)"
       ...> ElixirSessions.Parser.parse(s)
-      [send: '{number()}', recv: '{number()}']
+      [{:send, :Hello, []}, {:recv, :Receive, [:Integer]}]
 
   """
   def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
@@ -20,8 +20,8 @@ defmodule ElixirSessions.Parser do
   def parse(string) do
     with {:ok, tokens, _} <- lexer(string) do
       {:ok, session_type} = :parse.parse(tokens)
-      IO.inspect(session_type)
-      # session_type
+      # IO.inspect(session_type)
+      session_type
     else
       err -> err
     end
@@ -47,6 +47,45 @@ defmodule ElixirSessions.Parser do
     source =
       "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
+    _res = [
+        {:recv, :M220, [:String]},
+        {:choice,
+         [
+           [
+             {:send, :Helo, [:String]},
+             {:recv, :M250, [:String]},
+             {:recurse, :X,
+              [
+                choice: [
+                  [
+                    {:send, :MailFrom, [:String]},
+                    {:recv, :M250, [:String]},
+                    {:recurse, :Y,
+                     [
+                       choice: [
+                         [
+                           {:send, :RcptTo, [:String]},
+                           {:recv, :M250, [:String]},
+                           {:call_recurse, :Y}
+                         ],
+                         [
+                           {:send, :Data, []},
+                           {:recv, :M354, [:String]},
+                           {:send, :Content, [:String]},
+                           {:recv, :M250, [:String]},
+                           {:call_recurse, :X}
+                         ],
+                         [{:send, :Quit, []}, {:recv, :M221, [:String]}]
+                       ]
+                     ]}
+                  ],
+                  [{:send, :Quit, []}, {:recv, :M221, [:String]}]
+                ]
+              ]}
+           ],
+           [{:send, :Quit, []}, {:recv, :M221, [:String]}]
+         ]}
+      ]
     parse(source)
   end
 end

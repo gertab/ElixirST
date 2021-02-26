@@ -30,6 +30,8 @@ defmodule ElixirSessions.Generator do
     Fix 'case': the first 'send' should also send the label
   """
   require Logger
+  require ElixirSessions.Common
+
   # recompile && ElixirSession.Generator.run
   def run() do
     session_type = [
@@ -57,18 +59,13 @@ defmodule ElixirSessions.Generator do
     |> Macro.to_string()
   end
 
-  @type branch_type() :: %{atom => session_type}
-  @type choice_type() :: %{atom => session_type}
-  @type session_type() ::
-          [
-            {:recv, any}
-            | {:send, any}
-            | {:branch, branch_type}
-            | {:call_recurse, any}
-            | {:choice, choice_type}
-            | {:recurse, any, session_type}
-          ]
-  @type ast() :: Macro.t()
+  @typedoc false
+  @type ast :: ElixirSessions.Common.ast()
+  @typedoc false
+  @type info :: ElixirSessions.Common.info()
+  @typedoc false
+  @type session_type :: ElixirSessions.Common.session_type()
+
   @spec generate_quoted(session_type) :: ast
 
   @doc """
@@ -182,5 +179,13 @@ defmodule ElixirSessions.Generator do
     end
   end
 
-  # def(unquote(fundef),unquote([do: metered]))
+
+  # recompile && (IO.puts(ElixirSessions.Generator.run))
+  def run() do
+    session_type = [send: 'type', recv: 'type']
+    res = ElixirSessions.Generator.generate_to_string(session_type)
+    # |> IO.puts
+    IO.puts res
+    res
+  end
 end

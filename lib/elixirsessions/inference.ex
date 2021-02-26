@@ -14,7 +14,6 @@ defmodule ElixirSessions.Inference do
           ...>       {:do_something} -> :ok
           ...>       {:do_something_else, value} -> send(pid, {:label2, value})
           ...>     end
-          ...>
           ...>     a = true
           ...>     case a do
           ...>       true -> send(pid, {:first_branch})
@@ -22,22 +21,19 @@ defmodule ElixirSessions.Inference do
           ...>     end
           ...>   end
           ...> end
-          ...>
-          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
+          iex> ElixirSessions.Inference.infer_session_type(:ping, ast)
           [
-            send: 'type',
-            branch: %{
-              do_something: [recv: 'type'],
-              do_something_else: [recv: 'type', send: 'type']
-            },
-            choice: %{
-              first_branch: [send: 'type'],
-              other_branch: [send: 'type']
-            }
+            {:send, :label, []},
+            {:branch,
+            [
+              [{:recv, :do_something, []}],
+              [{:recv, :do_something_else, [:any]}, {:send, :label2, [:any]}]
+            ]},
+            {:choice, [[{:send, :first_branch, []}], [{:send, :other_branch, []}]]}
           ]
 
-
   todo: AST comparison (not just inference) with the expected session types.
+  todo: add more detail in errors (e.g. lines)
   Add runtime check for types: e.g. is_integer, is_atom, ...
   """
   @typedoc false
@@ -57,7 +53,7 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
-          [send: 'type']
+          [{:send, :hello, []}]
   """
   @spec infer_session_type(atom(), ast()) :: session_type()
   def infer_session_type(fun, body) do
@@ -80,7 +76,7 @@ defmodule ElixirSessions.Inference do
           ...>
           ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
           [
-            {:recurse, :X, [{:send, 'type'}, {:call_recurse, :X}]}
+            {:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}
           ]
   """
   @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type()
@@ -88,7 +84,8 @@ defmodule ElixirSessions.Inference do
     info = %{
       call_recursion: :X,
       function_name: fun,
-      arity: 0 # todo fix with proper arity
+      # todo fix with proper arity
+      arity: 0
     }
 
     inferred_session_type = infer_session_type_ast(body, info)
@@ -115,11 +112,12 @@ defmodule ElixirSessions.Inference do
           ...>
           ...> ElixirSessions.Inference.infer_session_type_ast(ast, %{})
           [
-            send: 'type',
-            branch: %{
-              do_something: [recv: 'type'],
-              do_something_else: [recv: 'type', send: 'type']
-            }
+            {:send, :label, []},
+            {:branch,
+            [
+              [{:recv, :do_something, []}],
+              [{:recv, :do_something_else, [:any]}, {:send, :label2, [:any]}]
+            ]}
           ]
   """
   def infer_session_type_ast(node, info)
@@ -127,20 +125,19 @@ defmodule ElixirSessions.Inference do
   #### Checking for AST literals
   # :atoms, 123, 3.12 (numbers), [1,2,3] (list), "string", {:ok, 1} (short tuples)
   def infer_session_type_ast(x, _info) when is_atom(x) or is_number(x) or is_binary(x) do
-    # IO.puts("\nAtom/Number/String: #{IO.inspect(x)}")
-
+    # Atom, number, or string
     []
   end
 
   def infer_session_type_ast({_a, _b}, _info) do
-    # IO.puts("\nTuple: ")
+    # Tuple
 
     # todo check if ok, maybe check each element
     []
   end
 
   def infer_session_type_ast(args, info) when is_list(args) do
-    # IO.puts("\nlist:")
+    # List
 
     Enum.reduce(args, [], fn x, acc -> acc ++ infer_session_type_ast(x, info) end)
     |> remove_nils()
@@ -148,14 +145,14 @@ defmodule ElixirSessions.Inference do
 
   #### AST checking for non literals
   def infer_session_type_ast({:__block__, _meta, args}, info) do
-    # IO.puts("\nBlock: ")
+    # Block
 
     infer_session_type_ast(args, info)
   end
 
   def infer_session_type_ast({:case, _meta, [_what_you_are_checking, body]}, info)
       when is_list(body) do
-    # IO.puts("\ncase:")
+    # Case
 
     cases = body[:do]
 
@@ -170,34 +167,24 @@ defmodule ElixirSessions.Inference do
       _ ->
         # Greater than 1
 
-        keys = Enum.map(cases, fn {:->, _, [_head | body]} -> get_label_of_first_send(body) end)
-
         choice_session_type =
           Enum.map(cases, fn x -> infer_session_type_ast(x, info) end)
           # Remove any :nils
           |> Enum.map(fn x -> remove_nils(x) end)
 
         # Ensure that all cases start with a 'send'
-
         case ensure_send(choice_session_type) do
           :ok ->
             choice_session_type
-            # Add indices
-            |> Enum.with_index()
-            # Fetch keys by index
-            |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
-            # Convert to map
-            |> Map.new()
             # {:choice, map}
             |> to_choice
             # [{:choice, map}]
             |> to_list
 
           :error ->
-            # _ =
-            #   Logger.error(
-            #     "When making a choice (in case statement), you need to have a 'send' as the first item"
-            #   )
+            # todo fix
+            # nope because it breaks if there is a 'case' without send/receive statements
+            # throw("Error while inferring: When making a choice (in case statement), you need to have a 'send' as the first item")
 
             []
         end
@@ -205,68 +192,44 @@ defmodule ElixirSessions.Inference do
   end
 
   def infer_session_type_ast({:=, _meta, [_left, right]}, info) do
-    # IO.puts("\npattern matchin (=):")
-    # IO.inspect(right)
+    # Pattern matchin
 
     infer_session_type_ast(right, info)
   end
 
-  def infer_session_type_ast({:send, _meta, _}, _info) do
-    # todo fix type
-    [{:send, 'type'}]
+  def infer_session_type_ast({:send, _meta, [_lhr, rhs]}, _info) do
+    # Send
+
+    {label, types} = parse_options(rhs)
+
+    [{:send, label, types}]
   end
 
   def infer_session_type_ast({:receive, _meta, [body]}, info) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
-
-    # IO.puts("\nRECEIVE")
+    # Receive
 
     cases = body[:do]
-
-    # IO.puts("Receive body size = #{length(cases)}")
 
     case length(cases) do
       0 ->
         []
 
       1 ->
-        [{:recv, 'type'}] ++ infer_session_type_ast(cases, info)
+        {:->, _, [[lhs] | _]} = hd(cases)
+        {label, types} = parse_options(lhs)
+
+        [{:recv, label, types}] ++ infer_session_type_ast(cases, info)
 
       _ ->
-        # Greater than 1
-        keys =
-          Enum.map(cases, fn
-            {:->, _, [[{:{}, _, matching_name}] | _]} ->
-              # IO.inspect(hd(matching_name))
-              hd(matching_name)
+        Enum.map(cases, fn x ->
+          {:->, _, [[lhs] | _]} = x
+          {label, types} = parse_options(lhs)
 
-            {:->, _, [[{matching_name, _}] | _]} ->
-              # IO.inspect(matching_name)
-              matching_name
-
-            {:->, _, [[{matching_name}] | _]} ->
-              _ = Logger.warn("Warning: Receiving only {:label}, without value ({:label, value})")
-
-              # IO.inspect(matching_name)
-              matching_name
-
-            # todo add line number in error
-            _ ->
-              _ =
-                Logger.error(
-                  "Error: Pattern matching in 'receive' is incorrect. Should be in the following format: {:label, value}."
-                )
-          end)
-
-        Enum.map(cases, fn x -> [{:recv, 'type'}] ++ infer_session_type_ast(x, info) end)
+          [{:recv, label, types}] ++ infer_session_type_ast(x, info)
+        end)
         # Remove any :nils
         |> Enum.map(fn x -> remove_nils(x) end)
-        # Add indices
-        |> Enum.with_index()
-        # Fetch keys by index
-        |> Enum.map(fn {x, y} -> {Enum.at(keys, y, y), x} end)
-        # Convert to map
-        |> Map.new()
         # {:branch, map}
         |> to_branch
         # [{:branch, map}]
@@ -275,20 +238,14 @@ defmodule ElixirSessions.Inference do
   end
 
   def infer_session_type_ast({:->, _meta, [_head | body]}, info) do
-    # IO.puts("\n->:")
+    # ->
     infer_session_type_ast(body, info)
-
-    # IO.puts("\n-> (result):")
-    # IO.inspect(res)
-    # res
   end
 
   def infer_session_type_ast({function_name, _meta, _}, %{
         function_name: function_name,
         call_recursion: recurse
       }) do
-    # IO.puts("\nRecurse on #{IO.inspect(function_name)}:")
-
     # todo replace instead of (only) X
     [{:call_recurse, recurse}]
   end
@@ -313,51 +270,6 @@ defmodule ElixirSessions.Inference do
 
   #########################################################
 
-  ### Returns the label of the first send encountered: send(pid, {:label, data, ...})
-  @spec get_label_of_first_send(ast()) :: atom()
-  defp get_label_of_first_send(ast)
-
-  defp get_label_of_first_send({:case, _, [_what_you_are_checking, body]})
-       when is_list(body) do
-    # [do: [ {:->, _, [ [ when/condition ], body ]}, other_cases... ] ]
-
-    stuff =
-      case List.keyfind(body, :do, 0) do
-        {:do, x} -> x
-        _ -> []
-      end
-
-    get_label_of_first_send(stuff)
-  end
-
-  defp get_label_of_first_send(args) when is_list(args) do
-    Enum.map(args, fn x -> get_label_of_first_send(x) end)
-    |> first_non_nil()
-  end
-
-  defp get_label_of_first_send({:->, _, [_head | body]}) do
-    # head contains info related to 'when'
-    get_label_of_first_send(body)
-  end
-
-  defp get_label_of_first_send({:send, _meta, [_to, data]}) do
-    case first_elem_in_tuple_node(data) do
-      nil ->
-        _ = Logger.error("The data in send should be of the format: {:label, ...}")
-
-      x ->
-        x
-    end
-  end
-
-  defp get_label_of_first_send({:__block__, _meta, args}) when is_list(args) do
-    get_label_of_first_send(args)
-  end
-
-  defp get_label_of_first_send(_) do
-    nil
-  end
-
   # Check if a given  contains {call_recurse, :X}
   @spec contains_recursion?(session_type()) :: boolean()
   defp contains_recursion?(session_type)
@@ -366,19 +278,14 @@ defmodule ElixirSessions.Inference do
     Enum.reduce(x, false, fn elem, acc -> acc || contains_recursion?(elem) end)
   end
 
-  defp contains_recursion?({x, _}) when x in [:send, :recv] do
+  defp contains_recursion?({x, _, _}) when x in [:send, :recv] do
     false
   end
 
-  defp contains_recursion?({x, args}) when x in [:branch, :choice] and is_map(args) do
-    # args = %{label1: [do_stuff, ...], ...}
+  defp contains_recursion?({x, args}) when x in [:branch, :choice] and is_list(args) do
+    # args =[[do_stuff, ...], [...], ...}]
     args
-    # {[label1, ...], [[do_stuff, ...]]}
-    |> Enum.unzip()
-    # [[do_stuff, ...]]
-    |> elem(1)
-    # [do_stuff, ...]
-    |> List.flatten()
+    # todo check if it works
     |> contains_recursion?()
   end
 
@@ -408,31 +315,6 @@ defmodule ElixirSessions.Inference do
   defp remove_nils(x) when is_list(x) do
     x
     |> Enum.filter(fn elem -> !is_nil(elem) end)
-  end
-
-  # Returns the first element from a tuple in AST form
-  # :atom                    # :atom
-  # {:{}, [], []}            # {}
-  # {:{}, [], [1]}           # {1}
-  # {1, 2}                   # {1,2}
-  # {:{}, [], [1, 2, 3]}     # {1,2,3}
-  # {:{}, [], [1, 2, 3, 4]}  # {1,2,3,4}
-  @doc false
-  @spec first_elem_in_tuple_node(ast()) :: atom()
-  def first_elem_in_tuple_node(x) when is_atom(x), do: x
-  def first_elem_in_tuple_node({x, _}), do: x
-  def first_elem_in_tuple_node({:{}, _, x}) when is_list(x), do: hd(x)
-  def first_elem_in_tuple_node(_), do: nil
-
-  # Returns first non nil element in a list
-  defp first_non_nil(a) when is_list(a) do
-    Enum.reduce(a, nil, fn x, acc ->
-      if acc == nil do
-        x
-      else
-        acc
-      end
-    end)
   end
 
   @doc false
@@ -466,6 +348,55 @@ defmodule ElixirSessions.Inference do
     end
   end
 
+  @doc false
+  # Takes case of :-> and returns the label and number of values as ':any' type.
+  # e.g. {:label, value1, value2} -> do_something()
+  # returns {:label, [:any, :any]}
+  def parse_options(x) do
+    x =
+      case x do
+        {:when, _, data} ->
+          # throw("Problem while inferring: 'when' not implemented yet")
+          hd(data)
+
+        x ->
+          x
+      end
+
+    {label, size} =
+      case x do
+        # Size 0, e.g. {:do_something}
+        {:{}, _, [label]} ->
+          {label, 0}
+
+        # Size 1, e.g. {:value, 545}
+        {label, _} ->
+          {label, 1}
+
+        # Size > 2, e.g. {:add, 3, 5}
+        {:{}, _, x} when is_list(x) and length(x) > 2 ->
+          {hd(x), length(x)}
+
+        _ ->
+          throw(
+            "Needs to be a tuple contain at least a label. E.g. {:do_something} oe {:value, 54}"
+          )
+      end
+
+    case is_atom(label) do
+      true ->
+        :ok
+
+      false ->
+        throw("First item in tuple needs to be a label/atom. (#{inspect(label)})")
+    end
+
+    # Default type is set to any
+    types = List.duplicate(:any, size)
+
+    {label, types}
+  end
+
   @doc """
   Runs a self-contained example.
 
@@ -475,69 +406,98 @@ defmodule ElixirSessions.Inference do
   def run() do
     fun = :ping
 
-
     body =
       quote do
-        send(self(), {:ping, self()})
-        send(self(), {:ping, self()})
-
-        a = true
-
         case a do
-          true ->
-            :okkkk
-            a = 1 + 3
+          1 ->
+            send(pid, {:ok1, v})
+            send(pid, {:ok1, v})
+            send(pid, {:ok1, v})
 
-            send(self(), {:ok1})
-
+          2 ->
             receive do
               {:message_type, value} ->
-                :jksdfsdn
+                ok
+
+              {:message_type2, value} ->
+                ok
             end
 
-            send(self(), :ok2ddd)
+            send(pid, {:ok1, v})
+            send(pid, {:ok1, v})
 
-          # false -> :kdnfkjs
-          _ ->
-            send(self(), {:abc, 12, :jhidf})
-
-            send(self(), {:ok2, 12, 23, 4, 45, 535, 63_463_453, 8, :okkdsnjdf})
+          3 ->
+            send(pid, {:ok1, v})
+            send(pid, {:ok1, v})
+            send(pid, {:ok1, v})
         end
 
-        send(self(), {:ping, self()})
+        # send(self(), {:ping})
+        # send(self(), {:ping2, 43})
+        # send(self(), {:ping3, 2343, 23_424_234})
 
-        case true do
-          true -> :ok
-          false -> :not_okkkk
-        end
+        # a = true
 
-        receive do
-          {:pong, 1, 2, 3} ->
-            IO.puts("Received pong!")
-            send(self(), {:ping, self()})
-            send(self(), {:ping, self()})
-            send(self(), {:ping, self()})
+        # receive do
+        #   {:labelll, 34, v} ->
+        #     :okkk
+        # end
 
-            receive do
-              {:pong, 1, 2, 3} ->
-                IO.puts("Received pong!")
-                send(self(), {:ping, self()})
-                send(self(), {:ping, self()})
-                send(self(), {:ping, self()})
-                send(self(), {:ping, self()})
+        # case a do
+        #   true ->
+        #     :okkkk
+        #     a = 1 + 3
 
-              {:ponng} ->
-                IO.puts("Received ponnng!")
-            end
+        #     send(self(), {:ok1})
 
-            send(self(), {:ping, self()})
+        #     receive do
+        #       {:message_type, value} ->
+        #         :jksdfsdn
+        #     end
 
-          {:ponng} ->
-            IO.puts("Received ponnng!")
-        end
+        #     send(self(), {:ok2ddd})
 
-        send(self(), {:ping, self()})
-        ping()
+        #   # false -> :kdnfkjs
+        #   _ ->
+        #     send(self(), {:abc, 12, :jhidf})
+
+        #     send(self(), {:ok2, 12, 23, 4, 45, 535, 63_463_453, 8, :okkdsnjdf})
+        # end
+
+        # send(self(), {:ping, self()})
+
+        # case true do
+        #   true -> :ok
+        #   false -> :not_okkkk
+        # end
+
+        # receive do
+        #   {:pong, 1, 2, 3} ->
+        #     IO.puts("Received pong!")
+        #     send(self(), {:ping, self()})
+        #     send(self(), {:ping, self()})
+        #     send(self(), {:ping, self()})
+
+        #     receive do
+        #       {:pong, 1, 2, 3} ->
+        #         IO.puts("Received pong!")
+        #         send(self(), {:ping, self()})
+        #         send(self(), {:ping, self()})
+        #         send(self(), {:ping, self()})
+        #         send(self(), {:ping, self()})
+
+        #       {:ponng} ->
+        #         IO.puts("Received ponnng!")
+        #     end
+
+        #     send(self(), {:ping, self()})
+
+        #   {:ponng} ->
+        #     IO.puts("Received ponnng!")
+        # end
+
+        # send(self(), {:ping, self()})
+        # ping()
       end
 
     infer_session_type(fun, body)
