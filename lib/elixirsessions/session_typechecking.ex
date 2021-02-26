@@ -212,7 +212,7 @@ defmodule ElixirSessions.SessionTypechecking do
       end
 
     # session_type = [send: 'int']
-    session_type = [send: 'int', send: 'int', send: 'type', send: 'int']
+    session_type = []
 
     session_typecheck(fun, 0, body, session_type)
 

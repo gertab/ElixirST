@@ -19,10 +19,6 @@ defmodule ElixirSessions.Common do
 
   #todo change to defstruct
 
-  @typep branch_type() :: %{atom => session_type}
-
-  @typep choice_type() :: %{atom => session_type}
-
   @typedoc """
   A session type list of session operations.
 
@@ -30,11 +26,11 @@ defmodule ElixirSessions.Common do
   """
   @type session_type() ::
           [
-            {:recv, any}
-            | {:send, any}
-            | {:branch, branch_type}
-            | {:call_recurse, any}
-            | {:choice, choice_type}
-            | {:recurse, any, session_type}
+            {:recv, atom, any}
+            | {:send, atom, any}
+            | {:branch, [session_type]}
+            | {:choice, [session_type]}
+            | {:call_recurse, atom}
+            | {:recurse, atom, session_type}
           ]
 end

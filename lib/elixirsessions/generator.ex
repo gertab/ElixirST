@@ -32,23 +32,12 @@ defmodule ElixirSessions.Generator do
   require Logger
   require ElixirSessions.Common
 
-  # recompile && ElixirSession.Generator.run
-  def run() do
-    session_type = [
-      send: 'type',
-      recv: 'type',
-      branch: %{
-        pong: [
-          recv: 'type',
-          send: 'type'
-        ],
-        ponng: [recv: 'type']
-      }
-    ]
-
-    generate_to_string(session_type)
-    # |> IO.puts()
-  end
+  @typedoc false
+  @type ast :: ElixirSessions.Common.ast()
+  @typedoc false
+  @type info :: ElixirSessions.Common.info()
+  @typedoc false
+  @type session_type :: ElixirSessions.Common.session_type()
 
   @spec generate_to_string(session_type()) :: String.t()
   @doc """
@@ -58,13 +47,6 @@ defmodule ElixirSessions.Generator do
     generate_quoted(session_type)
     |> Macro.to_string()
   end
-
-  @typedoc false
-  @type ast :: ElixirSessions.Common.ast()
-  @typedoc false
-  @type info :: ElixirSessions.Common.info()
-  @typedoc false
-  @type session_type :: ElixirSessions.Common.session_type()
 
   @spec generate_quoted(session_type) :: ast
 
@@ -182,10 +164,26 @@ defmodule ElixirSessions.Generator do
 
   # recompile && (IO.puts(ElixirSessions.Generator.run))
   def run() do
-    session_type = [send: 'type', recv: 'type']
+    session_type = [{:send, :hello, []}, {:send, :hello, []}]
     res = ElixirSessions.Generator.generate_to_string(session_type)
     # |> IO.puts
     IO.puts res
     res
+
+    # session_type = [
+    #   send: 'type',
+    #   recv: 'type',
+    #   branch: %{
+    #     pong: [
+    #       recv: 'type',
+    #       send: 'type'
+    #     ],
+    #     ponng: [recv: 'type']
+    #   }
+    # ]
+
+    # generate_to_string(session_type)
+    # # |> IO.puts()
+
   end
 end

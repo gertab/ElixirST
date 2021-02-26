@@ -14,15 +14,15 @@ defmodule ElixirSessions.Duality do
   @typedoc false
   @type session_type :: ElixirSessions.Common.session_type()
 
-  @spec dual(session_type()) :: session_type()
   @doc """
   Returns the dual of the session type `session_type`
 
   ## Examples
-      iex> s = [{:recurse, :X, [{:send, :Hello, []}, {:call_recurse, :X}]}]
-      ...> ElixirSessions.Duality.dual(s)
-      [{:recurse, :X, [{:recv, :Hello, []}, {:call_recurse, :X}]}]
+  iex> s = [{:recurse, :X, [{:send, :Hello, []}, {:call_recurse, :X}]}]
+  ...> ElixirSessions.Duality.dual(s)
+  [{:recurse, :X, [{:recv, :Hello, []}, {:call_recurse, :X}]}]
   """
+  @spec dual(session_type()) :: session_type()
   def dual(session_type) do
     compute_dual(session_type)
   end
