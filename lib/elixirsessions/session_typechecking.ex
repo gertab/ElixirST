@@ -22,7 +22,7 @@ defmodule ElixirSessions.SessionTypechecking do
   ...>   end
   ...> end
   ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
-  [send: 'type']
+  [{:send, :hello, []}]
   """
   @spec session_typecheck(atom(), arity(), ast(), session_type()) :: true
   def session_typecheck(fun, arity, body, session_type) do

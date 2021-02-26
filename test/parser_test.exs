@@ -58,35 +58,26 @@ defmodule ParserTest do
       {:send, :Hello, [:Integer]},
       {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:Number]}]]}
     ]
+
     result = Parser.parse(source)
     assert expected == result
   end
 
-    # todo fix
-  # test "complex session type" do
-  #   source =
-  #     "!ABC(any).rec X.(!Hello(any), ?HelloBack(any). rec Y.(!Num(number).rec Z.(Z)))"
+  # todo fix
+  test "complex session type" do
+    source = "!ABC(any).rec X.(!Hello(any) . ?HelloBack(any) . rec Y.(!Num(number).rec Z.(Z)))"
 
-  #   expected =
-  #      [
-  #        {:send, 'any'},
-  #        {:recurse, :X,
-  #         [
-  #           {:send, 'any'},
-  #           {:recv, 'any'},
-  #           {:recurse, :Y,
-  #            [
-  #              {:send, '{number}'},
-  #              {:recv, '{any}'},
-  #              {:recurse, :Z, [call_recurse: :Z]},
-  #              {:recv, '{any}'},
-  #              {:call_recurse, :Y}
-  #            ]},
-  #           {:call_recurse, :X}
-  #         ]}
-  #      ]
+    expected = [
+      {:send, :ABC, [:any]},
+      {:recurse, :X,
+       [
+         {:send, :Hello, [:any]},
+         {:recv, :HelloBack, [:any]},
+         {:recurse, :Y, [{:send, :Num, [:number]}, {:recurse, :Z, [call_recurse: :Z]}]}
+       ]}
+    ]
 
-  #   result = Parser.parse(source)
-  #   assert expected == result
-  # end
+    result = Parser.parse(source)
+    assert expected == result
+  end
 end
