@@ -1,17 +1,16 @@
 Definitions.
 
-INT        = [0-9]+
-ATOM       = :[a-zA-Z_]+
-WHITESPACE = [\s\t\n\r]
-SEND = send
-RECEIVE = receive
-CHOICE = choice
-BRANCH = branch
-SEQUENCE = \.
-TYPES = '([^']*)'
-% TYPES = '([^\\\']|\\.)*'
-REC = rec
-% rec X.( +{!Guess(num: Int)[num > 0 && num < 10].&{ ?Correct(ans: Int)[ans==num], ?Incorrect().X }, !Quit()} )
+WHITESPACE  = [\s\t\n\r]
+SEND        = send|\!
+RECEIVE     = receive|\?
+CHOICE      = choice|\+
+BRANCH      = branch|\&
+SEQUENCE    = \.
+TYPES       = (any|atom|binary|bitstring|boolean|exception|float|function|integer|list|map|nil|number|pid|port|reference|struct|tuple|string)
+TYPES_UPPER = (Any|Atom|Binary|Bitstring|Boolean|Exception|Float|Function|Integer|List|Map|Nil|Number|Pid|Port|Reference|Struct|Tuple|String) 
+% note: String does not have is_string
+REC         = rec
+LABEL       = [a-zA-Z0-9_]+
 
 Rules.
 
@@ -21,14 +20,12 @@ Rules.
 {BRANCH}       : {token, {branch, TokenLine}}.
 {SEQUENCE}     : {token, {sequence, TokenLine}}.
 {REC}          : {token, {recurse, TokenLine}}.
-{TYPES}        : {token, {types, TokenLine, lists:sublist(TokenChars, 2, TokenLen - 2)}}.
-{INT}          : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
-{ATOM}         : {token, {atom, TokenLine, to_atom(TokenChars)}}.
-[a-zA-Z0-9_]+  : {token, {label,  TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
+{TYPES}|{TYPES_UPPER} : {token, {types, TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
+{LABEL}        : {token, {label,  TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
 \[             : {token, {'[',  TokenLine}}.
 \]             : {token, {']',  TokenLine}}.
-\<             : {token, {'<',  TokenLine}}.
-\>             : {token, {'>',  TokenLine}}.
+\{             : {token, {'{',  TokenLine}}.
+\}             : {token, {'}',  TokenLine}}.
 \:             : {token, {':',  TokenLine}}.
 ,              : {token, {',',  TokenLine}}.
 \(             : {token, {'(',  TokenLine}}.
@@ -37,5 +34,3 @@ Rules.
 
 Erlang code.
 
-to_atom(Atom) ->
-    'Elixir.Helpers':to_atom(Atom).

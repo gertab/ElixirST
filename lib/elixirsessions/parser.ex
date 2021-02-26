@@ -20,7 +20,8 @@ defmodule ElixirSessions.Parser do
   def parse(string) do
     with {:ok, tokens, _} <- lexer(string) do
       {:ok, session_type} = :parse.parse(tokens)
-      session_type
+      IO.inspect(session_type)
+      # session_type
     else
       err -> err
     end
@@ -40,8 +41,11 @@ defmodule ElixirSessions.Parser do
     # source = "send '{:ping, pid}' . receive '{:pong}'"
     # source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
     # source = " send 'any'.  rec X ( send 'any' . receive 'any' . rec Y. ( send '{number}' . receive '{any}' . rec Z . ( Z ) . receive '{any}' . Y ) . X )"
+    # S_ponger=rec X.(&{?Ping().!Pong().X, ?Quit().end})
+    # S_smtp = ?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }
+
     source =
-      "receive '{label}' . branch<add: receive '{number, number, pid}' . send '{number}', neg: receive '{number, pid}' . send '{number}'>"
+      "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
     parse(source)
   end
