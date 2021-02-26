@@ -22,6 +22,7 @@ defmodule ElixirSessions.Parser do
       {:ok, session_type} = :parse.parse(tokens)
       # IO.inspect(session_type)
       session_type
+      # todo add function: validate_session_type (to check when using branch all branches start with a 'receive' statement, and when using a choice ensure that all options start with a 'send' statement)
     else
       err -> err
     end
