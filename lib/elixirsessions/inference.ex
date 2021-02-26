@@ -475,6 +475,7 @@ defmodule ElixirSessions.Inference do
   def run() do
     fun = :ping
 
+
     body =
       quote do
         send(self(), {:ping, self()})
