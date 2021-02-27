@@ -60,6 +60,7 @@ defmodule ElixirSessions.Parser do
     :lexer.string(string)
   end
 
+  # todo (confirm before implement) branches need more than one branch
   @spec validate(session_type()) :: boolean()
   def validate(session_type)
 
@@ -144,6 +145,55 @@ defmodule ElixirSessions.Parser do
     false
   end
 
+  @spec st_to_string(session_type()) :: String.t()
+  def st_to_string(session_type)
+
+  def st_to_string(body) when is_list(body) do
+    Enum.map(body, fn x -> st_to_string(x) end)
+    |> Enum.join(".")
+
+  end
+
+  def st_to_string({:recv, label, types}) do
+    types_string = types |> Enum.join(", ")
+    "?#{label}(#{types_string})"
+  end
+
+  def st_to_string({:send, label, types}) do
+    types_string = types |> Enum.join(", ")
+    "!#{label}(#{types_string})"
+  end
+
+  def st_to_string({:call_recurse, label}) do
+    "#{label}"
+  end
+
+  def st_to_string({:recurse, label, body}) do
+    "rec #{label}.(#{st_to_string(body)})"
+  end
+
+  def st_to_string({:branch, body}) when is_list(body) do
+    v =
+      Enum.map(body, fn x -> st_to_string(x) end)
+      |> Enum.join(", ")
+
+    "&{#{v}}"
+  end
+
+
+  def st_to_string({:choice, body}) when is_list(body) do
+    v =
+      Enum.map(body, fn x -> st_to_string(x) end)
+      |> Enum.join(", ")
+
+    "+{#{v}}"
+  end
+
+  def st_to_string(_) do
+    throw("Parsing to string problem. Unknown input")
+    ""
+  end
+
   # recompile && ElixirSessions.Parser.run
   def run() do
     _leex_res = :leex.file('src/lexer.xrl')
@@ -157,9 +207,10 @@ defmodule ElixirSessions.Parser do
     # S_smtp = ?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }
 
     source =
+      # "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
       "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
-    _res = [
+      _res = [
       {:recv, :M220, [:String]},
       {:choice,
        [
@@ -199,7 +250,7 @@ defmodule ElixirSessions.Parser do
        ]}
     ]
 
-    parse(source)
+    st_to_string(parse(source))
   end
 end
 

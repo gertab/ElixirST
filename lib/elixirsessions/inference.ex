@@ -60,7 +60,11 @@ defmodule ElixirSessions.Inference do
     # IO.inspect(fun)
     # IO.inspect(body)
 
-    infer_session_type_incl_recursion(fun, body)
+    res = infer_session_type_incl_recursion(fun, body)
+
+    IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res)}\n")
+
+    res
   end
 
   @doc """
@@ -408,29 +412,23 @@ defmodule ElixirSessions.Inference do
 
     body =
       quote do
-        case a do
-          1 ->
-            send(pid, {:ok1, v})
-            send(pid, {:ok1, v})
-            send(pid, {:ok1, v})
+        send(pid, {:hello, value})
 
-          2 ->
+        receive do
+          {:label1} ->
             receive do
-              {:message_type, value} ->
-                ok
-
-              {:message_type2, value} ->
-                ok
+              {:option1, v} -> send(pid, {:in_label1})
+              {:option2} -> :ok
             end
 
-            send(pid, {:ok1, v})
-            send(pid, {:ok1, v})
+          {:label2} ->
+            :ok
 
-          3 ->
-            send(pid, {:ok1, v})
-            send(pid, {:ok1, v})
-            send(pid, {:ok1, v})
+          {:label3} ->
+            :ok
         end
+
+        send(pid, {:end})
 
         # send(self(), {:ping})
         # send(self(), {:ping2, 43})
