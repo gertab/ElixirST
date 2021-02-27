@@ -104,10 +104,10 @@ defmodule DualityTest do
   end
 
   test "branching choice dual" do
-    s = "&{!Neg(number, pid).!Hello(number)}"
+    s = "&{?Neg(number, pid).?Hello(number)}"
 
     session = Parser.parse(s)
-    actual = [choice: [[{:recv, :Neg, [:number, :pid]}, {:recv, :Hello, [:number]}]]]
+    actual = [choice: [[{:send, :Neg, [:number, :pid]}, {:send, :Hello, [:number]}]]]
 
     assert Duality.dual(session) == actual
   end

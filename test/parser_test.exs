@@ -80,4 +80,49 @@ defmodule ParserTest do
     result = Parser.parse(source)
     assert expected == result
   end
+
+
+  test "validation no error - choice" do
+    source = "!Hello(Integer).+{!neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert true
+    catch
+      _ -> assert false
+    end
+  end
+
+  test "validation no error - branch" do
+    source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert true
+    catch
+      _ -> assert false
+    end
+  end
+
+  test "validation error - choice" do
+    source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+  end
+
+  test "validation error - branch" do
+    source = "!Hello(Integer).&{!neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+  end
 end

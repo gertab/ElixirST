@@ -211,8 +211,8 @@ defmodule ElixirSessions.SessionTypechecking do
         send(self(), {:ping, self()})
       end
 
-    # session_type = [send: 'int']
-    session_type = []
+    st = "!Ping()"
+    session_type = ElixirSessions.Parser.parse(st)
 
     session_typecheck(fun, 0, body, session_type)
 
