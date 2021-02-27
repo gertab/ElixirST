@@ -1,9 +1,10 @@
 defmodule ElixirSessions.Checking do
   require Logger
 
-  @moduledoc """
-  This module is the starting point of ElixirSessions. It parses the `@session` attribute and starts the AST code comparison with the session type.
-  """
+  @moduledoc false
+  # @moduledoc """
+  # This module is the starting point of ElixirSessions. It parses the `@session` attribute and starts the AST code comparison with the session type.
+  # """
 
   defmacro __using__(_) do
     quote do

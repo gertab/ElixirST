@@ -38,7 +38,7 @@ defmodule ParserTest do
   test "branch session type" do
     source = "&{?neg(Number), ?add(Number, Number)}"
 
-    expected = [branch: [[{:recv, :neg, [:Number]}], [{:recv, :add, [:Number, :Number]}]]]
+    expected = [branch: [[{:recv, :neg, [:number]}], [{:recv, :add, [:number, :number]}]]]
     result = Parser.parse(source)
     assert expected == result
   end
@@ -55,8 +55,8 @@ defmodule ParserTest do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number)}"
 
     expected = [
-      {:send, :Hello, [:Integer]},
-      {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:Number]}]]}
+      {:send, :Hello, [:integer]},
+      {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:number]}]]}
     ]
 
     result = Parser.parse(source)

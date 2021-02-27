@@ -2,6 +2,14 @@ defmodule ElixirSessions.Duality do
   @moduledoc """
   Session type duality.
   Given a session type, `dual(s)` is able to get  dual session type of `s`. `dual?(s1, s2)` checks if `s1` is the dual of `s2`.
+
+  ## Examples
+      iex> st_string = "!Ping(Integer).?Pong(String)"
+      ...> st = ElixirSessions.Parser.parse(st_string)
+      [{:send, :Ping, [:integer]}, {:recv, :Pong, [:string]}]
+      ...> ElixirSessions.Duality.dual(st)
+      [{:recv, :Ping, [:integer]}, {:send, :Pong, [:string]}]
+
   """
   require Logger
   require ElixirSessions.Common
@@ -18,9 +26,9 @@ defmodule ElixirSessions.Duality do
   Returns the dual of the session type `session_type`
 
   ## Examples
-  iex> s = [{:recurse, :X, [{:send, :Hello, []}, {:call_recurse, :X}]}]
-  ...> ElixirSessions.Duality.dual(s)
-  [{:recurse, :X, [{:recv, :Hello, []}, {:call_recurse, :X}]}]
+      iex> s = [{:recurse, :X, [{:send, :Hello, []}, {:call_recurse, :X}]}]
+      ...> ElixirSessions.Duality.dual(s)
+      [{:recurse, :X, [{:recv, :Hello, []}, {:call_recurse, :X}]}]
   """
   @spec dual(session_type()) :: session_type()
   def dual(session_type) do

@@ -1,7 +1,25 @@
 defmodule ElixirSessions.Parser do
   @moduledoc """
-  Documentation for ElixirSessions.Parser.
-  Parses the input to a Elixir data as session types.
+  Parses an input string to a Elixir data as session types.
+
+
+  ## Examples
+
+      iex> s = "!Hello(Integer)"
+      ...> ElixirSessions.Parser.parse(s)
+      [{:send, :Hello, [:integer]}]
+
+      iex> s = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
+      ...> ElixirSessions.Parser.parse(s)
+      [
+        {:recurse, :X,
+        [
+          branch: [
+            [{:recv, :Ping, []}, {:send, :Pong, []}, {:call_recurse, :X}],
+            [{:recv, :Quit, []}, {:call_recurse, :end}]
+          ]
+        ]}
+      ]
   """
   require Logger
 
@@ -12,7 +30,7 @@ defmodule ElixirSessions.Parser do
 
       iex> s = "!Hello() . ?Receive(Integer)"
       ...> ElixirSessions.Parser.parse(s)
-      [{:send, :Hello, []}, {:recv, :Receive, [:Integer]}]
+      [{:send, :Hello, []}, {:recv, :Receive, [:integer]}]
 
   """
   def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
@@ -92,6 +110,7 @@ defmodule ElixirSessions.Parser do
 end
 
 defmodule Helpers do
+  @moduledoc false
   def extract_token({_token, _line, value}), do: value
   def to_atom(':' ++ atom), do: List.to_atom(atom)
 end

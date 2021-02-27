@@ -3,7 +3,9 @@ defmodule ElixirSessions.Generator do
   Given a session type, it generates the quoted Elixir code (or AST) automatically.
 
       session_type = [{:send, :hello, [:number]}, {:recv, :hello_ret, [:number]}]
+
       ElixirSessions.Generator.generate_to_string(session_type) |> IO.puts()
+
       def func() do
         send(self(), {:hello})
         receive do
@@ -11,6 +13,8 @@ defmodule ElixirSessions.Generator do
             :ok
         end
       end
+
+  Another example:
 
       session_type = [
         {:recv, :Hello, []},
@@ -22,6 +26,7 @@ defmodule ElixirSessions.Generator do
       ]
 
       ElixirSessions.Generator.generate_to_string(session_type) |> IO.puts
+
       def(func()) do
         receive do
           {:Hello} ->
@@ -57,13 +62,43 @@ defmodule ElixirSessions.Generator do
   @typedoc false
   @type session_type :: ElixirSessions.Common.session_type()
 
-  @spec generate_to_string(session_type()) :: String.t()
   @doc """
   Given a session type, generates the corresponding Elixir code, formatted as a string.
-  """
+
+  E.g.
+        st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
+        ElixirSessions.Generator.generate_to_string(st)
+        def(func()) do
+          send(self(), {:Ping})
+          receive do
+            {:Pong, var1} when is_binary(var1) ->
+              :ok
+            end
+          end
+        end
+    """
+  @spec generate_to_string(session_type()) :: String.t()
   def generate_to_string(session_type) do
     generate_quoted(session_type)
     |> Macro.to_string()
+  end
+
+  @doc """
+    Given a session type (as a string), generates the corresponding Elixir code.
+    E.g.
+        ElixirSessions.Generator.generate_from_session_type("!Ping(Integer).?Pong(String)")
+        def func() do
+          send(self(), {:Ping})
+          receive do
+            {:Pong, var1} when is_binary(var1) ->
+              :ok
+          end
+        end
+  """
+  @spec generate_from_session_type(String.t()) :: String.t()
+  def generate_from_session_type(session_type_string) when is_binary(session_type_string) do
+    session_type = ElixirSessions.Parser.parse(session_type_string)
+    ElixirSessions.Generator.generate_to_string(session_type)
   end
 
   @doc """
@@ -287,11 +322,6 @@ defmodule ElixirSessions.Generator do
     |> Enum.map(fn x -> "var#{x}" end)
     |> List.insert_at(0, nil)
     |> Enum.join(", ")
-  end
-
-  defp generate_from_session_type(session_type_string) when is_binary(session_type_string) do
-    session_type = ElixirSessions.Parser.parse(session_type_string)
-    ElixirSessions.Generator.generate_to_string(session_type)
   end
 
   # recompile && (IO.puts(ElixirSessions.Generator.run))

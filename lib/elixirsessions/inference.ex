@@ -21,7 +21,7 @@ defmodule ElixirSessions.Inference do
           ...>     end
           ...>   end
           ...> end
-          iex> ElixirSessions.Inference.infer_session_type(:ping, ast)
+          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
           [
             {:send, :label, []},
             {:branch,

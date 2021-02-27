@@ -21,7 +21,8 @@ Rules.
 {BRANCH}       : {token, {branch, TokenLine}}.
 {SEQUENCE}     : {token, {sequence, TokenLine}}.
 {REC}          : {token, {recurse, TokenLine}}.
-{TYPES}|{TYPES_UPPER} : {token, {types, TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
+{TYPES}        : {token, {types, TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
+{TYPES_UPPER}  : {token, {types, TokenLine, list_to_atom(string:lowercase(lists:sublist(TokenChars, 1, TokenLen)))}}.
 {LABEL}        : {token, {label,  TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
 \[             : {token, {'[',  TokenLine}}.
 \]             : {token, {']',  TokenLine}}.

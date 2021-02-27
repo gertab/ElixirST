@@ -1,5 +1,6 @@
 defmodule ElixirSessions.LargerExample do
   use ElixirSessions.Checking
+  @moduledoc false
   # iex -S mix
 
 
