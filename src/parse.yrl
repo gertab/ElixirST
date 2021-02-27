@@ -2,7 +2,7 @@ Nonterminals
 session sessions label_sessions types_list.
 
 Terminals
-send recv choice branch sequence types label recurse '{' '}' ':' ',' '(' ')'.
+send recv choice branch sequence types label terminate recurse '{' '}' ':' ',' '(' ')'.
 
 Rootsymbol sessions.
 
@@ -16,6 +16,7 @@ session -> recurse label sequence '(' sessions ')' : {recurse, unwrap('$2'), '$5
 session -> recurse label '(' sessions ')' : {recurse, unwrap('$2'), '$4'}.
 session -> label : {call_recurse, unwrap('$1')}.
 
+sessions -> terminate : [].
 sessions -> session : ['$1'].
 sessions -> session sessions : ['$1' | '$2' ].
 sessions -> session sequence sessions : ['$1' | '$3' ].

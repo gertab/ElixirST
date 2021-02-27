@@ -27,12 +27,12 @@ defmodule ElixirSessions.Generator do
 
       ElixirSessions.Generator.generate_to_string(session_type) |> IO.puts
 
-      def(func()) do
+      def func() do
         receive do
           {:Hello} ->
             :ok
         end
-        case(true) do
+        case true do
           {:option0} ->
             send(self(), {:Neg})
             receive do
@@ -63,20 +63,20 @@ defmodule ElixirSessions.Generator do
   @type session_type :: ElixirSessions.Common.session_type()
 
   @doc """
-  Given a session type, generates the corresponding Elixir code, formatted as a string.
+        Given a session type, generates the corresponding Elixir code, formatted as a string.
 
-  E.g.
-        st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
-        ElixirSessions.Generator.generate_to_string(st)
-        def(func()) do
-          send(self(), {:Ping})
-          receive do
-            {:Pong, var1} when is_binary(var1) ->
-              :ok
-            end
-          end
-        end
-    """
+        E.g.
+              st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
+              ElixirSessions.Generator.generate_to_string(st)
+              def func() do
+                send(self(), {:Ping})
+                receive do
+                  {:Pong, var1} when is_binary(var1) ->
+                    :ok
+                  end
+                end
+              end
+      """
   @spec generate_to_string(session_type()) :: String.t()
   def generate_to_string(session_type) do
     generate_quoted(session_type)

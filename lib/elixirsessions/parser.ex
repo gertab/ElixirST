@@ -1,6 +1,6 @@
 defmodule ElixirSessions.Parser do
   @moduledoc """
-  Parses an input string to a Elixir data as session types.
+  Parses an input string to session types (as Elixir data).
 
 
   ## Examples
@@ -16,7 +16,7 @@ defmodule ElixirSessions.Parser do
         [
           branch: [
             [{:recv, :Ping, []}, {:send, :Pong, []}, {:call_recurse, :X}],
-            [{:recv, :Quit, []}, {:call_recurse, :end}]
+            [{:recv, :Quit, []}]
           ]
         ]}
       ]
@@ -24,7 +24,7 @@ defmodule ElixirSessions.Parser do
   require Logger
 
   @doc """
-  Parses a session type from a string to an Elixir datatype.
+  Parses a session type from a string to an Elixir data structure.
 
   ## Examples
 
