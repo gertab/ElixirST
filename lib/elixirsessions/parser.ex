@@ -44,10 +44,11 @@ defmodule ElixirSessions.Parser do
     with {:ok, tokens, _} <- lexer(string) do
       {:ok, session_type} = :parse.parse(tokens)
       # IO.inspect(session_type)
-      validate(session_type)
-      session_type
-
-      # todo add function: validate_session_type (to check when using branch all branches start with a 'receive' statement, and when using a choice ensure that all options start with a 'send' statement)
+      # IO.puts("Initial st: #{st_to_string(session_type)}")
+      fixed_session_type = fix_structure_branch_choice(session_type)
+      # IO.puts("Fixed st:   #{st_to_string(fixed_session_type)}")
+      validate(fixed_session_type)
+      fixed_session_type
     else
       err ->
         _ = Logger.error(err)
@@ -61,17 +62,33 @@ defmodule ElixirSessions.Parser do
   end
 
   # todo (confirm before implement) branches need more than one branch
+  @doc """
+  Performs validations on the session type.
+
+  Ensure the following:
+    1) All branches have a `receive` statement as the first statement.
+    1) All choices have a `send` statement as the first statement.
+    2) todo: There are no operations after a branch/choice (e.g. &{?Hello()}.!Hello() is invalid)
+    4) todo: check if similar checks are needed for `rec`
+
+  """
   @spec validate(session_type()) :: boolean()
   def validate(session_type)
 
   def validate(body) when is_list(body) do
-    v = Enum.map(body, fn x -> validate(x) end)
+    normal_validations = Enum.map(body, fn x -> validate(x) end)
+
+    joins_validations = branch_choice_validation(body) |> List.flatten()
 
     # AND operation in list: [t, t, f, t] -> f
-    if false in v do
+    if false in normal_validations do
       false
     else
-      true
+      if false in joins_validations do
+        false
+      else
+        true
+      end
     end
   end
 
@@ -88,7 +105,7 @@ defmodule ElixirSessions.Parser do
   end
 
   def validate({:branch, body}) when is_list(body) do
-    v =
+    receive_checks =
       Enum.map(body, fn
         [{:recv, _label, _types}] ->
           true
@@ -98,15 +115,16 @@ defmodule ElixirSessions.Parser do
 
         x ->
           throw(
-            "Session type parsing validation error: Each branch needs a receive as the first statement: #{
-              inspect(x)
+            "Session type parsing validation error: Each branch needs a receive as the first statement. Error in #{
+              st_to_string(x)
             }"
           )
+
           false
       end)
 
     # AND operation
-    if false in v do
+    if false in receive_checks do
       false
     else
       true
@@ -114,7 +132,7 @@ defmodule ElixirSessions.Parser do
   end
 
   def validate({:choice, body}) when is_list(body) do
-    v =
+    send_checks =
       Enum.map(body, fn
         [{:send, _label, _types}] ->
           true
@@ -125,7 +143,7 @@ defmodule ElixirSessions.Parser do
         x ->
           throw(
             "Session type parsing validation error: Each branch needs a send as the first statement: #{
-              inspect(x)
+              st_to_string(x)
             }"
           )
 
@@ -133,7 +151,7 @@ defmodule ElixirSessions.Parser do
       end)
 
     # AND operation
-    if false in v do
+    if false in send_checks do
       false
     else
       true
@@ -145,13 +163,70 @@ defmodule ElixirSessions.Parser do
     false
   end
 
+  # Ensure that there are no commands following a branch or choice (in session type).
+  defp branch_choice_validation([{:send, _label, _types} | remaining]) do
+    [true | branch_choice_validation(remaining)]
+  end
+
+  defp branch_choice_validation([{:recv, _label, _types} | remaining]) do
+    [true | branch_choice_validation(remaining)]
+  end
+
+  defp branch_choice_validation([{:branch, branches}]) do
+    Enum.map(branches, fn branch ->
+      branch_choice_validation(branch)
+    end)
+  end
+
+  defp branch_choice_validation([{:branch, branches} | remaining]) do
+    throw(
+      "Connot have operations after a branch (e.g. &{!A()}.!B()). Session type #{
+        st_to_string(remaining)
+      } is invalid after #{st_to_string([{:branch, branches}])}."
+    )
+
+    [false]
+  end
+
+  defp branch_choice_validation([{:choice, choices}]) do
+    Enum.map(choices, fn choice ->
+      branch_choice_validation(choice)
+    end)
+  end
+
+  defp branch_choice_validation([{:choice, choices} | remaining]) do
+    throw(
+      "Connot have operations after a choice (e.g. +{!A()}.!B()). Session type #{
+        st_to_string(remaining)
+      } is invalid after #{st_to_string([{:choice, choices}])}."
+    )
+
+    [false]
+  end
+
+  defp branch_choice_validation([{:call_recurse, _label} | remaining]) do
+    [true | branch_choice_validation(remaining)]
+  end
+
+  defp branch_choice_validation([{:recurse, _label, _body} | remaining]) do
+    [true | branch_choice_validation(remaining)]
+  end
+
+  defp branch_choice_validation([]) do
+    [true]
+  end
+
+  defp branch_choice_validation(x) do
+    throw("unknown #{inspect(x)}")
+    [false]
+  end
+
   @spec st_to_string(session_type()) :: String.t()
   def st_to_string(session_type)
 
   def st_to_string(body) when is_list(body) do
     Enum.map(body, fn x -> st_to_string(x) end)
     |> Enum.join(".")
-
   end
 
   def st_to_string({:recv, label, types}) do
@@ -180,7 +255,6 @@ defmodule ElixirSessions.Parser do
     "&{#{v}}"
   end
 
-
   def st_to_string({:choice, body}) when is_list(body) do
     v =
       Enum.map(body, fn x -> st_to_string(x) end)
@@ -194,23 +268,73 @@ defmodule ElixirSessions.Parser do
     ""
   end
 
+  @doc """
+  Fixes structure of sessionn types. E.g. &{!A()}.!B() becomes &{!A().!B()}
+  """
+  @spec fix_structure_branch_choice(session_type()) :: session_type()
+  def fix_structure_branch_choice([{:send, label, types} | remaining]) do
+    [{:send, label, types} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([{:recv, label, types} | remaining]) do
+    [{:recv, label, types} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([{:branch, branches}]) do
+    [{:branch, Enum.map(branches, fn branch -> fix_structure_branch_choice(branch) end)}]
+  end
+
+  def fix_structure_branch_choice([{:branch, branches} | remaining]) do
+    final = [{:branch, Enum.map(branches, fn branch -> fix_structure_branch_choice(branch ++ fix_structure_branch_choice(remaining)) end)}]
+
+    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
+    final
+  end
+
+  def fix_structure_branch_choice([{:choice, choices}]) do
+    [{:choice, Enum.map(choices, fn choice -> fix_structure_branch_choice(choice) end)}]
+  end
+
+  def fix_structure_branch_choice([{:choice, choices} | remaining]) do
+    final = [{:choice, Enum.map(choices, fn choice -> fix_structure_branch_choice(choice ++ fix_structure_branch_choice(remaining)) end)}]
+
+    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
+    final
+
+
+  end
+
+  def fix_structure_branch_choice([{:call_recurse, label} | remaining]) do
+    [{:call_recurse, label} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([{:recurse, label, body} | remaining]) do
+    [{:recurse, label, fix_structure_branch_choice(body)} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([]) do
+    []
+  end
+
+  def fix_structure_branch_choice(x) do
+    throw("fix_structure_branch_choice unknown #{inspect(x)}")
+    []
+  end
+
   # recompile && ElixirSessions.Parser.run
   def run() do
     _leex_res = :leex.file('src/lexer.xrl')
     # returns {ok, Scannerfile} | {ok, Scannerfile, Warnings} | error | {error, Errors, Warnings}
 
-    # source = "branch<neg: send 'any', neg2: send 'any'>"
-    # source = "send '{:ping, pid}' . receive '{:pong}'"
-    # source = "send '{string}' . choice<neg: send '{number, pid}' . receive '{number}'>"
-    # source = " send 'any'.  rec X ( send 'any' . receive 'any' . rec Y. ( send '{number}' . receive '{any}' . rec Z . ( Z ) . receive '{any}' . Y ) . X )"
     # S_ponger=rec X.(&{?Ping().!Pong().X, ?Quit().end})
     # S_smtp = ?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }
 
-    source =
-      # "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
-      "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
+    # source = "rec X.(!Hello1().&{?Ping().!Pong().X, ?Quit().end}.?Hello())"
+    source = "rec X.(!Hello1().&{?Ping().!Pong().X, ?Quit().&{?sefe()}.?Hello()}.!HEELeL())"
+    # "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
+    # "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
-      _res = [
+    _res = [
       {:recv, :M220, [:String]},
       {:choice,
        [
@@ -250,7 +374,8 @@ defmodule ElixirSessions.Parser do
        ]}
     ]
 
-    st_to_string(parse(source))
+    parse(source)
+    # |> st_to_string()
   end
 end
 
