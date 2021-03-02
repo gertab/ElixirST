@@ -6,9 +6,10 @@ defmodule ElixirSessions.Duality do
   ## Examples
       iex> st_string = "!Ping(Integer).?Pong(String)"
       ...> st = ElixirSessions.Parser.parse(st_string)
-      [{:send, :Ping, [:integer]}, {:recv, :Pong, [:string]}]
-      ...> ElixirSessions.Duality.dual(st)
+      ...> st_dual = ElixirSessions.Duality.dual(st)
       [{:recv, :Ping, [:integer]}, {:send, :Pong, [:string]}]
+      ...> ElixirSessions.Parser.st_to_string(st_dual)
+      "?Ping(integer).!Pong(string)"
 
   """
   require Logger

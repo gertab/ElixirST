@@ -68,9 +68,10 @@ defmodule ElixirSessions.Parser do
   Ensure the following:
     1) All branches have a `receive` statement as the first statement.
     1) All choices have a `send` statement as the first statement.
-    2) todo: There are no operations after a branch/choice (e.g. &{?Hello()}.!Hello() is invalid)
+    2) There are no operations after a branch/choice (e.g. &{?Hello()}.!Hello() is invalid)
     4) todo: check if similar checks are needed for `rec`
 
+  todo examples
   """
   @spec validate(session_type()) :: boolean()
   def validate(session_type)
@@ -221,6 +222,16 @@ defmodule ElixirSessions.Parser do
     [false]
   end
 
+  @doc """
+  Converts session type to a string.
+
+  ## Examples
+      ...> s = "rec x.(&{?Hello(number), ?Retry().X})"
+      ...> st = ElixirSessions.Parser.parse(s)
+      ...> st_dual = ElixirSessions.Duality.dual(st)
+      ...> ElixirSessions.Parser.st_to_string(st_dual)
+      "rec x.(+{!Hello(number), !Retry().X})"
+  """
   @spec st_to_string(session_type()) :: String.t()
   def st_to_string(session_type)
 
@@ -269,7 +280,30 @@ defmodule ElixirSessions.Parser do
   end
 
   @doc """
-  Fixes structure of sessionn types. E.g. &{!A()}.!B() becomes &{!A().!B()}
+  Fixes structure of sessionn types. E.g. `&{!A()}.!B()` becomes `&{!A().!B()}`.
+
+  ## Examples
+      iex> s = "&{?Hello()}.!Wrong()"
+      ...> st = ElixirSessions.Parser.parse(s) # Calls fix_structure_branch_choice
+      ...> ElixirSessions.Parser.st_to_string(st)
+      "&{?Hello().!Wrong()}"
+
+  ## Examples
+      iex> st =
+      ...> [
+      ...>   {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:number]}]]},
+      ...>   {:send, :Hello, [:integer]}
+      ...> ]
+      iex> ElixirSessions.Parser.fix_structure_branch_choice(st)
+      [
+        choice: [
+          [
+            {:send, :neg, [:number, :pid]},
+            {:recv, :Num, [:number]},
+            {:send, :Hello, [:integer]}
+          ]
+        ]
+      ]
   """
   @spec fix_structure_branch_choice(session_type()) :: session_type()
   def fix_structure_branch_choice([{:send, label, types} | remaining]) do
@@ -321,6 +355,7 @@ defmodule ElixirSessions.Parser do
     []
   end
 
+  @doc false
   # recompile && ElixirSessions.Parser.run
   def run() do
     _leex_res = :leex.file('src/lexer.xrl')
@@ -330,7 +365,7 @@ defmodule ElixirSessions.Parser do
     # S_smtp = ?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }
 
     # source = "rec X.(!Hello1().&{?Ping().!Pong().X, ?Quit().end}.?Hello())"
-    source = "rec X.(!Hello1().&{?Ping().!Pong().X, ?Quit().&{?sefe()}.?Hello()}.!HEELeL())"
+    source = "&{?Hello()}.!HEELeL()"
     # "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
     # "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
@@ -375,7 +410,7 @@ defmodule ElixirSessions.Parser do
     ]
 
     parse(source)
-    # |> st_to_string()
+    |> st_to_string()
   end
 end
 

@@ -366,10 +366,10 @@ defmodule CodeTest do
       [
         {:branch,
          [
-          [{:recv, :ok1, [:any]}, {:send, :ok1, [:any]}],
-          [{:recv, :ok2, [:any]}, {:send, :ok1, [:any]}],
+           [{:recv, :ok1, [:any]}, {:send, :ok1, [:any]}],
+           [{:recv, :ok2, [:any]}, {:send, :ok1, [:any]}]
          ]},
-         {:send, :ok1, [:any]}
+        {:send, :ok1, [:any]}
       ],
       [{:send, :ok1, [:any]}, {:send, :ok1, [:any]}],
       [{:send, :ok1, [:any]}]
@@ -379,5 +379,48 @@ defmodule CodeTest do
     expected_result = :error
 
     assert result == expected_result
+  end
+
+  test "receive session type structure not correct" do
+    fun = :ping
+
+    body =
+      quote do
+        send(self(), {:okkk})
+
+        receive do
+          {:message_type, _value} ->
+            send(self(), {:label1, :okkk})
+
+          {:message_type2, _value} ->
+            send(self(), {:label2, :okkk})
+        end
+
+        receive do
+          {:message_type, _value} ->
+            send(self(), {:label1, :okkk})
+
+          {:message_type2, _value} ->
+            send(self(), {:label2, :okkk})
+        end
+      end
+
+    expected_session_type = [
+      {:send, :okkk, []},
+      {:branch,
+       [
+         [{:recv, :message_type, [:any]}, {:send, :label1, [:any]}],
+         [{:recv, :message_type2, [:any]}, {:send, :label2, [:any]}]
+       ]},
+      {:branch,
+       [
+         [{:recv, :message_type, [:any]}, {:send, :label1, [:any]}],
+         [{:recv, :message_type2, [:any]}, {:send, :label2, [:any]}]
+       ]}
+    ]
+
+    inferred_session_type = ElixirSessions.Inference.infer_session_type_incl_recursion(fun, body)
+
+    assert inferred_session_type == expected_session_type
   end
 end

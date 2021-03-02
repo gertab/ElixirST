@@ -7,33 +7,27 @@ defmodule ElixirSessions.Inference do
 
 
   ## Examples
-          iex> ast = quote do
-          ...>   def ping(pid) do
-          ...>     send(pid, {:label})
-          ...>     receive do
-          ...>       {:do_something} -> :ok
-          ...>       {:do_something_else, value} -> send(pid, {:label2, value})
-          ...>     end
-          ...>     a = true
-          ...>     case a do
-          ...>       true -> send(pid, {:first_branch})
-          ...>       false -> send(pid, {:other_branch})
-          ...>     end
-          ...>   end
-          ...> end
-          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
-          [
-            {:send, :label, []},
-            {:branch,
-            [
-              [{:recv, :do_something, []}],
-              [{:recv, :do_something_else, [:any]}, {:send, :label2, [:any]}]
-            ]},
-            {:choice, [[{:send, :first_branch, []}], [{:send, :other_branch, []}]]}
-          ]
+      iex> ast = quote do
+      ...>   def ping(pid) do
+      ...>     send(pid, {:label})
+      ...>     receive do
+      ...>       {:do_something} -> :ok
+      ...>       {:do_something_else, value} -> send(pid, {:label2, value})
+      ...>     end
+      ...>     a = true
+      ...>     case a do
+      ...>       true -> send(pid, {:first_branch})
+      ...>       false -> send(pid, {:other_branch})
+      ...>     end
+      ...>   end
+      ...> end
+      ...> st = ElixirSessions.Inference.infer_session_type(:ping, ast)
+      ...> ElixirSessions.Parser.st_to_string(st)
+      "!label().&{?do_something().+{!first_branch(), !other_branch()}, ?do_something_else(any).!label2(any).+{!first_branch(), !other_branch()}}"
 
   todo: AST comparison (not just inference) with the expected session types.
   todo: add more detail in errors (e.g. lines)
+  todo: fix structure?
   Add runtime check for types: e.g. is_integer, is_atom, ...
   """
   @typedoc false
@@ -62,9 +56,14 @@ defmodule ElixirSessions.Inference do
 
     res = infer_session_type_incl_recursion(fun, body)
 
-    IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res)}\n")
+    # IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res)}\n")
 
-    res
+    res_structured = ElixirSessions.Parser.fix_structure_branch_choice(res)
+    ElixirSessions.Parser.validate(res_structured)
+
+    IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res_structured)}\n")
+
+    res_structured
   end
 
   @doc """
@@ -78,10 +77,12 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...>
-          ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
+          ...> st = ElixirSessions.Inference.infer_session_type(:ping, ast)
           [
             {:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}
           ]
+          ...> ElixirSessions.Parser.st_to_string(st)
+          "rec X.(!label().X)"
   """
   @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type()
   def infer_session_type_incl_recursion(fun, body) do
