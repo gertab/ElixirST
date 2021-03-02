@@ -7,19 +7,21 @@ defmodule ElixirSessions.Parser do
 
       iex> s = "!Hello(Integer)"
       ...> ElixirSessions.Parser.parse(s)
-      [{:send, :Hello, [:integer]}]
+      {:send, :Hello, [:integer], nil}
 
       iex> s = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
       ...> ElixirSessions.Parser.parse(s)
-      [
-        {:recurse, :X,
-        [
-          branch: [
-            [{:recv, :Ping, []}, {:send, :Pong, []}, {:call_recurse, :X}],
-            [{:recv, :Quit, []}]
+      {:recurse, :X,
+        {:branch,
+          [
+            {:recv, :Ping, [],
+              {:send, :Pong, [],
+             {:call_recurse, :X}}},
+              {:recv, :Quit, [], nil}
           ]
-        ]}
-      ]
+        }
+      }
+
   """
   require Logger
   require ElixirSessions.Common
@@ -34,7 +36,7 @@ defmodule ElixirSessions.Parser do
 
       iex> s = "!Hello() . ?Receive(Integer)"
       ...> ElixirSessions.Parser.parse(s)
-      [{:send, :Hello, []}, {:recv, :Receive, [:integer]}]
+      {:send, :Hello, [], {:recv, :Receive, [:integer], nil}}
 
   """
   @spec parse(bitstring() | charlist()) :: session_type()
@@ -43,14 +45,15 @@ defmodule ElixirSessions.Parser do
   def parse(string) do
     with {:ok, tokens, _} <- lexer(string) do
       {:ok, session_type} = :parse.parse(tokens)
-      # IO.inspect(session_type)
+      session_type
       # IO.puts("Initial st: #{st_to_string(session_type)}")
-      fixed_session_type = fix_structure_branch_choice(session_type)
+      # fixed_session_type = fix_structure_branch_choice(session_type)
       # IO.puts("Fixed st:   #{st_to_string(fixed_session_type)}")
-      validate(fixed_session_type)
-      fixed_session_type
+      # validate(fixed_session_type)
+      # fixed_session_type
     else
       err ->
+        # todo: cuter error message needed
         _ = Logger.error(err)
         []
     end
@@ -279,138 +282,17 @@ defmodule ElixirSessions.Parser do
     ""
   end
 
-  @doc """
-  Fixes structure of sessionn types. E.g. `&{!A()}.!B()` becomes `&{!A().!B()}`.
-
-  ## Examples
-      iex> s = "&{?Hello()}.!Wrong()"
-      ...> st = ElixirSessions.Parser.parse(s) # Calls fix_structure_branch_choice
-      ...> ElixirSessions.Parser.st_to_string(st)
-      "&{?Hello().!Wrong()}"
-
-  ## Examples
-      iex> st =
-      ...> [
-      ...>   {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:number]}]]},
-      ...>   {:send, :Hello, [:integer]}
-      ...> ]
-      iex> ElixirSessions.Parser.fix_structure_branch_choice(st)
-      [
-        choice: [
-          [
-            {:send, :neg, [:number, :pid]},
-            {:recv, :Num, [:number]},
-            {:send, :Hello, [:integer]}
-          ]
-        ]
-      ]
-  """
-  @spec fix_structure_branch_choice(session_type()) :: session_type()
-  def fix_structure_branch_choice([{:send, label, types} | remaining]) do
-    [{:send, label, types} | fix_structure_branch_choice(remaining)]
-  end
-
-  def fix_structure_branch_choice([{:recv, label, types} | remaining]) do
-    [{:recv, label, types} | fix_structure_branch_choice(remaining)]
-  end
-
-  def fix_structure_branch_choice([{:branch, branches}]) do
-    [{:branch, Enum.map(branches, fn branch -> fix_structure_branch_choice(branch) end)}]
-  end
-
-  def fix_structure_branch_choice([{:branch, branches} | remaining]) do
-    final = [{:branch, Enum.map(branches, fn branch -> fix_structure_branch_choice(branch ++ fix_structure_branch_choice(remaining)) end)}]
-
-    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
-    final
-  end
-
-  def fix_structure_branch_choice([{:choice, choices}]) do
-    [{:choice, Enum.map(choices, fn choice -> fix_structure_branch_choice(choice) end)}]
-  end
-
-  def fix_structure_branch_choice([{:choice, choices} | remaining]) do
-    final = [{:choice, Enum.map(choices, fn choice -> fix_structure_branch_choice(choice ++ fix_structure_branch_choice(remaining)) end)}]
-
-    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
-    final
-
-
-  end
-
-  def fix_structure_branch_choice([{:call_recurse, label} | remaining]) do
-    [{:call_recurse, label} | fix_structure_branch_choice(remaining)]
-  end
-
-  def fix_structure_branch_choice([{:recurse, label, body} | remaining]) do
-    [{:recurse, label, fix_structure_branch_choice(body)} | fix_structure_branch_choice(remaining)]
-  end
-
-  def fix_structure_branch_choice([]) do
-    []
-  end
-
-  def fix_structure_branch_choice(x) do
-    throw("fix_structure_branch_choice unknown #{inspect(x)}")
-    []
-  end
-
   @doc false
   # recompile && ElixirSessions.Parser.run
   def run() do
     _leex_res = :leex.file('src/lexer.xrl')
-    # returns {ok, Scannerfile} | {ok, Scannerfile, Warnings} | error | {error, Errors, Warnings}
 
-    # S_ponger=rec X.(&{?Ping().!Pong().X, ?Quit().end})
-    # S_smtp = ?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }
-
-    # source = "rec X.(!Hello1().&{?Ping().!Pong().X, ?Quit().end}.?Hello())"
-    source = "&{?Hello()}.!HEELeL()"
+    source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
     # "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
     # "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
-    _res = [
-      {:recv, :M220, [:String]},
-      {:choice,
-       [
-         [
-           {:send, :Helo, [:String]},
-           {:recv, :M250, [:String]},
-           {:recurse, :X,
-            [
-              choice: [
-                [
-                  {:send, :MailFrom, [:String]},
-                  {:recv, :M250, [:String]},
-                  {:recurse, :Y,
-                   [
-                     choice: [
-                       [
-                         {:send, :RcptTo, [:String]},
-                         {:recv, :M250, [:String]},
-                         {:call_recurse, :Y}
-                       ],
-                       [
-                         {:send, :Data, []},
-                         {:recv, :M354, [:String]},
-                         {:send, :Content, [:String]},
-                         {:recv, :M250, [:String]},
-                         {:call_recurse, :X}
-                       ],
-                       [{:send, :Quit, []}, {:recv, :M221, [:String]}]
-                     ]
-                   ]}
-                ],
-                [{:send, :Quit, []}, {:recv, :M221, [:String]}]
-              ]
-            ]}
-         ],
-         [{:send, :Quit, []}, {:recv, :M221, [:String]}]
-       ]}
-    ]
-
     parse(source)
-    |> st_to_string()
+    # |> st_to_string()
   end
 end
 

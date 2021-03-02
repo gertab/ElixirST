@@ -6,7 +6,7 @@ defmodule ParserTest do
   test "send session type" do
     source = "!Label(any)"
 
-    expected = [{:send, :Label, [:any]}]
+    expected = {:send, :Label, [:any], nil}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -14,7 +14,7 @@ defmodule ParserTest do
   test "receive session type" do
     source = "?Receive(any)"
 
-    expected = [{:recv, :Receive, [:any]}]
+    expected = {:recv, :Receive, [:any], nil}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -22,7 +22,7 @@ defmodule ParserTest do
   test "simple session type" do
     source = "!Ping(pid).?Pong()"
 
-    expected = [{:send, :Ping, [:pid]}, {:recv, :Pong, []}]
+    expected = {:send, :Ping, [:pid], {:recv, :Pong, [], nil}}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -30,7 +30,7 @@ defmodule ParserTest do
   test "choice session type" do
     source = "+{!neg(any)}"
 
-    expected = [choice: [[{:send, :neg, [:any]}]]]
+    expected = {:choice, [{:send, :neg, [:any], nil}]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -38,7 +38,7 @@ defmodule ParserTest do
   test "branch session type" do
     source = "&{?neg(Number), ?add(Number, Number)}"
 
-    expected = [branch: [[{:recv, :neg, [:number]}], [{:recv, :add, [:number, :number]}]]]
+    expected = {:branch, [{:recv, :neg, [:number], nil}, {:recv, :add, [:number, :number], nil}]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -46,7 +46,7 @@ defmodule ParserTest do
   test "recurse session type" do
     source = "rec X .(!Hello() . X)"
 
-    expected = [{:recurse, :X, [{:send, :Hello, []}, {:call_recurse, :X}]}]
+    expected = {:recurse, :X, {:send, :Hello, [], {:call_recurse, :X}}}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -54,10 +54,9 @@ defmodule ParserTest do
   test "send receive choicde session type" do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number)}"
 
-    expected = [
-      {:send, :Hello, [:integer]},
-      {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:number]}]]}
-    ]
+    expected =
+      {:send, :Hello, [:integer],
+       {:choice, [{:send, :neg, [:number, :pid], {:recv, :Num, [:number], nil}}]}}
 
     result = Parser.parse(source)
     assert expected == result
@@ -67,20 +66,16 @@ defmodule ParserTest do
   test "complex session type" do
     source = "!ABC(any).rec X.(!Hello(any) . ?HelloBack(any) . rec Y.(!Num(number).rec Z.(Z)))"
 
-    expected = [
-      {:send, :ABC, [:any]},
-      {:recurse, :X,
-       [
-         {:send, :Hello, [:any]},
-         {:recv, :HelloBack, [:any]},
-         {:recurse, :Y, [{:send, :Num, [:number]}, {:recurse, :Z, [call_recurse: :Z]}]}
-       ]}
-    ]
+    expected =
+      {:send, :ABC, [:any],
+       {:recurse, :X,
+        {:send, :Hello, [:any],
+         {:recv, :HelloBack, [:any],
+          {:recurse, :Y, {:send, :Num, [:number], {:recurse, :Z, {:call_recurse, :Z}}}}}}}}
 
     result = Parser.parse(source)
     assert expected == result
   end
-
 
   test "validation no error - choice" do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"

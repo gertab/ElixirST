@@ -402,6 +402,93 @@ defmodule ElixirSessions.Inference do
     {label, types}
   end
 
+    @doc """
+  Fixes structure of sessionn types. E.g. `&{!A()}.!B()` becomes `&{!A().!B()}`.
+
+  ## Examples
+      iex> s = "&{?Hello()}.!Wrong()"
+      ...> st = ElixirSessions.Parser.parse(s) # Calls fix_structure_branch_choice
+      ...> ElixirSessions.Parser.st_to_string(st)
+      "&{?Hello().!Wrong()}"
+
+  ## Examples
+      iex> st =
+      ...> [
+      ...>   {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:number]}]]},
+      ...>   {:send, :Hello, [:integer]}
+      ...> ]
+      iex> ElixirSessions.Parser.fix_structure_branch_choice(st)
+      [
+        choice: [
+          [
+            {:send, :neg, [:number, :pid]},
+            {:recv, :Num, [:number]},
+            {:send, :Hello, [:integer]}
+          ]
+        ]
+      ]
+  """
+  @spec fix_structure_branch_choice(session_type()) :: session_type()
+  def fix_structure_branch_choice([{:send, label, types} | remaining]) do
+    [{:send, label, types} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([{:recv, label, types} | remaining]) do
+    [{:recv, label, types} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([{:branch, branches}]) do
+    [{:branch, Enum.map(branches, fn branch -> fix_structure_branch_choice(branch) end)}]
+  end
+
+  def fix_structure_branch_choice([{:branch, branches} | remaining]) do
+    final = [
+      {:branch,
+       Enum.map(branches, fn branch ->
+         fix_structure_branch_choice(branch ++ fix_structure_branch_choice(remaining))
+       end)}
+    ]
+
+    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
+    final
+  end
+
+  def fix_structure_branch_choice([{:choice, choices}]) do
+    [{:choice, Enum.map(choices, fn choice -> fix_structure_branch_choice(choice) end)}]
+  end
+
+  def fix_structure_branch_choice([{:choice, choices} | remaining]) do
+    final = [
+      {:choice,
+       Enum.map(choices, fn choice ->
+         fix_structure_branch_choice(choice ++ fix_structure_branch_choice(remaining))
+       end)}
+    ]
+
+    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
+    final
+  end
+
+  def fix_structure_branch_choice([{:call_recurse, label} | remaining]) do
+    [{:call_recurse, label} | fix_structure_branch_choice(remaining)]
+  end
+
+  def fix_structure_branch_choice([{:recurse, label, body} | remaining]) do
+    [
+      {:recurse, label, fix_structure_branch_choice(body)}
+      | fix_structure_branch_choice(remaining)
+    ]
+  end
+
+  def fix_structure_branch_choice([]) do
+    []
+  end
+
+  def fix_structure_branch_choice(x) do
+    throw("fix_structure_branch_choice unknown #{inspect(x)}")
+    []
+  end
+
   @doc """
   Runs a self-contained example.
 
