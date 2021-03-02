@@ -71,7 +71,7 @@ defmodule ElixirSessions.Parser do
   Ensure the following:
     1) All branches have a `receive` statement as the first statement.
     1) All choices have a `send` statement as the first statement.
-    2) There are no operations after a branch/choice (e.g. &{?Hello()}.!Hello() is invalid)
+    2) todo: remove, no need to check. There are no operations after a branch/choice (e.g. &{?Hello()}.!Hello() is invalid)
     4) todo: check if similar checks are needed for `rec`
 
   todo examples
@@ -287,11 +287,14 @@ defmodule ElixirSessions.Parser do
   def run() do
     _leex_res = :leex.file('src/lexer.xrl')
 
+    # source = "!Hello()"
     source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
-    # "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
+    # source = "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
     # "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
     parse(source)
+    |> ST.convert_to_structs()
+
     # |> st_to_string()
   end
 end
