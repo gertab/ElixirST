@@ -5,11 +5,11 @@ defmodule ElixirSessions.SessionTypechecking do
   Given a session type and Elixir code, the Elixir code is typechecked against the session type.
   """
   @typedoc false
-  @type ast :: ElixirSessions.Common.ast()
+  @type ast :: ST.ast()
   @typedoc false
-  @type info :: ElixirSessions.Common.info()
+  @type info :: ST.info()
   @typedoc false
-  @type session_type :: ElixirSessions.Common.session_type()
+  @type session_type :: ST.session_type()
   @typep session_context :: %{atom() => session_type()}
 
   @doc """
@@ -22,7 +22,7 @@ defmodule ElixirSessions.SessionTypechecking do
   ...>   end
   ...> end
   ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
-  [{:send, :hello, []}]
+  %ST.Send{label: :hello, next: %ST.Terminate{}, types: []}
   """
   @spec session_typecheck(atom(), arity(), ast(), session_type()) :: true
   def session_typecheck(fun, arity, body, session_type) do

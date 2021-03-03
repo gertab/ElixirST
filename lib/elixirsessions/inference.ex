@@ -22,7 +22,7 @@ defmodule ElixirSessions.Inference do
       ...>   end
       ...> end
       ...> st = ElixirSessions.Inference.infer_session_type(:ping, ast)
-      ...> ElixirSessions.Parser.st_to_string(st)
+      ...> ST.st_to_string(st)
       "!label().&{?do_something().+{!first_branch(), !other_branch()}, ?do_something_else(any).!label2(any).+{!first_branch(), !other_branch()}}"
 
   todo: AST comparison (not just inference) with the expected session types.
@@ -37,18 +37,22 @@ defmodule ElixirSessions.Inference do
 
   @typedoc """
   A session type list of session operations.
+  Allows for sequences/joins.
 
   A session type may: `receive` (or dually `send` data), `branch` (or make a `choice`) or `recurse`.
   """
-  @type session_type() ::
+  @type session_type_joins() ::
           [
             {:recv, atom, any}
             | {:send, atom, any}
-            | {:branch, [session_type]}
-            | {:choice, [session_type]}
+            | {:branch, [session_type_joins]}
+            | {:choice, [session_type_joins]}
             | {:call_recurse, atom}
-            | {:recurse, atom, session_type}
+            | {:recurse, atom, session_type_joins}
           ]
+
+  @typedoc false
+  @type session_type() :: ST.session_type()
 
   @doc """
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.
@@ -60,21 +64,23 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
-          [{:send, :hello, []}]
+          %ST.Send{label: :hello, next: %ST.Terminate{}, types: []}
   """
   @spec infer_session_type(atom(), ast()) :: session_type()
   def infer_session_type(fun, body) do
-    # IO.inspect(fun)
-    # IO.inspect(body)
 
     res = infer_session_type_incl_recursion(fun, body)
 
-    # IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res)}\n")
+    # IO.puts("Inferred session type for &#{fun}:\n#{ST.st_to_string(res)}\n")
 
-    res_structured = ElixirSessions.Parser.fix_structure_branch_choice(res)
-    ElixirSessions.Parser.validate!(res_structured)
+    res_structured =
+      fix_structure_branch_choice(res)
+      |> fix_structure_no_joins()
+      |> ST.convert_to_structs()
 
-    IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res_structured)}\n")
+    ST.validate!(res_structured)
+
+    IO.puts("Inferred session type for &#{fun}:\n#{ST.st_to_string(res_structured)}\n")
 
     res_structured
   end
@@ -94,10 +100,10 @@ defmodule ElixirSessions.Inference do
           [
             {:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}
           ]
-          ...> ElixirSessions.Parser.st_to_string(st)
+          ...> ST.st_to_string(st)
           "rec X.(!label().X)"
   """
-  @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type()
+  @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type_joins()
   def infer_session_type_incl_recursion(fun, body) do
     info = %{
       call_recursion: :X,
@@ -139,7 +145,7 @@ defmodule ElixirSessions.Inference do
           ]
   """
   def infer_session_type_ast(node, info)
-  @spec infer_session_type_ast(ast, info) :: session_type()
+  @spec infer_session_type_ast(ast, info) :: session_type_joins()
   #### Checking for AST literals
   # :atoms, 123, 3.12 (numbers), [1,2,3] (list), "string", {:ok, 1} (short tuples)
   def infer_session_type_ast(x, _info) when is_atom(x) or is_number(x) or is_binary(x) do
@@ -289,7 +295,7 @@ defmodule ElixirSessions.Inference do
   #########################################################
 
   # Check if a given  contains {call_recurse, :X}
-  @spec contains_recursion?(session_type()) :: boolean()
+  @spec contains_recursion?(session_type_joins()) :: boolean()
   defp contains_recursion?(session_type)
 
   defp contains_recursion?(x) when is_list(x) do
@@ -415,14 +421,8 @@ defmodule ElixirSessions.Inference do
     {label, types}
   end
 
-    @doc """
+  @doc """
   Fixes structure of sessionn types. E.g. `&{!A()}.!B()` becomes `&{!A().!B()}`.
-
-  ## Examples
-      iex> s = "&{?Hello()}.!Wrong()"
-      ...> st = ElixirSessions.Parser.parse(s) # Calls fix_structure_branch_choice
-      ...> ElixirSessions.Parser.st_to_string(st)
-      "&{?Hello().!Wrong()}"
 
   ## Examples
       iex> st =
@@ -430,7 +430,7 @@ defmodule ElixirSessions.Inference do
       ...>   {:choice, [[{:send, :neg, [:number, :pid]}, {:recv, :Num, [:number]}]]},
       ...>   {:send, :Hello, [:integer]}
       ...> ]
-      iex> ElixirSessions.Parser.fix_structure_branch_choice(st)
+      iex> ElixirSessions.Inference.fix_structure_branch_choice(st)
       [
         choice: [
           [
@@ -441,7 +441,7 @@ defmodule ElixirSessions.Inference do
         ]
       ]
   """
-  @spec fix_structure_branch_choice(session_type()) :: session_type()
+  @spec fix_structure_branch_choice(session_type_joins()) :: session_type_joins()
   def fix_structure_branch_choice([{:send, label, types} | remaining]) do
     [{:send, label, types} | fix_structure_branch_choice(remaining)]
   end
@@ -462,7 +462,7 @@ defmodule ElixirSessions.Inference do
        end)}
     ]
 
-    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
+    # _ = Logger.warn("Fixing structure of session type: \n#{ST.st_to_string(initial)} was changed to\n#{ST.st_to_string(final)}")
     final
   end
 
@@ -478,7 +478,7 @@ defmodule ElixirSessions.Inference do
        end)}
     ]
 
-    # _ = Logger.warn("Fixing structure of session type: \n#{st_to_string(initial)} was changed to\n#{st_to_string(final)}")
+    # _ = Logger.warn("Fixing structure of session type: \n#{ST.st_to_string(initial)} was changed to\n#{ST.st_to_string(final)}")
     final
   end
 
@@ -502,12 +502,45 @@ defmodule ElixirSessions.Inference do
     []
   end
 
+  # @spec fix_structure_no_joins(session_type()) :: session_type()
+  def fix_structure_no_joins([]) do
+    {:terminate}
+  end
+
+  def fix_structure_no_joins([{:send, label, types} | remaining]) do
+    {:send, label, types, fix_structure_no_joins(remaining)}
+  end
+
+  def fix_structure_no_joins([{:recv, label, types} | remaining]) do
+    {:recv, label, types, fix_structure_no_joins(remaining)}
+  end
+
+  def fix_structure_no_joins([{:branch, branches}]) do
+    {:branch, Enum.map(branches, fn branch -> fix_structure_no_joins(branch) end)}
+  end
+
+  def fix_structure_no_joins([{:choice, choices}]) do
+    {:choice, Enum.map(choices, fn choice -> fix_structure_no_joins(choice) end)}
+  end
+
+  def fix_structure_no_joins([{:call_recurse, label}]) do
+    {:call_recurse, label}
+  end
+
+  def fix_structure_no_joins([{:recurse, label, body} ]) do
+    {:recurse, label, fix_structure_no_joins(body)}
+  end
+
+  def fix_structure_no_joins(x) do
+    throw("fix_structure_no_joins unknown #{inspect(x)}")
+    []
+  end
+
   @doc """
   Runs a self-contained example.
 
   `recompile && ElixirSessions.Inference.run`
   """
-  @spec run :: session_type()
   def run() do
     fun = :ping
 
@@ -600,6 +633,7 @@ defmodule ElixirSessions.Inference do
       end
 
     infer_session_type(fun, body)
+    |> ST.st_to_string()
     # body
   end
 end

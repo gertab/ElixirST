@@ -1,9 +1,6 @@
 defmodule CodeTest do
   use ExUnit.Case
   doctest ElixirSessions.Inference
-  alias ElixirSessions.Duality
-  alias ElixirSessions.Parser
-  alias ElixirSessions.Inference
 
   test "send - infer" do
     fun = :ping
