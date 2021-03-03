@@ -126,4 +126,12 @@ defmodule ParserTest do
       _ -> assert true
     end
   end
+
+  test "session type to string" do
+    source = "?M220(string).+{!Helo(string).?M250(string).rec X.(+{!MailFrom(string).?M250(string).rec Y.(+{!RcptTo(string).?M250(string).Y, !Data().?M354(string).!Content(string).?M250(string).X, !Quit().?M221(string)}), !Quit().?M221(string)}), !Quit().?M221(string)}"
+
+    st = ElixirSessions.Parser.parse(source)
+
+    assert ST.st_to_string(st) == source
+  end
 end

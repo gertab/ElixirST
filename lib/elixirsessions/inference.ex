@@ -72,7 +72,7 @@ defmodule ElixirSessions.Inference do
     # IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res)}\n")
 
     res_structured = ElixirSessions.Parser.fix_structure_branch_choice(res)
-    ElixirSessions.Parser.validate(res_structured)
+    ElixirSessions.Parser.validate!(res_structured)
 
     IO.puts("Inferred session type for &#{fun}:\n#{ElixirSessions.Parser.st_to_string(res_structured)}\n")
 
