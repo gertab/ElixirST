@@ -2,7 +2,6 @@ defmodule ElixirSessions.Parser do
   @moduledoc """
   Parses an input string to session types (as Elixir data).
 
-
   ## Examples
 
       iex> s = "!Hello(Integer)"
@@ -71,7 +70,7 @@ defmodule ElixirSessions.Parser do
     _leex_res = :leex.file('src/lexer.xrl')
 
     # source = "!Hello()"
-    source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
+    source = "&{?Neg(number, pid).?Hello(number)}"
     # source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
     # source = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
     # source = "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"

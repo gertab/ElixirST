@@ -56,27 +56,25 @@ defmodule ElixirSessions.Generator do
   require ST
 
   @typedoc false
-  @type ast :: ElixirSessions.Common.ast()
+  @type ast :: ST.ast()
   @typedoc false
-  @type info :: ElixirSessions.Common.info()
-  @typedoc false
-  @type session_type :: ElixirSessions.Common.session_type()
+  @type session_type :: ST.session_type()
 
   @doc """
-        Given a session type, generates the corresponding Elixir code, formatted as a string.
+    Given a session type, generates the corresponding Elixir code, formatted as a string.
 
-        E.g.
-              st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
-              ElixirSessions.Generator.generate_to_string(st)
-              def func() do
-                send(self(), {:Ping})
-                receive do
-                  {:Pong, var1} when is_binary(var1) ->
-                    :ok
-                  end
-                end
+    E.g.
+          st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
+          ElixirSessions.Generator.generate_to_string(st)
+          def func() do
+            send(self(), {:Ping})
+            receive do
+              {:Pong, var1} when is_binary(var1) ->
+                :ok
               end
-      """
+            end
+          end
+  """
   @spec generate_to_string(session_type()) :: String.t()
   def generate_to_string(session_type) do
     generate_quoted(session_type)
@@ -105,19 +103,21 @@ defmodule ElixirSessions.Generator do
   Given a session type, computes the equivalent (skeleton) code in Elixir. The output is in AST/quoted format.
 
   ## Examples
-      iex> session_type = [{:send, :value, []}]
+      iex> session_type = %ST.Send{label: :hello, types: [], next: %ST.Terminate{}}
       ...> ElixirSessions.Generator.generate_quoted(session_type)
       {:def, [context: ElixirSessions.Generator, import: Kernel],
+      [
+        {:func, [context: ElixirSessions.Generator], []},
         [
-          {:func, [context: ElixirSessions.Generator], []},
-          [
-            do: {:send, [line: 1],
-              [{:self, [line: 1], []}, {:{}, [line: 1], [:value]}]}
-          ]
+          do:
+            {:send, [context: ElixirSessions.Generator, import: Kernel],
+              [{:self, [context: ElixirSessions.Generator, import: Kernel], []}, {:{}, [], [:hello]}]}
         ]
-      }
+      ]}
   """
-  @spec generate_quoted(session_type) :: ast
+
+
+  @spec generate_quoted(session_type()) :: ast()
   def generate_quoted(session_type) do
     quote do
       def func() do
@@ -126,15 +126,53 @@ defmodule ElixirSessions.Generator do
     end
   end
 
-  defp generate(session_type)
+  defp generate(%ST.Send{label: label, types: _types, next: next}) do
+    current_quoted =
+      quote do
+        send(self(), {unquote(label)})
+      end
 
-  defp generate({:send, label, _types}) do
-    quote do
-      send(self(), {unquote(label)})
+    next_quoted = generate(next)
+
+    # # todo improve using this code below (note: __branch__ causes brackets: e.g. "(\n  send(dsjds, dd)\n  send(dsjds, dd)\n \n)")
+    # join =
+    #   [current_quoted, next_quoted]
+    #   |> Enum.map(fn x -> Macro.to_string(x) end)
+    #   |>IO.inspect()
+    #   # ["code", "code2"] -> ["code \n", "code2 \n"]
+    #   |> Enum.map(fn x -> x <> " \n" end)
+    #   # ["code \n", "code2 \n"] -> "code \ncode2 \n"
+    #   |> List.to_string()
+
+    # # Convert to quoted/AST
+    # case Code.string_to_quoted(join) do
+    #   {:ok, result} ->
+    #     result
+
+    #   {:error, {line, err1, err2}} ->
+    #     Logger.error(
+    #       "Error while generating block AST on line #{line}: #{IO.inspect(err1)} #{
+    #         IO.inspect(err2)
+    #       }"
+    #     )
+    # end
+
+    case next_quoted do
+      nil ->
+        current_quoted
+
+      {:__block__, meta, body} ->
+        {:__block__, meta, [current_quoted | body]}
+
+      x ->
+        quote do
+          unquote(current_quoted)
+          unquote(x)
+        end
     end
   end
 
-  defp generate({:recv, label, types}) do
+  defp generate(%ST.Recv{label: label, types: types, next: next}) do
     guards =
       if type_guards(types) != "" do
         "when #{type_guards(types)}"
@@ -144,7 +182,19 @@ defmodule ElixirSessions.Generator do
 
     case Code.string_to_quoted("receive do \n " <> conditions <> " \n end") do
       {:ok, result} ->
-        result
+        case generate(next) do
+          nil ->
+            result
+
+          {:__block__, meta, body} ->
+            {:__block__, meta, [result | body]}
+
+          x ->
+            quote do
+              unquote(result)
+              unquote(x)
+            end
+        end
 
       {:error, {line, err1, err2}} ->
         _ =
@@ -158,37 +208,55 @@ defmodule ElixirSessions.Generator do
     end
   end
 
-  defp generate({:recurse, _recurse_var, args}) when is_list(args) do
-    generate(args)
-  end
+  defp generate(%ST.Choice{choices: choices}) do
+    cases =
+      Enum.with_index(choices, 1)
+      |> Enum.map(fn
+        {%ST.Send{label: label, types: types, next: next}, index} ->
+          "{:option#{index}} -> #{
+            generate(%ST.Send{label: label, types: types, next: next}) |> Macro.to_string()
+          }\n"
 
-  defp generate({:call_recurse, _recurse_var}) do
-    quote do
-      func()
+        _ ->
+          throw(
+            "Error while generating branch: all branches need to start with a receive statement"
+          )
+      end)
+
+    code = "case true do \n " <> List.to_string(cases) <> " \n end"
+
+    case Code.string_to_quoted(code) do
+      {:ok, result} ->
+        result
+
+      {:error, {line, err1, err2}} ->
+        Logger.error(
+          "Error while generating receive AST on line #{line}: #{IO.inspect(err1)} #{
+            IO.inspect(err2)
+          }"
+        )
     end
   end
 
-  defp generate({:branch, args}) when is_list(args) do
+  defp generate(%ST.Branch{branches: branches}) do
     cases =
       Enum.map(
-        args,
+        branches,
         fn
-          [{:recv, label, types}] ->
+          %ST.Recv{label: label, types: types, next: next} ->
             guards =
               if type_guards(types) != "" do
                 "when #{type_guards(types)}"
               end
 
-            "{:#{label}#{variable_guards(types)}} #{guards} -> :ok\n"
-
-          [{:recv, label, types} | b] ->
-            guards =
-              if type_guards(types) != "" do
-                "when #{type_guards(types)}"
+            quoted_next =
+              case generate(next) do
+                nil -> :ok
+                x -> x
               end
 
             "{:#{label}#{variable_guards(types)}} #{guards} -> " <>
-              (generate(b) |> Macro.to_string()) <> "\n"
+              (quoted_next |> Macro.to_string()) <> "\n"
 
           _ ->
             throw(
@@ -215,62 +283,17 @@ defmodule ElixirSessions.Generator do
     end
   end
 
-  defp generate({:choice, args}) when is_list(args) do
-    # todo add label to first send - send(pid, {:label, data})
-    cases =
-      Enum.with_index(args)
-      |> Enum.map(fn
-        {[{:send, label, types}], index} ->
-          "{:option#{index}} -> #{generate({:send, label, types}) |> Macro.to_string()}\n"
+  defp generate(%ST.Recurse{body: body}) do
+    generate(body)
+  end
 
-        {[{:send, label, types} | b], index} ->
-          "{:option#{index}} -> #{generate({:send, label, types}) |> Macro.to_string()}\n" <>
-            (generate(b) |> Macro.to_string()) <> "\n"
-
-        _ ->
-          throw(
-            "Error while generating branch: all branches need to start with a receive statement"
-          )
-      end)
-
-    code = "case true do \n " <> List.to_string(cases) <> " \n end"
-
-    case Code.string_to_quoted(code) do
-      {:ok, result} ->
-        result
-
-      {:error, {line, err1, err2}} ->
-        Logger.error(
-          "Error while generating receive AST on line #{line}: #{IO.inspect(err1)} #{
-            IO.inspect(err2)
-          }"
-        )
+  defp generate(%ST.Call_Recurse{}) do
+    quote do
+      func()
     end
   end
 
-  defp generate(session_type) when is_list(session_type) do
-    code =
-      Enum.map(session_type, fn x ->
-        generate(x)
-        |> Macro.to_string()
-      end)
-      # ["code", "code2"] -> ["code \n", "code2 \n"]
-      |> Enum.map(fn x -> x <> " \n" end)
-      # ["code \n", "code2 \n"] -> "code \ncode2 \n"
-      |> List.to_string()
-
-    # Convert to quoted/AST
-    case Code.string_to_quoted(code) do
-      {:ok, result} ->
-        result
-
-      {:error, {line, err1, err2}} ->
-        Logger.error(
-          "Error while generating block AST on line #{line}: #{IO.inspect(err1)} #{
-            IO.inspect(err2)
-          }"
-        )
-    end
+  defp generate(%ST.Terminate{}) do
   end
 
   defp type_equivalent(type) when is_atom(type) do
@@ -326,8 +349,7 @@ defmodule ElixirSessions.Generator do
 
   # recompile && (IO.puts(ElixirSessions.Generator.run))
   def run() do
-    session_type_string =
-      "!Hello().!Hello2(Number).!Hello2(String).&{?Option1(Atom), ?Option2(Atom, any, Number).?Option2(list, Atom, Number).!SDFLDF(), ?Option3()}.+{!Option1(List), !Option2().!SDFLDF(), !Option3()}"
+    session_type_string = "!H1111111().!H2222222222222(Number).?H333333333333333(number, list)"
 
     generate_from_session_type(session_type_string)
   end
