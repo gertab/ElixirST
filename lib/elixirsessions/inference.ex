@@ -33,7 +33,17 @@ defmodule ElixirSessions.Inference do
   @typedoc false
   @type ast :: ST.ast()
   @typedoc false
-  @type info :: ST.info()
+  # @typedoc """
+  # Information related to a function body.
+  # """
+  @type info() :: %{
+    # recursion: boolean(),
+    call_recursion: atom,
+    function_name: atom,
+    arity: arity
+    # session_type: any
+    # todo maybe add __module__
+  }
 
   @typedoc """
   A session type list of session operations.
@@ -70,8 +80,6 @@ defmodule ElixirSessions.Inference do
   def infer_session_type(fun, body) do
 
     res = infer_session_type_incl_recursion(fun, body)
-
-    # IO.puts("Inferred session type for &#{fun}:\n#{ST.st_to_string(res)}\n")
 
     res_structured =
       fix_structure_branch_choice(res)

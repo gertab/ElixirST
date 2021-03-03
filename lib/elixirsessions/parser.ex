@@ -1,46 +1,13 @@
 defmodule ElixirSessions.Parser do
-  @moduledoc """
-  Parses an input string to session types (as Elixir data).
-
-  ## Examples
-
-      iex> s = "!Hello(Integer)"
-      ...> ElixirSessions.Parser.parse(s)
-      %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:integer]}
-
-      iex> s = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
-      ...> ElixirSessions.Parser.parse(s)
-      %ST.Recurse{
-        body: %ST.Branch{
-          branches: [
-            %ST.Recv{
-              label: :Ping,
-              next: %ST.Send{label: :Pong, next: %ST.Call_Recurse{label: :X}, types: []},
-              types: []
-            },
-            %ST.Recv{label: :Quit, next: %ST.Terminate{}, types: []}
-          ]
-        },
-        label: :X
-      }
-
-  """
+  @moduledoc false
+  # Parses an input string to session types (as Elixir data).
   require Logger
   require ST
 
   @typedoc false
   @type session_type :: ST.session_type()
 
-  @doc """
-  Parses a session type from a string to an Elixir data structure.
-
-  ## Examples
-
-      iex> s = "!Hello() . ?Receive(Integer)"
-      ...> ElixirSessions.Parser.parse(s)
-      %ST.Send{label: :Hello, next: %ST.Recv{label: :Receive, next: %ST.Terminate{}, types: [:integer]}, types: []}
-
-  """
+  # Parses a session type from a string to an Elixir data structure.
   @spec parse(bitstring() | charlist()) :: session_type()
   def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
 

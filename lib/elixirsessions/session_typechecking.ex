@@ -7,7 +7,17 @@ defmodule ElixirSessions.SessionTypechecking do
   @typedoc false
   @type ast :: ST.ast()
   @typedoc false
-  @type info :: ST.info()
+  # @typedoc """
+  # Information related to a function body.
+  # """
+  @type info() :: %{
+    # recursion: boolean(),
+    call_recursion: atom,
+    function_name: atom,
+    arity: arity
+    # session_type: any
+    # todo maybe add __module__
+  }
   @typedoc false
   @type session_type :: ST.session_type()
   @typep session_context :: %{atom() => session_type()}
