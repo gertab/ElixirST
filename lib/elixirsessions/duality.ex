@@ -13,13 +13,11 @@ defmodule ElixirSessions.Duality do
 
   """
   require Logger
-  require ElixirSessions.Common
+  require ST
   alias ElixirSessions.Parser
 
   @typedoc false
   @type ast :: ElixirSessions.Common.ast()
-  @typedoc false
-  @type info :: ElixirSessions.Common.info()
   @typedoc false
   @type session_type :: ElixirSessions.Common.session_type()
 

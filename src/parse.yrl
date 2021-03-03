@@ -6,13 +6,13 @@ send recv choice branch sequence types label terminate recurse '{' '}' ':' ',' '
 
 Rootsymbol session.
 
-session -> terminate : nil.
-session -> send label '(' ')'                              : #send{label=unwrap('$2'), types=[], next=nil}.
-session -> send label '(' types_list ')'                   : #send{label=unwrap('$2'), types='$4', next=nil}.
+session -> terminate                                       : #terminate{}.
+session -> send label '(' ')'                              : #send{label=unwrap('$2'), types=[], next=#terminate{}}.
+session -> send label '(' types_list ')'                   : #send{label=unwrap('$2'), types='$4', next=#terminate{}}.
 session -> send label '(' ')' sessions                     : #send{label=unwrap('$2'), types=[], next='$5'}.
 session -> send label '(' types_list ')' sessions          : #send{label=unwrap('$2'), types='$4', next='$6'}.
-session -> recv label '(' ')'                              : #recv{label=unwrap('$2'), types=[], next=nil}.
-session -> recv label '(' types_list ')'                   : #recv{label=unwrap('$2'), types='$4', next=nil}.
+session -> recv label '(' ')'                              : #recv{label=unwrap('$2'), types=[], next=#terminate{}}.
+session -> recv label '(' types_list ')'                   : #recv{label=unwrap('$2'), types='$4', next=#terminate{}}.
 session -> recv label '(' ')' sessions                     : #recv{label=unwrap('$2'), types=[], next='$5'}.
 session -> recv label '(' types_list ')' sessions          : #recv{label=unwrap('$2'), types='$4', next='$6'}.
 session -> choice '{' label_sessions '}'                   : #choice{choices='$3'}.
@@ -44,6 +44,7 @@ Erlang code.
 -record(branch, {branches}).
 -record(recurse, {label, body}).
 -record(call_recurse, {label}).
+-record(terminate, {}).
 
 unwrap({_, _, V}) -> V.
 % unwrap2({_, V}) -> V.

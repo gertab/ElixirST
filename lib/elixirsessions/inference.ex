@@ -1,6 +1,6 @@
 defmodule ElixirSessions.Inference do
   require Logger
-  require ElixirSessions.Common
+  require ST
 
   @moduledoc """
   Performs session type inference of a given AST.
@@ -31,11 +31,24 @@ defmodule ElixirSessions.Inference do
   Add runtime check for types: e.g. is_integer, is_atom, ...
   """
   @typedoc false
-  @type ast :: ElixirSessions.Common.ast()
+  @type ast :: ST.ast()
   @typedoc false
-  @type info :: ElixirSessions.Common.info()
-  @typedoc false
-  @type session_type :: ElixirSessions.Common.session_type()
+  @type info :: ST.info()
+
+  @typedoc """
+  A session type list of session operations.
+
+  A session type may: `receive` (or dually `send` data), `branch` (or make a `choice`) or `recurse`.
+  """
+  @type session_type() ::
+          [
+            {:recv, atom, any}
+            | {:send, atom, any}
+            | {:branch, [session_type]}
+            | {:choice, [session_type]}
+            | {:call_recurse, atom}
+            | {:recurse, atom, session_type}
+          ]
 
   @doc """
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.

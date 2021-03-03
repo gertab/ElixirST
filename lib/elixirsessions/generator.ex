@@ -53,7 +53,7 @@ defmodule ElixirSessions.Generator do
     todo: multiple recursion levels
   """
   require Logger
-  require ElixirSessions.Common
+  require ST
 
   @typedoc false
   @type ast :: ElixirSessions.Common.ast()

@@ -1,5 +1,5 @@
 defmodule ElixirSessions.SessionTypechecking do
-  require ElixirSessions.Common
+  require ST
 
   @moduledoc """
   Given a session type and Elixir code, the Elixir code is typechecked against the session type.

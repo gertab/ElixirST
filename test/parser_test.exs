@@ -6,7 +6,7 @@ defmodule ParserTest do
   test "send session type" do
     source = "!Label(any)"
 
-    expected = {:send, :Label, [:any], nil}
+    expected = %ST.Send{label: :Label, next: %ST.Terminate{}, types: [:any]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -14,7 +14,7 @@ defmodule ParserTest do
   test "receive session type" do
     source = "?Receive(any)"
 
-    expected = {:recv, :Receive, [:any], nil}
+    expected = %ST.Recv{label: :Receive, next: %ST.Terminate{}, types: [:any]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -22,7 +22,7 @@ defmodule ParserTest do
   test "simple session type" do
     source = "!Ping(pid).?Pong()"
 
-    expected = {:send, :Ping, [:pid], {:recv, :Pong, [], nil}}
+    expected = %ST.Send{label: :Ping, next: %ST.Recv{label: :Pong, next: %ST.Terminate{}, types: []}, types: [:pid]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -30,7 +30,7 @@ defmodule ParserTest do
   test "choice session type" do
     source = "+{!neg(any)}"
 
-    expected = {:choice, [{:send, :neg, [:any], nil}]}
+    expected = %ST.Choice{choices: [%ST.Send{label: :neg, next: %ST.Terminate{}, types: [:any]}]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -38,7 +38,7 @@ defmodule ParserTest do
   test "branch session type" do
     source = "&{?neg(Number), ?add(Number, Number)}"
 
-    expected = {:branch, [{:recv, :neg, [:number], nil}, {:recv, :add, [:number, :number], nil}]}
+    expected = %ST.Branch{branches: [%ST.Recv{label: :neg, next: %ST.Terminate{}, types: [:number]}, %ST.Recv{label: :add, next: %ST.Terminate{}, types: [:number, :number]}]}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -46,7 +46,7 @@ defmodule ParserTest do
   test "recurse session type" do
     source = "rec X .(!Hello() . X)"
 
-    expected = {:recurse, :X, {:send, :Hello, [], {:call_recurse, :X}}}
+    expected = %ST.Recurse{body: %ST.Send{label: :Hello, next: %ST.Call_Recurse{label: :X}, types: []}, label: :X}
     result = Parser.parse(source)
     assert expected == result
   end
@@ -55,8 +55,7 @@ defmodule ParserTest do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number)}"
 
     expected =
-      {:send, :Hello, [:integer],
-       {:choice, [{:send, :neg, [:number, :pid], {:recv, :Num, [:number], nil}}]}}
+      %ST.Send{label: :Hello, next: %ST.Choice{choices: [%ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}]}, types: [:integer]}
 
     result = Parser.parse(source)
     assert expected == result
@@ -67,11 +66,18 @@ defmodule ParserTest do
     source = "!ABC(any).rec X.(!Hello(any) . ?HelloBack(any) . rec Y.(!Num(number).rec Z.(Z)))"
 
     expected =
-      {:send, :ABC, [:any],
-       {:recurse, :X,
-        {:send, :Hello, [:any],
-         {:recv, :HelloBack, [:any],
-          {:recurse, :Y, {:send, :Num, [:number], {:recurse, :Z, {:call_recurse, :Z}}}}}}}}
+      %ST.Send{
+        label: :ABC,
+        next: %ST.Recurse{
+          body: %ST.Send{
+            label: :Hello,
+            next: %ST.Recv{label: :HelloBack, next: %ST.Recurse{body: %ST.Send{label: :Num, next: %ST.Recurse{body: %ST.Call_Recurse{label: :Z}, label: :Z}, types: [:number]}, label: :Y}, types: [:any]},
+            types: [:any]
+          },
+          label: :X
+        },
+        types: [:any]
+      }
 
     result = Parser.parse(source)
     assert expected == result
