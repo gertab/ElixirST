@@ -49,7 +49,9 @@ defmodule ElixirSessions.SessionTypechecking do
 
     case remaining_session_type do
       %ST.Terminate{} -> :ok
-      x -> throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
+
+      # todo what if call_recursive
+      _ -> throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
     end
 
     # case contains_recursion?(inferred_session_type) do

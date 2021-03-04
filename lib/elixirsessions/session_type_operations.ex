@@ -183,6 +183,61 @@ defmodule ElixirSessions.Operations do
   def st_to_string(%ST.Terminate{}) do
     ""
   end
+
+  # Pattern matching with ST.session_type()
+  @spec equal(session_type(), session_type()) :: boolean()
+  def equal(session_type, session_type)
+
+  def equal(%ST.Send{label: label1, types: types1, next: next1}, %ST.Send{label: label2, types: types2, next: next2}) do
+    label1 == label2 and types1 == types2 and equal(next1, next2)
+  end
+
+  def equal(%ST.Recv{label: label1, types: types1, next: next1}, %ST.Recv{label: label2, types: types2, next: next2}) do
+    label1 == label2 and types1 == types2 and equal(next1, next2)
+  end
+
+  def equal(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
+    Enum.zip(choices1, choices2)
+    |> Enum.reduce(true,
+    fn
+      {choice1, choice2}, acc ->
+        acc and equal(choice1, choice2)
+    end)
+  end
+
+  def equal(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
+    Enum.zip(branches1, branches2)
+    |> Enum.reduce(true,
+    fn
+      {branche1, branche2}, acc ->
+        acc and equal(branche1, branche2)
+    end)
+  end
+
+  def equal(%ST.Recurse{label: label1, body: body1}, %ST.Recurse{label: label2, body: body2}) do
+    label1 == label2 and equal(body1, body2)
+  end
+
+  def equal(%ST.Call_Recurse{label: label1}, %ST.Call_Recurse{label: label2}) do
+    label1 == label2
+  end
+
+  def equal(%ST.Terminate{}, %ST.Terminate{}) do
+    true
+  end
+
+  def equal(_, _) do
+    false
+  end
+
+
+  # recompile && ElixirSessions.Operations.run
+  def run() do
+    s1 = "!Hello2(atom, list).+{!Hello2(atom, list).?H(), !Hello2(atom, list)}"
+    s2 = "!Hello2(atom, list)+{!Hello2(atom, list).?H(), !Hello2(atom, list)}"
+
+    equal(ST.string_to_st(s1), ST.string_to_st(s2))
+  end
 end
 
 # Pattern matching with ST.session_type()
