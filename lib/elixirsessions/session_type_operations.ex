@@ -3,7 +3,7 @@ defmodule ElixirSessions.Operations do
   require ST
 
   @type session_type :: ST.session_type()
-  @type session_type_tuple() :: session_type_tuple()
+  @type session_type_tuple() :: ST.session_type_tuple()
 
   # Performs validations on the session type.
   @spec validate!(session_type()) :: boolean()
@@ -87,8 +87,19 @@ defmodule ElixirSessions.Operations do
     false
   end
 
-  # Convert session types from Erlang records to Elixir Structs.
-  @spec convert_to_structs(session_type_tuple) :: session_type()
+  # Convert session types from Erlang records (tuples) to Elixir Structs.
+  # @spec convert_to_structs(session_type_tuple()) :: session_type()
+  @spec convert_to_structs(
+          {:send, atom, any, session_type_tuple()} # should be { , , [atom], }
+          | {:recv, atom, any, session_type_tuple()}
+          | {:choice, [session_type_tuple()]}
+          | {:branch, [session_type_tuple()]}
+          | {:call_recurse, atom}
+          | {:recurse, atom, session_type_tuple()}
+          | {:terminate}
+        ) :: session_type()
+  def convert_to_structs(session_type)
+
   def convert_to_structs({:terminate}) do
     %ST.Terminate{}
   end

@@ -256,7 +256,7 @@ defmodule ST do
         types: []
       }
   """
-  @spec convert_to_structs(session_type_tuple) :: session_type()
+  @spec convert_to_structs(session_type_tuple()) :: session_type()
   def convert_to_structs(session_type_tuple) do
     ElixirSessions.Operations.convert_to_structs(session_type_tuple)
   end

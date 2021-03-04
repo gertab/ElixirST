@@ -7,8 +7,6 @@ defmodule ElixirSessions.Duality do
   require ST
   alias ElixirSessions.Parser
 
-
-
   @type ast :: ST.ast()
   @type session_type :: ST.session_type()
 
