@@ -11,13 +11,13 @@ defmodule ElixirSessions.SessionTypechecking do
   # Information related to a function body.
   # """
   @type info() :: %{
-    # recursion: boolean(),
-    call_recursion: atom,
-    function_name: atom,
-    arity: arity
-    # session_type: any
-    # todo maybe add __module__
-  }
+          # recursion: boolean(),
+          call_recursion: atom,
+          function_name: atom,
+          arity: arity
+          # session_type: any
+          # todo maybe add __module__
+        }
   @typedoc false
   @type session_type :: ST.session_type()
   @typep session_context :: %{atom() => session_type()}
@@ -44,8 +44,13 @@ defmodule ElixirSessions.SessionTypechecking do
       arity: arity
     }
 
-    IO.puts("Session typechecking: #{inspect session_type}")
-    _ = session_typecheck_ast(body, session_type, info, %{})
+    IO.puts("Session typechecking: #{inspect(session_type)}")
+    {_, remaining_session_type} = session_typecheck_ast(body, session_type, info, %{})
+
+    case remaining_session_type do
+      %ST.Terminate{} -> :ok
+      x -> throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
+    end
 
     # case contains_recursion?(inferred_session_type) do
     #   true -> [{:recurse, :X, inferred_session_type}]
@@ -65,62 +70,33 @@ defmodule ElixirSessions.SessionTypechecking do
   # literals
   def session_typecheck_ast(x, session_type, _info, _session_context)
       when is_atom(x) or is_number(x) or is_binary(x) do
+    IO.puts("\literal: ")
     {false, session_type}
   end
 
   def session_typecheck_ast({_a, _b}, session_type, _info, _session_context) do
-    # IO.puts("\nTuple: ")
+    IO.puts("\nTuple: ")
 
     # todo check if ok, maybe check each element
     {false, session_type}
   end
 
-  def session_typecheck_ast({type, _, _} = ast, [session_type], info, session_context) when type not in [:__block__]do
-    # session_type is a list of size 1
-    session_typecheck_ast(ast, session_type, info, session_context)
+  # def session_typecheck_ast({type, _, _} = ast, [session_type], info, session_context) when type != :__block__ do
+  #   # session_type is a list of size 1
+  #   session_typecheck_ast(ast, session_type, info, session_context)
+  # end
+  def session_typecheck_ast([], session_type, _info, _session_context) do
+    # todo ensure that session_type = terminate
+    {false, session_type}
   end
 
-  def session_typecheck_ast(args, session_type, info, session_context)
-      when is_list(args) and is_list(session_type) do
+  def session_typecheck_ast([head | tail], session_type, info, session_context) do
     IO.puts("\nlist:")
 
-    if length(args) != length(session_type) do
-      {_, meta, _} = hd(args)
+    {_, remaining_session_type} = session_typecheck_ast(head, session_type, info, session_context)
 
-      if meta[:line] do
-        throw(
-          "Session type error (line #{inspect meta[:line]}): Session type size (#{length(session_type)}) is not equal to block size (#{
-            length(args)
-          })"
-        )
-      else
-        throw(
-          "Session type error: Session type size (#{length(session_type)}) is not equal to block size (#{
-            length(args)
-          })"
-        )
-      end
-    end
-
-    Enum.zip(args, session_type)
-    |> Enum.map(fn {ast, s_t} ->
-      # IO.puts("#{inspect(ast)} ## #{inspect(s_t)}")
-      session_typecheck_ast(ast, s_t, info, session_context)
-    end)
-
-    # {_, remaining_session_type} =
-    #   Enum.map_reduce(args, session_type, fn elem, s_t ->
-    #     case is_list(session_type) do
-    #       true ->
-    #         case session_typecheck_ast(elem, hd(s_t), info, session_context) do
-    #           {true, _} -> tl(s_t)
-    #           {false, _} -> s_t
-    #         end
-    #       false ->
-    #         :ok
-    #     end
-    #   end)
-    # length(remaining_session_type) == 0
+    IO.puts("Remaining st: #{inspect(remaining_session_type)}")
+    session_typecheck_ast(tail, remaining_session_type, info, session_context)
   end
 
   def session_typecheck_ast(args, session_type, _info, _session_context) when is_list(args) do
@@ -129,6 +105,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Non literals
   def session_typecheck_ast({:__block__, _meta, args}, session_type, info, session_context) do
+    IO.puts("__block__ of size #{length(args)}")
     session_typecheck_ast(args, session_type, info, session_context)
   end
 
@@ -146,41 +123,114 @@ defmodule ElixirSessions.SessionTypechecking do
     {false, session_type}
   end
 
-  def session_typecheck_ast({:send, meta, _}, session_type, _info, _session_context) do
-    IO.puts("[in send] #{inspect session_type}")
+  def session_typecheck_ast({:send, meta, _} = ast, session_type, _info, _session_context) do
+    IO.puts("[in send] #{inspect(session_type)}")
 
-    line = if meta[:line] do
-      meta[:line]
-    else
-      "unknown"
-    end
+    line =
+      if meta[:line] do
+        meta[:line]
+      else
+        "unknown"
+      end
 
     case session_type do
-      {:recv, type} -> throw("Session type error [line #{line}]: expected a 'receive #{IO.inspect type}' but found a send statement.")
-      {:send, _type} -> :ok
-      s_t when is_list(s_t) -> throw("[send] todo: good but not implemented yet")
-    end
+      #   throw(
+      #     "Session type error [line #{line}]: expected a 'receive #{IO.inspect(type)}' but found a send statement."
+      #   )
 
-    {false, session_type}
+      %ST.Send{label: label, types: _types, next: next} ->
+        # todo types
+        # todo check label
+        IO.puts("Matched send: #{label}")
+        {false, next}
+
+      x ->
+        throw("Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}.")
+    end
   end
 
-  def session_typecheck_ast({:receive, meta, [_body]}, session_type, _info, _session_context) do
+  def session_typecheck_ast(
+        {:receive, meta, [body | _]} = ast,
+        session_type,
+        info,
+        session_context
+      ) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
+    IO.puts("[in recv] #{inspect(session_type)}")
 
-    line = if meta[:line] do
-      meta[:line]
-    else
-      "unknown"
+    line =
+      if meta[:line] do
+        meta[:line]
+      else
+        "unknown"
+      end
+
+    cases = body[:do]
+
+    case length(cases) do
+      0 ->
+        []
+
+      1 ->
+        # 1 receive option, therefore assume that it is not a branch
+
+        case session_type do
+          #   throw(
+          #     "Session type error [line #{line}]: expected a 'send #{IO.inspect(type)}' but found a receive statement."
+          #   )
+
+          %ST.Recv{label: label, types: _types, next: next} ->
+            # todo types
+            # todo check label
+            IO.puts("Matched receive: #{label}")
+            {false, next}
+
+          x ->
+            throw(
+              "[In receive] Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}."
+            )
+        end
+
+      _ ->
+        # More than 1 receive option, therefore assume that it is a branch
+        branches_session_types =
+          case session_type do
+            %ST.Branch{branches: branches} ->
+              branches
+          end
+
+        if length(branches_session_types) != length(cases) do
+          throw("[in receive] Mismatch in number of receive and & branches.")
+        end
+
+        remaining_branches_session_types =
+          Enum.zip(cases, branches_session_types)
+          |> Enum.map(fn
+            {{:->, _, [[lhs] | rhs]}, bra_session_type} ->
+              # Given {:a, b} when is_atom(b) -> do_something()
+              # lhs contains data related to '{:a, b} when is_atom(b)'
+              # rhs contains body, e.g. 'do_something()'
+              {label, types} = parse_options(lhs)
+
+              next =
+                case bra_session_type do
+                  %ST.Recv{label: _label, types: _types, next: next} ->
+                    next
+
+                  x ->
+                    throw(
+                      "[In receive/branch] Cannot match `#{Macro.to_string(ast)}` with #{
+                        ST.st_to_string(x)
+                      }."
+                    )
+                end
+
+              session_typecheck_ast(hd(rhs), next, info, session_context)
+          end)
+
+        # Ensure that all element in remaining_branches_session_types are the same
+        hd(remaining_branches_session_types)
     end
-
-    case session_type do
-      {:send, type} -> throw("Session type error [line #{line}]: expected a 'send #{IO.inspect type}' but found a receive statement.")
-      {:recv, _type} -> :ok
-      s_t when is_list(s_t) -> throw("[receive] todo: Good but not implemented yet")
-    end
-
-
-    {false, session_type}
   end
 
   def session_typecheck_ast({:->, _meta, [_head | _body]}, session_type, _info, _session_context) do
@@ -202,7 +252,58 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def session_typecheck_ast(_, session_type, _info, _session_context) do
+    IO.puts("Other input")
     {false, session_type}
+  end
+
+  @doc false
+  # Takes case of :-> and returns the label and number of values as ':any' type.
+  # e.g. {:label, value1, value2} -> do_something()
+  # or   {:label, value1, value2} when is_number(value1) -> do_something()
+  # returns {:label, [:any, :any]}
+  def parse_options(x) do
+    x =
+      case x do
+        {:when, _, data} ->
+          # throw("Problem while typechecking: 'when' not implemented yet")
+          hd(data)
+
+        x ->
+          x
+      end
+
+    {label, size} =
+      case x do
+        # Size 0, e.g. {:do_something}
+        {:{}, _, [label]} ->
+          {label, 0}
+
+        # Size 1, e.g. {:value, 545}
+        {label, _} ->
+          {label, 1}
+
+        # Size > 2, e.g. {:add, 3, 5}
+        {:{}, _, x} when is_list(x) and length(x) > 2 ->
+          {hd(x), length(x)}
+
+        _ ->
+          throw(
+            "Needs to be a tuple contain at least a label. E.g. {:do_something} oe {:value, 54}"
+          )
+      end
+
+    case is_atom(label) do
+      true ->
+        :ok
+
+      false ->
+        throw("First item in tuple needs to be a label/atom. (#{inspect(label)})")
+    end
+
+    # Default type is set to any
+    types = List.duplicate(:any, size)
+
+    {label, types}
   end
 
   # recompile && ElixirSessions.SessionTypechecking.run
@@ -211,18 +312,24 @@ defmodule ElixirSessions.SessionTypechecking do
 
     body =
       quote do
-        send(self(), {:ping, self()})
-        send(self(), {:ping, self()})
+        send(self(), {:ping1, self()})
+        send(self(), {:ping2, self()})
+
         receive do
-          {:message_type, value} ->
+          {:message_type1, value} ->
+            send(self(), {:ping3, self()})
+            :ok1
+
+          {:message_type22, value} ->
+            send(self(), {:ping3, self()})
             :ok
         end
 
-        send(self(), {:ping, self()})
+        # send(self(), {:ping3, self()})
       end
 
-    st = "!Ping()"
-    session_type = ElixirSessions.Parser.parse(st)
+    st = "!Ping1().!Ping2().&{?Option1().!Ping3(), ?Option2().!DSF()}"
+    session_type = ST.string_to_st(st)
 
     session_typecheck(fun, 0, body, session_type)
 

@@ -21,6 +21,8 @@ session -> recurse label sequences '(' session ')'         : #recurse{label=unwr
 session -> recurse label '(' session ')'                   : #recurse{label=unwrap('$2'), body='$4'}.
 session -> label                                           : #call_recurse{label=unwrap('$1')}.
 
+% todo allow only &{?} and not &{}
+
 sequences -> sequence                        : nil.
 sequences -> sequences sequence              : nil.
 
