@@ -277,6 +277,21 @@ defmodule ST do
   end
 
   @doc """
+  Converts the current session type to a string.
+
+  ## Examples
+      iex> s = "?Hello(number).?Retry()"
+      ...> st = ST.string_to_st(s)
+      ...> ST.st_to_string_current(st)
+      "?Hello(number)"
+  """
+  # todo should you include '.end'?
+  @spec st_to_string_current(session_type()) :: String.t()
+  def st_to_string_current(session_type) do
+    ElixirSessions.Operations.st_to_string_current(session_type)
+  end
+
+  @doc """
   Converts a string to a session type. To do the opposite, use `st_to_string/1`.
 
   ## Examples

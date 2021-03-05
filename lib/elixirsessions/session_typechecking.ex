@@ -100,21 +100,22 @@ defmodule ElixirSessions.SessionTypechecking do
     session_typecheck_ast(tail, remaining_session_type, info, session_context)
   end
 
-  def session_typecheck_ast(args, session_type, _info, _session_context) when is_list(args) do
-    {false, session_type}
-  end
-
   # Non literals
   def session_typecheck_ast({:__block__, _meta, args}, session_type, info, session_context) do
     IO.puts("__block__ of size #{length(args)}")
     session_typecheck_ast(args, session_type, info, session_context)
   end
 
-  def session_typecheck_ast({:=, _meta, [_left, _right]}, session_type, _info, _session_context) do
-    {false, session_type}
+  def session_typecheck_ast({:=, _meta, [_left, right]}, session_type, info, session_context) do
+    session_typecheck_ast(right, session_type, info, session_context)
   end
 
-  def session_typecheck_ast({:send, _meta, [_, send_body | _]} = ast, session_type, _info, _session_context) do
+  def session_typecheck_ast(
+        {:send, _meta, [_, send_body | _]} = ast,
+        session_type,
+        _info,
+        _session_context
+      ) do
     IO.puts("[in send] #{inspect(session_type)}")
 
     # line =
@@ -129,16 +130,29 @@ defmodule ElixirSessions.SessionTypechecking do
       #     "Session type error [line #{line}]: expected a 'receive #{IO.inspect(type)}' but found a send statement."
       #   )
 
-      %ST.Send{label: expected_label, types: _expected_types, next: next} ->
+      %ST.Send{label: expected_label, types: expected_types, next: next} ->
         # todo types
         # todo check label
         IO.puts("Matched send: #{expected_label}")
 
-        {actual_label, _actual_types} = parse_options(send_body)
+        {actual_label, actual_parameters} = parse_options(send_body)
+
+        IO.inspect expected_types
+        IO.inspect actual_parameters
+        IO.inspect length(expected_types)
+        IO.inspect length(actual_parameters)
+        if length(expected_types) != length(actual_parameters) do
+          throw(
+            "Session type parameter length mismatch. Expected #{ST.st_to_string(session_type)} (length = #{
+              length(expected_types)
+            }), but found #{Macro.to_string(send_body)} (length = #{length(actual_parameters)})."
+          )
+        end
 
         if expected_label != actual_label do
-          throw("Expected receive with label :#{actual_label} but found :#{expected_label}.")
+          throw("Expected receive with label :#{expected_label} but found :#{actual_label}.")
         end
+
         {false, next}
 
       x ->
@@ -188,7 +202,7 @@ defmodule ElixirSessions.SessionTypechecking do
             {actual_label, _actual_types} = parse_options(lhs)
 
             if expected_label != actual_label do
-              throw("Expected receive with label #{actual_label} but found #{expected_label}.")
+              throw("Expected receive with label :#{expected_label} but found :#{actual_label}.")
             end
 
             {false, next}
@@ -287,7 +301,7 @@ defmodule ElixirSessions.SessionTypechecking do
               choices
 
             x ->
-              ##{Macro.to_string(ast)})
+              ## {Macro.to_string(ast)})
               throw("Found a case, but expected #{ST.st_to_string(x)}")
           end
 
@@ -360,7 +374,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # Takes case of :-> and returns the label and number of values as ':any' type.
   # e.g. {:label, value1, value2} -> do_something()
   # or   {:label, value1, value2} when is_number(value1) -> do_something()
-  # returns {:label, [:any, :any]}
+  # returns {:label, [value1, value2]}
   def parse_options(x) do
     x =
       case x do
@@ -372,23 +386,25 @@ defmodule ElixirSessions.SessionTypechecking do
           x
       end
 
-    {label, size} =
+    {label, types} =
       case x do
         # Size 0, e.g. {:do_something}
         {:{}, _, [label]} ->
-          {label, 0}
+          {label, []}
 
         # Size 1, e.g. {:value, 545}
-        {label, _} ->
-          {label, 1}
+        {label, type} ->
+          {label, [type]}
 
         # Size > 2, e.g. {:add, 3, 5}
-        {:{}, _, x} when is_list(x) and length(x) > 2 ->
-          {hd(x), length(x)}
+        {:{}, _, [label | types]} ->
+          {label, types}
 
         x ->
           throw(
-            "#{inspect x}Needs to be a tuple contain at least a label. E.g. {:do_something} oe {:value, 54}"
+            "Needs to be a tuple contain at least a label. E.g. {:do_something} or {:value, 54}. Found #{
+              inspect(x)
+            }."
           )
       end
 
@@ -399,9 +415,6 @@ defmodule ElixirSessions.SessionTypechecking do
       false ->
         throw("First item in tuple needs to be a label/atom. (#{inspect(label)})")
     end
-
-    # Default type is set to any
-    types = List.duplicate(:any, size)
 
     {label, types}
   end
@@ -415,9 +428,9 @@ defmodule ElixirSessions.SessionTypechecking do
         send(self(), {:Ping1, self()})
         send(self(), {:Ping2, self()})
 
-        case true do
+        receive do
           {:message_type1, value} ->
-            send(self(), {:ping3, self()})
+            send(self(), {:Ping3, self()})
             :ok1
 
           {:message_type22, value} ->
@@ -431,7 +444,7 @@ defmodule ElixirSessions.SessionTypechecking do
         end
       end
 
-    st = "!Ping1().!Ping2().&{?Option1().!Ping3().?Ping3(), ?Option2().?Ping3()}"
+    st = "!Ping1(integer).!Ping2().&{?Option1().!Ping3().?Ping3(), ?Option2().?Ping3()}"
     session_type = ST.string_to_st(st)
 
     session_typecheck(fun, 0, body, session_type)

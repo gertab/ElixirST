@@ -184,6 +184,52 @@ defmodule ElixirSessions.Operations do
     ""
   end
 
+  #  Converts one item in a session type to a string. E.g. ?Hello().!hi() would return ?Hello() only.
+  @spec st_to_string_current(session_type()) :: String.t()
+  def st_to_string_current(session_type)
+
+  def st_to_string_current(%ST.Send{label: label, types: types}) do
+    types_string = types |> Enum.join(", ")
+
+      "!#{label}(#{types_string})"
+  end
+
+  def st_to_string_current(%ST.Recv{label: label, types: types}) do
+    types_string = types |> Enum.join(", ")
+
+      "?#{label}(#{types_string})"
+  end
+
+  def st_to_string_current(%ST.Choice{choices: choices}) do
+    v =
+      Enum.map(choices, fn x -> st_to_string_current(x) end)
+      |> Enum.map(fn x -> x <> "..." end)
+      |> Enum.join(", ")
+
+    "+{#{v}}"
+  end
+
+  def st_to_string_current(%ST.Branch{branches: branches}) do
+    v =
+      Enum.map(branches, fn x -> st_to_string_current(x) end)
+      |> Enum.map(fn x -> x <> "..." end)
+      |> Enum.join(", ")
+
+    "&{#{v}}"
+  end
+
+  def st_to_string_current(%ST.Recurse{label: label, body: body}) do
+    "rec #{label}.(#{st_to_string_current(body)})"
+  end
+
+  def st_to_string_current(%ST.Call_Recurse{label: label}) do
+    "#{label}"
+  end
+
+  def st_to_string_current(%ST.Terminate{}) do
+    ""
+  end
+
   # Pattern matching with ST.session_type()
   @spec equal(session_type(), session_type()) :: boolean()
   def equal(session_type, session_type)
