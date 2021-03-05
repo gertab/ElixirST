@@ -75,6 +75,21 @@ defmodule ElixirSessions.Inference do
           ...> end
           ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
           %ST.Send{label: :hello, next: %ST.Terminate{}, types: []}
+
+          iex> ast = quote do
+          ...>   def ping(pid) do
+          ...>     send(pid, {:label})
+          ...>     ping()
+          ...>   end
+          ...> end
+          ...>
+          ...> st = ElixirSessions.Inference.infer_session_type(:ping, ast)
+          %ST.Recurse{
+            body: %ST.Send{label: :label, next: %ST.Call_Recurse{label: :X}, types: []},
+            label: :X
+          }
+          ...> ST.st_to_string(st)
+          "rec X.(!label().X)"
   """
   @spec infer_session_type(atom(), ast()) :: session_type()
   def infer_session_type(fun, body) do
@@ -94,7 +109,8 @@ defmodule ElixirSessions.Inference do
   end
 
   @doc """
-  Uses `infer_session_type_ast/2` to infer the session type (includes recursion).
+  Uses `infer_session_type_incl_recursion/2` to infer the session type (includes recursion).
+  Outputs the result as `t:session_type_joins() since it may contain sequences/joins.
 
   ## Examples
           iex> ast = quote do
@@ -104,12 +120,8 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...>
-          ...> st = ElixirSessions.Inference.infer_session_type(:ping, ast)
-          [
-            {:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}
-          ]
-          ...> ST.st_to_string(st)
-          "rec X.(!label().X)"
+          ...> st = ElixirSessions.Inference.infer_session_type_incl_recursion(:ping, ast)
+          [{:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}]
   """
   @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type_joins()
   def infer_session_type_incl_recursion(fun, body) do
@@ -134,7 +146,7 @@ defmodule ElixirSessions.Inference do
   ## Examples
           iex> ast = quote do
           ...>   def ping() do
-          ...>     send(self(), {:label})
+          ...>     send(pid, {:label})
           ...>     receive do
           ...>       {:do_something} -> :ok
           ...>       {:do_something_else, value} -> send(self(), {:label2, value})
