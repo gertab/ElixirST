@@ -94,19 +94,20 @@ defmodule ElixirSessions.SessionTypechecking do
   def session_typecheck_ast([head | tail], session_type, info, session_context) do
     IO.puts("\nlist:")
 
+    # Split the session type in two.
+    # First, perform session type checking for the first operation (head).
+    # Then, do the remaining session type checking for the remaining statements (tail).
     {_, remaining_session_type} = session_typecheck_ast(head, session_type, info, session_context)
-
-    IO.puts("Remaining st: #{inspect(remaining_session_type)}")
     session_typecheck_ast(tail, remaining_session_type, info, session_context)
   end
 
   # Non literals
   def session_typecheck_ast({:__block__, _meta, args}, session_type, info, session_context) do
-    IO.puts("__block__ of size #{length(args)}")
     session_typecheck_ast(args, session_type, info, session_context)
   end
 
   def session_typecheck_ast({:=, _meta, [_left, right]}, session_type, info, session_context) do
+    # Session type check the right part of the pattern matching operator (i.e. =)
     session_typecheck_ast(right, session_type, info, session_context)
   end
 
@@ -116,7 +117,7 @@ defmodule ElixirSessions.SessionTypechecking do
         _info,
         _session_context
       ) do
-    IO.puts("[in send] #{inspect(session_type)}")
+    # IO.puts("[in send] #{inspect(session_type)}")
 
     line =
       if meta[:line] do
@@ -127,15 +128,13 @@ defmodule ElixirSessions.SessionTypechecking do
 
     case session_type do
       %ST.Send{label: expected_label, types: expected_types, next: next} ->
-        # todo types
-        IO.puts("Matched send: #{expected_label}")
+        # todo ensure types correctness for parameters
+        # IO.puts("Matched send: #{expected_label}")
 
         {actual_label, actual_parameters} = parse_options(send_body)
 
         if expected_label != actual_label do
-          throw(
-            "#{line} Expected receive with label :#{expected_label} but found :#{actual_label}."
-          )
+          throw("#{line} Expected send with label :#{expected_label} but found :#{actual_label}.")
         end
 
         if length(expected_types) != length(actual_parameters) do
@@ -143,7 +142,7 @@ defmodule ElixirSessions.SessionTypechecking do
             "#{line} Session type parameter length mismatch. Expected #{
               ST.st_to_string_current(session_type)
             } (length = #{length(expected_types)}), but found #{Macro.to_string(send_body)} (length = #{
-              length(actual_parameters)
+              List.to_string(actual_parameters)
             })."
           )
         end
@@ -156,7 +155,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def session_typecheck_ast(
-        {:receive, meta, [body | _]} = ast,
+        {:receive, meta, [body | _]},
         session_type,
         info,
         session_context
@@ -173,185 +172,97 @@ defmodule ElixirSessions.SessionTypechecking do
 
     cases = body[:do]
 
-    case length(cases) do
-      0 ->
-        throw("Should not happen")
+    if length(cases) == 0 do
+      throw("Should not happen [receive statements need to have 1 or more cases]")
+    end
 
-      1 ->
-        # 1 receive option, therefore assume that it is not a branch
+    # 1 or more receive branches
+    # In case of one receive branch, it should match with a %ST.Recv{}
+    # In case of more than one receive branch, it should match with a %ST.Branch{}
+    branches_session_types =
+      case session_type do
+        %ST.Branch{branches: branches} ->
+          branches
 
-        case session_type do
-          %ST.Recv{label: expected_label, types: expected_types, next: next} ->
-            # todo type check at runtime (add when is_integer(..))
-            IO.puts("#{line} Matched receive: #{expected_label}")
+        %ST.Recv{label: label, types: types, next: next} ->
+          %{label => %ST.Recv{label: label, types: types, next: next}}
 
-            [{:->, _, [[lhs] | _]}] = cases
-            # Given: {:a, b} when is_atom(b) -> do_something()
-            # lhs contains data related to '{:a, b} when is_atom(b)'
-            # rhs contains the body, e.g. 'do_something()'
-            {actual_label, actual_parameters} = parse_options(lhs)
+        x ->
+          throw("#{line} Found a receive/branch, but expected #{ST.st_to_string(x)}.")
+      end
+
+    # Each branch from the session type should have an equivalent branch in the receive cases
+    if map_size(branches_session_types) != length(cases) do
+      throw(
+        "#{line} [in branch/receive] Mismatch in number of receive and & branches. Expected session type #{
+          ST.st_to_string_current(%ST.Branch{branches: branches_session_types})
+        }"
+      )
+    end
+
+    # Get label, parameters and remaining ast from the source ast
+    # label_types_ast = %{{label1 => {parameters1, remaining_ast1}}, ...}
+    label_parameters_ast =
+      Enum.map(cases, fn
+        {:->, _, [[lhs] | rhs]} ->
+          # Given: {:a, b} when is_atom(b) -> do_something()
+          # lhs contains data related to '{:a, b} when is_atom(b)'
+          # rhs contains the body, e.g. 'do_something()'
+          {label, parameters} = parse_options(lhs)
+          {label, {parameters, rhs}}
+      end)
+      |> Enum.into(%{})
+
+    # Compare the actual branches (from label_parameters_ast)
+    # with the branch session type (in branches_session_types)
+    Enum.map(
+      branches_session_types,
+      fn {st_label, branch_session_type} ->
+        # Match the label with the correct branch
+        case Map.fetch(label_parameters_ast, st_label) do
+          {:ok, {actual_parameters, inside_ast}} ->
+            # Match the number of parameters found (in ast) and expected (in st)
+            %ST.Recv{types: expected_types, next: inside_branch_session_type} =
+              branch_session_type
 
             if length(expected_types) != length(actual_parameters) do
               throw(
                 "#{line} Session type parameter length mismatch. Expected #{
                   ST.st_to_string_current(session_type)
-                } (length = #{length(expected_types)}), but found {#{actual_label}, #{
-                  Enum.join(actual_parameters, ", ")
-                }} (length = #{length(actual_parameters)})."
+                } (length = #{length(expected_types)}), but found #{inspect(actual_parameters)} (length = #{
+                  length(actual_parameters)
+                })."
               )
             end
 
-            if expected_label != actual_label do
-              throw(
-                "#{line} Expected receive with label :#{expected_label} (#{
-                  ST.st_to_string_current(session_type)
-                }) but found :#{actual_label}."
-              )
-            end
+            # Recursively session typecheck the inside of the branch
+            session_typecheck_ast(
+              inside_ast,
+              inside_branch_session_type,
+              info,
+              session_context
+            )
 
-            {false, next}
-
-          x ->
+          :error ->
             throw(
-              "#{line} [In receive] Cannot match `#{Macro.to_string(ast)}` with #{
-                ST.st_to_string(x)
+              "Receive branch with label :#{st_label} expected but not found. Session type #{
+                ST.st_to_string_current(%ST.Branch{branches: branches_session_types})
               }."
             )
         end
+      end
+    )
+    # Ensure that all element in remaining_branches_session_types are the same, and return the last one
+    |> Enum.reduce(fn full_st, full_acc ->
+      {x, st} = full_st
+      {_, acc} = full_acc
 
-      _ ->
-        # More than 1 receive option, therefore assume that it is a branch
-        branches_session_types =
-          case session_type do
-            %ST.Branch{branches: branches} ->
-              branches
-
-            x ->
-              throw("#{line} Found a receive/branch, but expected #{ST.st_to_string(x)}.")
-          end
-
-        if map_size(branches_session_types) != length(cases) do
-          throw("#{line} [in receive] Mismatch in number of receive and & branches.")
-        end
-
-        # todo fix no ordering should be required
-
-        # label_types_ast = %{{label1 => {parameters1, remaining_ast1}}, ...}
-        label_parameters_ast =
-          Enum.map(cases, fn
-            {:->, _, [[lhs] | rhs]} ->
-              # Given: {:a, b} when is_atom(b) -> do_something()
-              # lhs contains data related to '{:a, b} when is_atom(b)'
-              # rhs contains the body, e.g. 'do_something()'
-              {label, parameters} = parse_options(lhs)
-              {label, {parameters, rhs}}
-          end)
-          |> Enum.into(%{})
-
-        Enum.map(
-          branches_session_types,
-          fn {st_label, branch_session_type} ->
-            case Map.fetch(label_parameters_ast, st_label) do
-              {:ok, {parameters, remaining_ast}} ->
-                inside_branch_session_type =
-                  case branch_session_type do
-                    %ST.Recv{types: types, next: next} ->
-                      if length(parameters) != length(types) do
-                        throw(
-                          "#{line} [in receive] Mismatch in number of receive and & branches. Branch with label :#{
-                            st_label
-                          } and #{length(parameters)} parameter/s doesn't match session type #{
-                            ST.st_to_string_current(branch_session_type)
-                          }."
-                        )
-                      end
-
-                      next
-
-                    x ->
-                      throw("Should never happen [branch -> receive] #{inspect(x)}")
-                  end
-
-                session_typecheck_ast(
-                  remaining_ast,
-                  inside_branch_session_type,
-                  info,
-                  session_context
-                )
-
-              :error ->
-                throw(
-                  "Receive branch with label :#{st_label} expected but not found. Session type #{
-                    ST.st_to_string_current(%ST.Branch{branches: branches_session_types})
-                  }."
-                )
-            end
-          end
-        )
-        |> hd
-
-        #   label_parameters_ast,
-        #   fn {label, parameters, remaining_ast} ->
-        #     case Map.fetch(branches_session_types, label) do
-        #       {:ok, current_branch_session_types} -> nil
-        #       :error -> throw("Receive branch with label :#{label} was not found in the session type #{ST.st_to_string_current(branches_session_types)}.")
-        #     end
-        #   end
-        # )
-
-        # session_typecheck_ast(hd(rhs), next, info, session_context)
-
-        # remaining_branches_session_types = []
-
-        #   Enum.zip(cases, branches_session_types)
-        #   |> Enum.map(fn
-        #     {{:->, _, [[lhs] | rhs]}, bra_session_type} ->
-        #       # Given: {:a, b} when is_atom(b) -> do_something()
-        #       # lhs contains data related to '{:a, b} when is_atom(b)'
-        #       # rhs contains the body, e.g. 'do_something()'
-        #       {label, types} = parse_options(lhs)
-        #       IO.puts("In receive: #{label}, #{inspect(types)}")
-        #       IO.puts("#{inspect(bra_session_type)}")
-
-        #       next =
-        #         case bra_session_type do
-        #           {_l, %ST.Recv{label: expected_label, types: _types, next: next}} ->
-        #             if expected_label == label do
-        #               next
-        #             else
-        #               throw(
-        #                 "#{line} [In receive/branch] Label mismatch: expected :#{expected_label} but found :#{label}."
-        #               )
-        #             end
-
-        #           {_l, x} ->
-        #             throw(
-        #               "#{line} [In receive/branch] Cannot match `#{Macro.to_string(ast)}` with #{
-        #                 ST.st_to_string(x)
-        #               }."
-        #             )
-        #         end
-
-        #       session_typecheck_ast(hd(rhs), next, info, session_context)
-        #   end)
-
-        # Ensure that all element in remaining_branches_session_types are the same
-        # remaining_branches_session_types
-        # |> Enum.reduce(fn full_st, full_acc ->
-        #   {x, st} = full_st
-        #   {_, acc} = full_acc
-
-        #   if st == acc do
-        #     {x, st}
-        #   else
-        #     throw(
-        #       "#{line} Mismatch in branches: #{ST.st_to_string(st)} and #{ST.st_to_string(acc)}"
-        #     )
-        #   end
-        # end)
-
-        # hd(remaining_branches_session_types)
-    end
+      if st == acc do
+        {x, st}
+      else
+        throw("#{line} Mismatch in branches: #{ST.st_to_string(st)} and #{ST.st_to_string(acc)}")
+      end
+    end)
   end
 
   def session_typecheck_ast(
@@ -514,20 +425,28 @@ defmodule ElixirSessions.SessionTypechecking do
         receive do
           {:Option1} ->
             send(self(), {:Ping3, self()})
+
+            receive do
+              {:Ping54, value} ->
+                nil
+                # code
+            end
+
             :ok1
 
           {:Option2, value} ->
-            send(self(), {:ping3, self()})
             :ok
         end
 
         receive do
-          {:Ping3} ->
+          {:Ping33} ->
             :ok
         end
       end
 
-    st = "!Ping1(integer).!Ping2().&{?Option2(integer).?Ping54(), ?Option1().!Ping3(any).?Ping3()}"
+    st =
+      "!Ping1(integer).!Ping2().&{?Option1().!Ping3(any).?Ping54(any).?Ping33(), ?Option2(integer).?Ping33()}"
+
     session_type = ST.string_to_st(st)
 
     session_typecheck(fun, 0, body, session_type)
