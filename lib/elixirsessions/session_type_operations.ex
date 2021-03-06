@@ -247,7 +247,7 @@ defmodule ElixirSessions.Operations do
 
   def st_to_string_current(%ST.Choice{choices: choices}) do
     v =
-      Enum.map(choices, fn x -> st_to_string_current(x) end)
+      Enum.map(choices, fn {_, x} -> st_to_string_current(x) end)
       |> Enum.map(fn x -> x <> "..." end)
       |> Enum.join(", ")
 
@@ -256,7 +256,7 @@ defmodule ElixirSessions.Operations do
 
   def st_to_string_current(%ST.Branch{branches: branches}) do
     v =
-      Enum.map(branches, fn x -> st_to_string_current(x) end)
+      Enum.map(branches, fn {_, x} -> st_to_string_current(x) end)
       |> Enum.map(fn x -> x <> "..." end)
       |> Enum.join(", ")
 
