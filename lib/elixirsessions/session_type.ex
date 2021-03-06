@@ -319,6 +319,7 @@ defmodule ST do
   """
   # todo examples
   # todo (confirm before implement) branches need more than one branch
+  # todo confirm if sorted
   @spec validate!(session_type()) :: boolean()
   def validate!(session_type) do
     ElixirSessions.Operations.validate!(session_type)

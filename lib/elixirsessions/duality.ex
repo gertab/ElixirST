@@ -42,6 +42,60 @@ defmodule ElixirSessions.Duality do
     st
   end
 
+  # Checks if the two given session types are dual of each other
+  @spec dual?(session_type(), session_type()) :: boolean()
+  def dual?(session_type1, session_type2)
+
+  def dual?(%ST.Send{label: label, types: types, next: next1}, %ST.Recv{label: label, types: types, next: next2}) do
+    dual?(next1, next2)
+  end
+
+  def dual?(%ST.Recv{} = a, %ST.Send{} = b) do
+    dual?(b, a)
+  end
+
+  def dual?(%ST.Choice{choices: choices}, %ST.Branch{branches: branches}) do
+    # %ST.Branch{branches: Enum.map(choices, fn choice -> dual?(choice) end)}
+  end
+
+  def dual?(%ST.Branch{} = a, %ST.Choice{} = b) do
+    dual?(b, a)
+  end
+
+  def dual?(%ST.Choice{choices: choices}, %ST.Recv{label: label, types: types, next: next}) do
+    # %ST.Choice{choices: Enum.map(branches, fn branche -> dual?(branche) end)}
+    true
+  end
+
+  def dual?(%ST.Recv{} = a, %ST.Choice{} = b) do
+    dual?(b, a)
+  end
+
+  def dual?(%ST.Branch{branches: branches}, %ST.Send{label: label, types: types, next: next}) do
+    # %ST.Choice{choices: Enum.map(branches, fn branche -> dual?(branche) end)}
+    true
+  end
+
+  def dual?(%ST.Send{} = a, %ST.Branch{} = b) do
+    dual?(b, a)
+  end
+
+  def dual?(%ST.Recurse{label: label, body: body1}, %ST.Recurse{label: label, body: body2}) do
+    dual?(body1, body2)
+  end
+
+  def dual?(%ST.Call_Recurse{}, %ST.Call_Recurse{}) do
+    true
+  end
+
+  def dual?(%ST.Terminate{}, %ST.Terminate{}) do
+    true
+  end
+
+  def dual?(_, _) do
+    false
+  end
+
   # defp compute_dual(tokens) do
   #   _ = Logger.error("Unknown input type for #{IO.puts(tokens)}")
   # end

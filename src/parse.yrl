@@ -1,5 +1,5 @@
 Nonterminals
-session label_sessions types_list sequences sessions. 
+session choice_label_sessions branch_label_sessions types_list sequences sessions. 
 
 Terminals
 send recv choice branch sequence types label terminate recurse '{' '}' ':' ',' '(' ')'.
@@ -15,13 +15,13 @@ session -> recv label '(' ')'                              : #recv{label=unwrap(
 session -> recv label '(' types_list ')'                   : #recv{label=unwrap('$2'), types='$4', next=#terminate{}}.
 session -> recv label '(' ')' sessions                     : #recv{label=unwrap('$2'), types=[], next='$5'}.
 session -> recv label '(' types_list ')' sessions          : #recv{label=unwrap('$2'), types='$4', next='$6'}.
-session -> choice '{' label_sessions '}'                   : #choice{choices='$3'}.
-session -> branch '{' label_sessions '}'                   : #branch{branches='$3'}.
+session -> choice '{' choice_label_sessions '}'            : #choice{choices='$3'}.
+session -> branch '{' branch_label_sessions '}'            : #branch{branches='$3'}.
 session -> recurse label sequences '(' session ')'         : #recurse{label=unwrap('$2'), body='$5'}.
 session -> recurse label '(' session ')'                   : #recurse{label=unwrap('$2'), body='$4'}.
 session -> label                                           : #call_recurse{label=unwrap('$1')}.
 
-% todo allow only &{?} and not &{}
+% todo allow only &{?} and not &{!}
 
 sequences -> sequence                        : nil.
 sequences -> sequences sequence              : nil.
@@ -29,8 +29,11 @@ sequences -> sequences sequence              : nil.
 sessions -> session                          : '$1'.
 sessions -> sequences session                : '$2'.
 
-label_sessions -> session ',' label_sessions : ['$1' | '$3' ].
-label_sessions -> session                    : ['$1'].
+choice_label_sessions -> session ',' choice_label_sessions : ['$1' | '$3' ].
+choice_label_sessions -> session                           : ['$1'].
+
+branch_label_sessions -> session ',' branch_label_sessions : ['$1' | '$3' ].
+branch_label_sessions -> session                           : ['$1'].
 
 types_list -> label ':' types                : [unwrap('$3')].
 types_list -> types                          : [unwrap('$1')].

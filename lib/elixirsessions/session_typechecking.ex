@@ -111,57 +111,52 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def session_typecheck_ast(
-        {:send, _meta, [_, send_body | _]} = ast,
+        {:send, meta, [_, send_body | _]} = ast,
         session_type,
         _info,
         _session_context
       ) do
     IO.puts("[in send] #{inspect(session_type)}")
 
-    # line =
-    #   if meta[:line] do
-    #     meta[:line]
-    #   else
-    #     "unknown"
-    #   end
+    line =
+      if meta[:line] do
+        "[Line #{meta[:line]}]"
+      else
+        "[Line unknown]"
+      end
 
     case session_type do
-      #   throw(
-      #     "Session type error [line #{line}]: expected a 'receive #{IO.inspect(type)}' but found a send statement."
-      #   )
-
       %ST.Send{label: expected_label, types: expected_types, next: next} ->
         # todo types
-        # todo check label
         IO.puts("Matched send: #{expected_label}")
 
         {actual_label, actual_parameters} = parse_options(send_body)
 
-        IO.inspect expected_types
-        IO.inspect actual_parameters
-        IO.inspect length(expected_types)
-        IO.inspect length(actual_parameters)
-        if length(expected_types) != length(actual_parameters) do
+        if expected_label != actual_label do
           throw(
-            "Session type parameter length mismatch. Expected #{ST.st_to_string(session_type)} (length = #{
-              length(expected_types)
-            }), but found #{Macro.to_string(send_body)} (length = #{length(actual_parameters)})."
+            "#{line} Expected receive with label :#{expected_label} but found :#{actual_label}."
           )
         end
 
-        if expected_label != actual_label do
-          throw("Expected receive with label :#{expected_label} but found :#{actual_label}.")
+        if length(expected_types) != length(actual_parameters) do
+          throw(
+            "#{line} Session type parameter length mismatch. Expected #{
+              ST.st_to_string_current(session_type)
+            } (length = #{length(expected_types)}), but found #{Macro.to_string(send_body)} (length = #{
+              length(actual_parameters)
+            })."
+          )
         end
 
         {false, next}
 
       x ->
-        throw("Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}.")
+        throw("#{line} Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}.")
     end
   end
 
   def session_typecheck_ast(
-        {:receive, _meta, [body | _]} = ast,
+        {:receive, meta, [body | _]} = ast,
         session_type,
         info,
         session_context
@@ -169,12 +164,12 @@ defmodule ElixirSessions.SessionTypechecking do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
     IO.puts("[in recv] #{inspect(session_type)}")
 
-    # line =
-    #   if meta[:line] do
-    #     meta[:line]
-    #   else
-    #     "unknown"
-    #   end
+    line =
+      if meta[:line] do
+        "[Line #{meta[:line]}]"
+      else
+        "[Line unknown]"
+      end
 
     cases = body[:do]
 
@@ -190,26 +185,41 @@ defmodule ElixirSessions.SessionTypechecking do
           #     "Session type error [line #{line}]: expected a 'send #{IO.inspect(type)}' but found a receive statement."
           #   )
 
-          %ST.Recv{label: expected_label, types: _actual_types, next: next} ->
-            # todo types
-            # todo check label
-            IO.puts("Matched receive: #{expected_label}")
+          %ST.Recv{label: expected_label, types: expected_types, next: next} ->
+            # todo type check at runtime (add when is_integer(..))
+            IO.puts("#{line} Matched receive: #{expected_label}")
 
             [{:->, _, [[lhs] | _]}] = cases
             # Given: {:a, b} when is_atom(b) -> do_something()
             # lhs contains data related to '{:a, b} when is_atom(b)'
             # rhs contains the body, e.g. 'do_something()'
-            {actual_label, _actual_types} = parse_options(lhs)
+            {actual_label, actual_parameters} = parse_options(lhs)
+
+            if length(expected_types) != length(actual_parameters) do
+              throw(
+                "#{line} Session type parameter length mismatch. Expected #{
+                  ST.st_to_string_current(session_type)
+                } (length = #{length(expected_types)}), but found {#{actual_label}, #{
+                  Enum.join(actual_parameters, ", ")
+                }} (length = #{length(actual_parameters)})."
+              )
+            end
 
             if expected_label != actual_label do
-              throw("Expected receive with label :#{expected_label} but found :#{actual_label}.")
+              throw(
+                "#{line} Expected receive with label :#{expected_label} (#{
+                  ST.st_to_string_current(session_type)
+                }) but found :#{actual_label}."
+              )
             end
 
             {false, next}
 
           x ->
             throw(
-              "[In receive] Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}."
+              "#{line} [In receive] Cannot match `#{Macro.to_string(ast)}` with #{
+                ST.st_to_string(x)
+              }."
             )
         end
 
@@ -221,12 +231,14 @@ defmodule ElixirSessions.SessionTypechecking do
               branches
 
             x ->
-              throw("Found a receive/branch, but expected #{ST.st_to_string(x)}.")
+              throw("#{line} Found a receive/branch, but expected #{ST.st_to_string(x)}.")
           end
 
         if length(branches_session_types) != length(cases) do
-          throw("[in receive] Mismatch in number of receive and & branches.")
+          throw("#{line} [in receive] Mismatch in number of receive and & branches.")
         end
+
+      # todo fix no ordering should be required
 
         remaining_branches_session_types =
           Enum.zip(cases, branches_session_types)
@@ -245,7 +257,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
                   x ->
                     throw(
-                      "[In receive/branch] Cannot match `#{Macro.to_string(ast)}` with #{
+                      "#{line} [In receive/branch] Cannot match `#{Macro.to_string(ast)}` with #{
                         ST.st_to_string(x)
                       }."
                     )
@@ -263,7 +275,9 @@ defmodule ElixirSessions.SessionTypechecking do
           if st == acc do
             {x, st}
           else
-            throw("Mismatch in branches: #{ST.st_to_string(st)} and #{ST.st_to_string(acc)}")
+            throw(
+              "#{line} Mismatch in branches: #{ST.st_to_string(st)} and #{ST.st_to_string(acc)}"
+            )
           end
         end)
 
@@ -394,11 +408,11 @@ defmodule ElixirSessions.SessionTypechecking do
 
         # Size 1, e.g. {:value, 545}
         {label, type} ->
-          {label, [type]}
+          {label, [Macro.to_string(type)]}
 
         # Size > 2, e.g. {:add, 3, 5}
         {:{}, _, [label | types]} ->
-          {label, types}
+          {label, Enum.map(types, fn x -> String.to_atom(Macro.to_string(x)) end)}
 
         x ->
           throw(
@@ -426,10 +440,10 @@ defmodule ElixirSessions.SessionTypechecking do
     body =
       quote do
         send(self(), {:Ping1, self()})
-        send(self(), {:Ping2, self()})
+        send(self(), {:Ping2})
 
         receive do
-          {:message_type1, value} ->
+          {:message_type, jkasnkjn, value} ->
             send(self(), {:Ping3, self()})
             :ok1
 
@@ -439,12 +453,12 @@ defmodule ElixirSessions.SessionTypechecking do
         end
 
         receive do
-          {:message_type, value} ->
+          {:Ping3} ->
             :ok
         end
       end
 
-    st = "!Ping1(integer).!Ping2().&{?Option1().!Ping3().?Ping3(), ?Option2().?Ping3()}"
+    st = "!Ping1(integer).!Ping2().&{?Option2().?Ping54(), ?Option1().!Ping3(any).?Ping3()}"
     session_type = ST.string_to_st(st)
 
     session_typecheck(fun, 0, body, session_type)

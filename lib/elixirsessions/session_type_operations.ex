@@ -18,6 +18,8 @@ defmodule ElixirSessions.Operations do
   end
 
   def validate!(%ST.Choice{choices: choices}) do
+    # todo maybe check the label; check if sorted
+    # todo check for uniqeness
     res =
       Enum.map(
         choices,
@@ -35,6 +37,8 @@ defmodule ElixirSessions.Operations do
             false
         end
       )
+
+
 
     # AND operation
     if false in res do
@@ -279,8 +283,8 @@ defmodule ElixirSessions.Operations do
 
   # recompile && ElixirSessions.Operations.run
   def run() do
-    s1 = "!Hello2(atom, list).+{!Hello2(atom, list).?H(), !Hello2(atom, list)}"
-    s2 = "!Hello2(atom, list)+{!Hello2(atom, list).?H(), !Hello2(atom, list)}"
+    s1 = "!Hello2(atom, list).&{?Hello2(atom, list).?H(), ?Hello2(atom, list)}"
+    s2 = "!Hello2(atom, list)&{?Hello2(atom, list), ?Hello2(atom, list).?H()}"
 
     equal(ST.string_to_st(s1), ST.string_to_st(s2))
   end
