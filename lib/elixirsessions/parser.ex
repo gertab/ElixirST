@@ -16,6 +16,10 @@ defmodule ElixirSessions.Parser do
       {:ok, session_type} = :parse.parse(tokens)
 
       session_type_s = ST.convert_to_structs(session_type)
+
+      # todo convert branches with one option to receive statements
+      # and choices with one choice to send
+
       ST.validate!(session_type_s)
       session_type_s
     else

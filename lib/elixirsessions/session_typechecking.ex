@@ -44,7 +44,7 @@ defmodule ElixirSessions.SessionTypechecking do
       arity: arity
     }
 
-    IO.puts("Session typechecking: #{inspect(session_type)}")
+    IO.puts("Session typechecking: #{ST.st_to_string(session_type)}")
     {_, remaining_session_type} = session_typecheck_ast(body, session_type, info, %{})
 
     case remaining_session_type do
@@ -52,6 +52,8 @@ defmodule ElixirSessions.SessionTypechecking do
       # todo what if call_recursive
       _ -> throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
     end
+
+    IO.puts("Session type checking was successful.")
 
     # case contains_recursion?(inferred_session_type) do
     #   true -> [{:recurse, :X, inferred_session_type}]
@@ -71,12 +73,12 @@ defmodule ElixirSessions.SessionTypechecking do
   # literals
   def session_typecheck_ast(x, session_type, _info, _session_context)
       when is_atom(x) or is_number(x) or is_binary(x) do
-    IO.puts("\literal: ")
+    # IO.puts("\literal: ")
     {false, session_type}
   end
 
   def session_typecheck_ast({_a, _b}, session_type, _info, _session_context) do
-    IO.puts("\nTuple: ")
+    # IO.puts("\nTuple: ")
 
     # todo check if ok, maybe check each element
     {false, session_type}
@@ -92,7 +94,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def session_typecheck_ast([head | tail], session_type, info, session_context) do
-    IO.puts("\nlist:")
+    # IO.puts("\nlist:")
 
     # Split the session type in two.
     # First, perform session type checking for the first operation (head).
@@ -149,6 +151,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
         {false, next}
 
+      # todo: choice with one option should be valid
       x ->
         throw("#{line} Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}.")
     end
@@ -161,7 +164,7 @@ defmodule ElixirSessions.SessionTypechecking do
         session_context
       ) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
-    IO.puts("[in recv] #{inspect(session_type)}")
+    # IO.puts("[in recv] #{inspect(session_type)}")
 
     line =
       if meta[:line] do
@@ -260,85 +263,141 @@ defmodule ElixirSessions.SessionTypechecking do
       if st == acc do
         {x, st}
       else
-        throw("#{line} Mismatch in branches: #{ST.st_to_string(st)} and #{ST.st_to_string(acc)}")
+        throw(
+          "#{line} Mismatch in session type following the branch: #{ST.st_to_string(st)} and #{
+            ST.st_to_string(acc)
+          }"
+        )
       end
     end)
   end
 
   def session_typecheck_ast(
-        {:case, _meta, [_what_you_are_checking, body | _]} = ast,
+        {:case, meta, [_what_you_are_checking, body | _]},
         session_type,
         info,
         session_context
       ) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
-    IO.puts("[in case/choice] #{inspect(session_type)}")
+    # IO.puts("[in case/choice] #{inspect(session_type)}")
 
-    # line =
-    #   if meta[:line] do
-    #     meta[:line]
-    #   else
-    #     "unknown"
-    #   end
+    line =
+      if meta[:line] do
+        "[Line #{meta[:line]}]"
+      else
+        "[Line unknown]"
+      end
 
     cases = body[:do]
 
-    case length(cases) do
-      0 ->
-        throw("Should not happen")
+    if length(cases) == 0 do
+      throw("Should not happen [case statements need to have 1 or more cases]")
+    end
 
-      _ ->
-        # 1 or more case option (assume that it is a choice)
-        choices_session_types =
-          case session_type do
-            %ST.Choice{choices: choices} ->
-              choices
+    # 1 or more case option (assume that it is a choice)
+    # choices_session_types is of type %{label() => session_type()}
+    choices_session_types =
+      case session_type do
+        %ST.Choice{choices: choices} ->
+          choices
 
-            x ->
-              ## {Macro.to_string(ast)})
-              throw("Found a case, but expected #{ST.st_to_string(x)}")
-          end
+        x ->
+          throw("Found a choice, but expected #{ST.st_to_string(x)}")
+      end
 
-        remaining_session_types =
-          Enum.zip(cases, choices_session_types)
-          |> Enum.map(fn
-            {{:->, _, [[lhs] | rhs]}, bra_session_type} ->
-              # Given: {:a, b} when is_atom(b) -> do_something()
-              # lhs contains data related to '{:a, b} when is_atom(b)'
-              # rhs contains the body, e.g. 'do_something()'
-              {label, types} = parse_options(lhs)
-              IO.puts("In receive: #{label}, #{inspect(types)}")
+    # Each branch from the session type could have (up to) one equivalent choice in
+    # the case statements
+    if map_size(choices_session_types) < length(cases) do
+      throw(
+        "#{line} [in case/choice] More cases found (#{length(cases)}) than expected(#{
+          map_size(choices_session_types)
+        }). Expected session type #{
+          ST.st_to_string_current(%ST.Choice{choices: choices_session_types})
+        }"
+      )
+    end
 
-              next =
-                case bra_session_type do
-                  %ST.Recv{label: _label, types: _types, next: next} ->
-                    next
+    inner_ast =
+      Enum.map(cases, fn
+        {:->, _, [[_lhs] | rhs]} ->
+          # Given: {:a, b} when is_atom(b) -> do_something()
+          # lhs contains data related to '{:a, b} when is_atom(b)'
+          # rhs contains the body, e.g. 'do_something()'
+          # {label, parameters} = parse_options(lhs)
+          rhs
+      end)
 
-                  x ->
-                    throw(
-                      "[In receive/branch] Cannot match `#{Macro.to_string(ast)}` with #{
-                        ST.st_to_string(x)
-                      }."
-                    )
+    # Compare the actual choices (from label_parameters_ast)
+    # with the choice session type (in choices_session_types)
+
+    Enum.map(
+      inner_ast,
+      fn ast ->
+        tentative_remaining_session_types =
+          Enum.map(
+            choices_session_types,
+            fn
+              {_l, potential_session_type} ->
+                try do
+                  session_typecheck_ast(
+                    ast,
+                    potential_session_type,
+                    info,
+                    session_context
+                  )
+                catch
+                  error -> {:error, error}
                 end
+            end
+          )
 
-              session_typecheck_ast(hd(rhs), next, info, session_context)
+        remaining_session_type_list =
+          Enum.filter(tentative_remaining_session_types, fn
+            {:error, _} -> false
+            _ -> true
           end)
 
-        # # Ensure that all element in remaining_session_types are the same
-        # remaining_session_types
-        # |> Enum.reduce(fn full_st, full_acc ->
-        #   {x, st} = full_st
-        #   {_, acc} = full_acc
-        #   if st == acc do
-        #     {x, st}
-        #   else
-        #     throw("Mismatch in branches: #{ST.st_to_string(st)} and #{ST.st_to_string(acc)}")
-        #   end
-        # end)
+        errors_session_type_list =
+          Enum.filter(tentative_remaining_session_types, fn
+            {:error, _} -> true
+            _ -> false
+          end)
+          |> Enum.map(fn {:error, x} -> x end)
 
-        hd(remaining_session_types)
-    end
+        # If all return nils (meaning that all choice threw an error), then this case fails
+        remaining_session_type =
+          case remaining_session_type_list do
+            [] ->
+              throw(
+                "Couldn't match case with session type: #{
+                  ST.st_to_string_current(%ST.Choice{choices: choices_session_types})
+                }. The following errors were found: #{
+                  inspect(Enum.join(errors_session_type_list, ", or "))
+                }."
+              )
+
+            x ->
+              hd(x)
+          end
+
+        remaining_session_type
+      end
+    )
+    # Ensure that all element in remaining_branches_session_types are the same, and return the last one
+    |> Enum.reduce(fn full_st, full_acc ->
+      {x, st} = full_st
+      {_, acc} = full_acc
+
+      if st == acc do
+        {x, st}
+      else
+        throw(
+          "#{line} Mismatch in session type following the chioce: #{ST.st_to_string(st)} and #{
+            ST.st_to_string(acc)
+          }"
+        )
+      end
+    end)
   end
 
   def session_typecheck_ast({:->, _meta, [_head | _body]}, session_type, _info, _session_context) do
@@ -360,7 +419,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def session_typecheck_ast(_, session_type, _info, _session_context) do
-    IO.puts("Other input")
+    # IO.puts("Other input")
     {false, session_type}
   end
 
@@ -419,38 +478,52 @@ defmodule ElixirSessions.SessionTypechecking do
 
     body =
       quote do
+        a = 1
         send(self(), {:Ping1, self()})
         send(self(), {:Ping2})
 
-        receive do
-          {:Option1} ->
-            send(self(), {:Ping3, self()})
+        case jkd do
+          {:bbbbb} ->
+            send(pid, {:Option2})
+            a = 4 + 43
+            a = 4 + 43
+            a = 4 + 43
+            a = 4 + 43
+            send(pid, {:ABC})
 
             receive do
-              {:Ping54, value} ->
-                nil
-                # code
+              {:Branch1} ->
+                :ok
+
+              {:Branch2} ->
+                :ok
             end
 
             :ok1
 
-          {:Option2, value} ->
-            :ok
-        end
-
-        receive do
-          {:Ping33} ->
-            :ok
+          {:aaaaa} ->
+            send(self(), {:Ping3, self()})
+            send(pid, {:Option1})
+            send(pid, {:ABC})
         end
       end
 
-    st =
-      "!Ping1(integer).!Ping2().&{?Option1().!Ping3(any).?Ping54(any).?Ping33(), ?Option2(integer).?Ping33()}"
+    st = """
+    !Ping1(integer).!Ping2().
+                              +{
+                               !Option1().!ABC(),
+                               !Option2().!ABC().&{?Branch1(), ?Branch2()},
+                               !Option3()
+                              }
+    """
+
+    # .!Ping3(any).?Ping54(any).?Ping33(),
+    #                             !Option2(integer).?Ping33()
 
     session_type = ST.string_to_st(st)
 
     session_typecheck(fun, 0, body, session_type)
 
-    []
+    :ok
   end
 end

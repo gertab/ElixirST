@@ -23,6 +23,7 @@ session -> label                                           : #call_recurse{label
 
 % todo allow only &{?} and not &{!}
 % todo allow only branches/choices with different labels
+% todo allow !Number()
 
 sequences -> sequence                        : nil.
 sequences -> sequences sequence              : nil.
