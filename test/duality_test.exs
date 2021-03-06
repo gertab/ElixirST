@@ -46,13 +46,13 @@ defmodule DualityTest do
     session = Parser.parse(s)
 
     actual = %ST.Choice{
-      choices: [
-        %ST.Send{
+      choices: %{
+        Neg: %ST.Send{
           label: :Neg,
           next: %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:number]},
           types: [:number, :pid]
         }
-      ]
+      }
     }
 
     assert Duality.dual(session) == actual
@@ -65,16 +65,16 @@ defmodule DualityTest do
 
     actual = %ST.Recv{
       label: :Hello,
+      types: [],
       next: %ST.Branch{
-        branches: [
-          %ST.Recv{
+        branches: %{
+          Neg: %ST.Recv{
             label: :Neg,
             next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
             types: [:number, :pid]
           }
-        ]
-      },
-      types: []
+        }
+      }
     }
 
     assert Duality.dual(session) == actual
@@ -87,23 +87,56 @@ defmodule DualityTest do
 
     actual = %ST.Recv{
       label: :Hello,
+      types: [],
       next: %ST.Choice{
-        choices: [
-          %ST.Send{
-            label: :Neg,
-            next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
-            types: [:number, :pid]
-          },
-          %ST.Send{
+        choices: %{
+          Neg: %ST.Send{
             label: :Neg,
             next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
             types: [:number, :pid]
           }
-        ]
-      },
-      types: []
+        }
+      }
     }
 
     assert Duality.dual(session) == actual
+  end
+
+  test "dual?" do
+    s1 = "rec X . (?Hello() . +{!Hello(). X, !Hello2(). X})"
+    s2 = "rec X . (!Hello() . &{?Hello(). X})"
+
+    session1 = ST.string_to_st(s1)
+    session2 = ST.string_to_st(s2)
+
+    actual = ElixirSessions.Duality.dual?(session1, session2)
+    expected = false
+
+    assert actual == expected
+  end
+
+  test "dual? 2" do
+    s1 = "rec X . (?Hello() . +{!Hello(). X})"
+    s2 = "rec X . (!Hello() . &{?Hello(). X, ?Hello2(). X})"
+
+    session1 = ST.string_to_st(s1)
+    session2 = ST.string_to_st(s2)
+
+    actual = ElixirSessions.Duality.dual?(session1, session2)
+    expected = true
+
+    assert actual == expected
+  end
+
+  test "dual? complex" do
+    s1 ="?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
+
+    session1 = ST.string_to_st(s1)
+    session2 = ST.dual(session1)
+
+    actual = ElixirSessions.Duality.dual?(session1, session2)
+    expected = true
+
+    assert actual == expected
   end
 end

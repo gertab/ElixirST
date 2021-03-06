@@ -120,7 +120,7 @@ defmodule ElixirSessions.Inference do
           ...>   end
           ...> end
           ...>
-          ...> st = ElixirSessions.Inference.infer_session_type_incl_recursion(:ping, ast)
+          ...> ElixirSessions.Inference.infer_session_type_incl_recursion(:ping, ast)
           [{:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}]
   """
   @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type_joins()
@@ -522,7 +522,7 @@ defmodule ElixirSessions.Inference do
     []
   end
 
-  # @spec fix_structure_no_joins(session_type()) :: session_type()
+  # @spec fix_structure_no_joins(session_type_joins()) :: session_type_tuple()
   def fix_structure_no_joins([]) do
     {:terminate}
   end

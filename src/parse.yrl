@@ -22,6 +22,7 @@ session -> recurse label '(' session ')'                   : #recurse{label=unwr
 session -> label                                           : #call_recurse{label=unwrap('$1')}.
 
 % todo allow only &{?} and not &{!}
+% todo allow only branches/choices with different labels
 
 sequences -> sequence                        : nil.
 sequences -> sequences sequence              : nil.

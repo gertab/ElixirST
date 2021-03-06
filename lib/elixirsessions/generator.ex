@@ -121,14 +121,14 @@ defmodule ElixirSessions.Generator do
     cases =
       Enum.with_index(choices, 1)
       |> Enum.map(fn
-        {%ST.Send{label: label, types: types, next: next}, index} ->
+        {{_label, %ST.Send{label: label, types: types, next: next}}, index} ->
           "{:option#{index}} -> #{
             generate(%ST.Send{label: label, types: types, next: next}) |> Macro.to_string()
           }\n"
 
         _ ->
           throw(
-            "Error while generating branch: all branches need to start with a receive statement"
+            "[Choice] Error while generating branch: all branches need to start with a receive statement"
           )
       end)
 
@@ -152,7 +152,7 @@ defmodule ElixirSessions.Generator do
       Enum.map(
         branches,
         fn
-          %ST.Recv{label: label, types: types, next: next} ->
+          {_label, %ST.Recv{label: label, types: types, next: next}} ->
             guards =
               if type_guards(types) != "" do
                 "when #{type_guards(types)}"
@@ -169,7 +169,7 @@ defmodule ElixirSessions.Generator do
 
           _ ->
             throw(
-              "Error while generating branch: all branches need to start with a receive statement"
+              "[Branch] Error while generating branch: all branches need to start with a receive statement"
             )
         end
       )
@@ -258,7 +258,7 @@ defmodule ElixirSessions.Generator do
 
   # recompile && (IO.puts(ElixirSessions.Generator.run))
   def run() do
-    session_type_string = "!H1111111().!H2222222222222(Number).?H333333333333333(number, list)"
+    session_type_string = "!H1111111().!H2222222222222(Number).?H333333333333333(number, list).+{!Hello()}"
 
     generate_from_session_type(session_type_string)
   end

@@ -67,17 +67,17 @@ defmodule ST do
       iex> s = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
       ...> ST.string_to_st(s)
       %ST.Recurse{
+        label: :X,
         body: %ST.Branch{
-          branches: [
-            %ST.Recv{
+          branches: %{
+            Ping: %ST.Recv{
               label: :Ping,
               next: %ST.Send{label: :Pong, next: %ST.Call_Recurse{label: :X}, types: []},
               types: []
             },
-            %ST.Recv{label: :Quit, next: %ST.Terminate{}, types: []}
-          ]
-        },
-        label: :X
+            Quit: %ST.Recv{label: :Quit, next: %ST.Terminate{}, types: []}
+          }
+        }
       }
 
   ### Generator
@@ -125,8 +125,8 @@ defmodule ST do
   @type session_type() ::
           %ST.Send{label: label(), types: types(), next: session_type()}
           | %ST.Recv{label: label(), types: types(), next: session_type()}
-          | %ST.Choice{choices: [session_type()]}
-          | %ST.Branch{branches: [session_type()]}
+          | %ST.Choice{choices: %{label() => session_type()}}
+          | %ST.Branch{branches: %{label() => session_type()}}
           | %ST.Recurse{label: label(), body: session_type()}
           | %ST.Call_Recurse{label: label()}
           | %ST.Terminate{}
@@ -212,7 +212,8 @@ defmodule ST do
     defstruct [:choices]
 
     @type session_type() :: ST.session_type()
-    @type t :: %__MODULE__{choices: [session_type()]}
+    @type label() :: ST.label()
+    @type t :: %__MODULE__{choices: %{label() => session_type()}}
   end
 
   defmodule Branch do
@@ -221,7 +222,8 @@ defmodule ST do
     defstruct [:branches]
 
     @type session_type() :: ST.session_type()
-    @type t :: %__MODULE__{branches: [session_type()]}
+    @type label() :: ST.label()
+    @type t :: %__MODULE__{branches: %{label() => session_type()}}
   end
 
   defmodule Recurse do

@@ -24,10 +24,10 @@ defmodule ElixirSessions.Operations do
       Enum.map(
         choices,
         fn
-          %ST.Send{next: next} ->
+          {_label, %ST.Send{next: next}} ->
             validate!(next)
 
-          other ->
+          {_, other} ->
             throw(
               "Session type parsing validation error: Each branch needs a send as the first statement: #{
                 ST.st_to_string(other)
@@ -35,10 +35,11 @@ defmodule ElixirSessions.Operations do
             )
 
             false
+
+          _ ->
+            throw("BAD - check")
         end
       )
-
-
 
     # AND operation
     if false in res do
@@ -53,10 +54,10 @@ defmodule ElixirSessions.Operations do
       Enum.map(
         branches,
         fn
-          %ST.Recv{next: next} ->
+          {_label, %ST.Recv{next: next}} ->
             validate!(next)
 
-          other ->
+          {_, other} ->
             throw(
               "Session type parsing validation error: Each branch needs a receive as the first statement: #{
                 ST.st_to_string(other)
@@ -64,6 +65,9 @@ defmodule ElixirSessions.Operations do
             )
 
             false
+
+          _ ->
+            throw("BAD - check")
         end
       )
 
@@ -94,7 +98,8 @@ defmodule ElixirSessions.Operations do
   # Convert session types from Erlang records (tuples) to Elixir Structs.
   # @spec convert_to_structs(session_type_tuple()) :: session_type()
   @spec convert_to_structs(
-          {:send, atom, any, session_type_tuple()} # should be { , , [atom], }
+          # should be { , , [atom], }
+          {:send, atom, any, session_type_tuple()}
           | {:recv, atom, any, session_type_tuple()}
           | {:choice, [session_type_tuple()]}
           | {:branch, [session_type_tuple()]}
@@ -117,11 +122,35 @@ defmodule ElixirSessions.Operations do
   end
 
   def convert_to_structs({:choice, choices}) do
-    %ST.Choice{choices: Enum.map(choices, fn x -> convert_to_structs(x) end)}
+    %ST.Choice{
+      choices:
+        Enum.map(
+          choices,
+          fn
+            x ->
+              converted = convert_to_structs(x)
+              label = label(converted)
+              {label, converted}
+          end
+        )
+        |> Enum.into(%{})
+    }
   end
 
   def convert_to_structs({:branch, branches}) do
-    %ST.Branch{branches: Enum.map(branches, fn x -> convert_to_structs(x) end)}
+    %ST.Branch{
+      branches:
+        Enum.map(
+          branches,
+          fn
+            x ->
+              converted = convert_to_structs(x)
+              label = label(converted)
+              {label, converted}
+          end
+        )
+        |> Enum.into(%{})
+    }
   end
 
   def convert_to_structs({:recurse, label, body}) do
@@ -130,6 +159,18 @@ defmodule ElixirSessions.Operations do
 
   def convert_to_structs({:call_recurse, label}) do
     %ST.Call_Recurse{label: label}
+  end
+
+  defp label(%ST.Send{label: label}) do
+    label
+  end
+
+  defp label(%ST.Recv{label: label}) do
+    label
+  end
+
+  defp label(_) do
+    throw("After a branch/choice, a send or receive statement is required.")
   end
 
   #  Converts s session type to a string
@@ -162,7 +203,7 @@ defmodule ElixirSessions.Operations do
 
   def st_to_string(%ST.Choice{choices: choices}) do
     v =
-      Enum.map(choices, fn x -> st_to_string(x) end)
+      Enum.map(choices, fn {_label, x} -> st_to_string(x) end)
       |> Enum.join(", ")
 
     "+{#{v}}"
@@ -170,7 +211,7 @@ defmodule ElixirSessions.Operations do
 
   def st_to_string(%ST.Branch{branches: branches}) do
     v =
-      Enum.map(branches, fn x -> st_to_string(x) end)
+      Enum.map(branches, fn {_label, x} -> st_to_string(x) end)
       |> Enum.join(", ")
 
     "&{#{v}}"
@@ -195,13 +236,13 @@ defmodule ElixirSessions.Operations do
   def st_to_string_current(%ST.Send{label: label, types: types}) do
     types_string = types |> Enum.join(", ")
 
-      "!#{label}(#{types_string})"
+    "!#{label}(#{types_string})"
   end
 
   def st_to_string_current(%ST.Recv{label: label, types: types}) do
     types_string = types |> Enum.join(", ")
 
-      "?#{label}(#{types_string})"
+    "?#{label}(#{types_string})"
   end
 
   def st_to_string_current(%ST.Choice{choices: choices}) do
@@ -238,38 +279,53 @@ defmodule ElixirSessions.Operations do
   @spec equal(session_type(), session_type()) :: boolean()
   def equal(session_type, session_type)
 
-  def equal(%ST.Send{label: label1, types: types1, next: next1}, %ST.Send{label: label2, types: types2, next: next2}) do
-    label1 == label2 and types1 == types2 and equal(next1, next2)
+  def equal(
+        %ST.Send{label: label, types: types, next: next1},
+        %ST.Send{label: label, types: types, next: next2}
+      ) do
+      equal(next1, next2)
   end
 
-  def equal(%ST.Recv{label: label1, types: types1, next: next1}, %ST.Recv{label: label2, types: types2, next: next2}) do
-    label1 == label2 and types1 == types2 and equal(next1, next2)
+  def equal(
+        %ST.Recv{label: label, types: types, next: next1},
+        %ST.Recv{label: label, types: types, next: next2}
+      ) do
+    equal(next1, next2)
   end
 
   def equal(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
-    Enum.zip(choices1, choices2)
-    |> Enum.reduce(true,
-    fn
-      {choice1, choice2}, acc ->
-        acc and equal(choice1, choice2)
-    end)
+    # Sorting is done (automatically) by the map
+
+    Enum.zip(Map.values(choices1), Map.values(choices2))
+    |> Enum.reduce(
+      true,
+      fn
+        {choice1, choice2}, acc ->
+          acc and equal(choice1, choice2)
+      end
+    )
   end
 
   def equal(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
-    Enum.zip(branches1, branches2)
-    |> Enum.reduce(true,
-    fn
-      {branche1, branche2}, acc ->
-        acc and equal(branche1, branche2)
-    end)
+    # Sorting is done (automatically) by the map
+
+    Enum.zip(Map.values(branches1), Map.values(branches2))
+    |> Enum.reduce(
+      true,
+      fn
+        {branche1, branche2}, acc ->
+          acc and equal(branche1, branche2)
+      end
+    )
   end
 
-  def equal(%ST.Recurse{label: label1, body: body1}, %ST.Recurse{label: label2, body: body2}) do
-    label1 == label2 and equal(body1, body2)
+  def equal(%ST.Recurse{label: label, body: body1}, %ST.Recurse{label: label, body: body2}) do
+    equal(body1, body2)
   end
 
-  def equal(%ST.Call_Recurse{label: label1}, %ST.Call_Recurse{label: label2}) do
-    label1 == label2
+  def equal(%ST.Call_Recurse{label: label}, %ST.Call_Recurse{label: label}) do
+    # todo alpha equivalence?
+    true
   end
 
   def equal(%ST.Terminate{}, %ST.Terminate{}) do
@@ -279,7 +335,6 @@ defmodule ElixirSessions.Operations do
   def equal(_, _) do
     false
   end
-
 
   # recompile && ElixirSessions.Operations.run
   def run() do
