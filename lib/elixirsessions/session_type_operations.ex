@@ -277,6 +277,7 @@ defmodule ElixirSessions.Operations do
   end
 
   # Pattern matching with ST.session_type()
+  # todo remove? use == instead
   @spec equal(session_type(), session_type()) :: boolean()
   def equal(session_type, session_type)
 

@@ -4,7 +4,7 @@ defmodule ElixirSessions.MixProject do
   def project do
     [
       app: :elixirsessions,
-      version: "0.1.1",
+      version: "0.1.2",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,

@@ -25,14 +25,6 @@ defmodule ElixirSessions.SessionTypechecking do
   @doc """
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.
 
-  Examples
-  iex> ast = quote do
-  ...>   def ping() do
-  ...>     send(self(), {:hello})
-  ...>   end
-  ...> end
-  ...> ElixirSessions.Inference.infer_session_type(:ping, ast)
-  %ST.Send{label: :hello, next: %ST.Terminate{}, types: []}
   """
   @spec session_typecheck(atom(), arity(), ast(), session_type()) :: true
   def session_typecheck(fun, arity, body, session_type) do
@@ -309,7 +301,7 @@ defmodule ElixirSessions.SessionTypechecking do
     # the case statements
     if map_size(choices_session_types) < length(cases) do
       throw(
-        "#{line} [in case/choice] More cases found (#{length(cases)}) than expected(#{
+        "#{line} [in case/choice] More cases found (#{length(cases)}) than expected (#{
           map_size(choices_session_types)
         }). Expected session type #{
           ST.st_to_string_current(%ST.Choice{choices: choices_session_types})
@@ -333,6 +325,7 @@ defmodule ElixirSessions.SessionTypechecking do
     Enum.map(
       inner_ast,
       fn ast ->
+        # Compare the current branch to all possible session types (in the choice map)
         tentative_remaining_session_types =
           Enum.map(
             choices_session_types,
@@ -351,12 +344,15 @@ defmodule ElixirSessions.SessionTypechecking do
             end
           )
 
+        # remaining_session_type_list may contain either [] or
+        # a list with one element containing the matching session type
         remaining_session_type_list =
           Enum.filter(tentative_remaining_session_types, fn
             {:error, _} -> false
             _ -> true
           end)
 
+        # errors_session_type_list contains a list of all erros caught
         errors_session_type_list =
           Enum.filter(tentative_remaining_session_types, fn
             {:error, _} -> true
@@ -392,7 +388,7 @@ defmodule ElixirSessions.SessionTypechecking do
         {x, st}
       else
         throw(
-          "#{line} Mismatch in session type following the chioce: #{ST.st_to_string(st)} and #{
+          "#{line} Mismatch in session type following the choice: #{ST.st_to_string(st)} and #{
             ST.st_to_string(acc)
           }"
         )
@@ -478,47 +474,43 @@ defmodule ElixirSessions.SessionTypechecking do
 
     body =
       quote do
-        a = 1
-        send(self(), {:Ping1, self()})
-        send(self(), {:Ping2})
+        pid =
+          receive do
+            {:address, pid} ->
+              pid
+          end
 
-        case jkd do
-          {:bbbbb} ->
-            send(pid, {:Option2})
-            a = 4 + 43
-            a = 4 + 43
-            a = 4 + 43
-            a = 4 + 43
-            send(pid, {:ABC})
+        receive do
+          {:option1} ->
+            a = 1
+            send(pid, {:A, a})
+            send(pid, {:B, a + 1})
 
-            receive do
-              {:Branch1} ->
-                :ok
+          {:option2} ->
+            _b = 2
+            send(pid, {:X})
 
-              {:Branch2} ->
-                :ok
+          {:option3, value} ->
+            b = 3
+            send(pid, {:Y, b})
+            case value do
+              true -> send(pid, {:hello})
+              false -> send(pid, {:hello2})
+              _ -> send(pid, {:not_hello, 3})
             end
-
-            :ok1
-
-          {:aaaaa} ->
-            send(self(), {:Ping3, self()})
-            send(pid, {:Option1})
-            send(pid, {:ABC})
         end
+
       end
 
-    st = """
-    !Ping1(integer).!Ping2().
-                              +{
-                               !Option1().!ABC(),
-                               !Option2().!ABC().&{?Branch1(), ?Branch2()},
-                               !Option3()
-                              }
-    """
-
-    # .!Ping3(any).?Ping54(any).?Ping33(),
-    #                             !Option2(integer).?Ping33()
+    st = "?address(any).
+                    &{?option1().!A(any).!B(any),
+                      ?option2().!X(),
+                      ?option3(any).!Y(any).
+                            +{!hello(),
+                              !hello2(),
+                              !not_hello(any)
+                            }
+                      }"
 
     session_type = ST.string_to_st(st)
 

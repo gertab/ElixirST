@@ -1,4 +1,4 @@
-# Elixirsessions
+# ElixirSessions
 
 ![Elixir CI](https://github.com/gertab/ElixirSessions/workflows/Elixir%20CI/badge.svg)
 
@@ -75,7 +75,6 @@ end
 </td>
 <td>
 Receive a label <code>:Ping</code> with a value of type <code>number</code>.
-<td>
 </td>
 </tr>
 <tr>

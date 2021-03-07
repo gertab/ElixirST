@@ -11,6 +11,7 @@ defmodule ElixirSessions.Checking do
       import ElixirSessions.Checking
 
       Module.register_attribute(__MODULE__, :session, accumulate: true)
+      Module.register_attribute(__MODULE__, :infer_session, accumulate: true)
       # todo add @infer_session true
 
       @on_definition ElixirSessions.Checking
@@ -28,8 +29,21 @@ defmodule ElixirSessions.Checking do
   def __on_definition__(env, _access, name, args, _guards, body) do
     if sessions = Module.get_attribute(env.module, :session) do
       if length(sessions) > 0 do
-        # session = hd(sessions)
-        # s = ElixirSessions.Parser.parse(session)
+        session = hd(sessions)
+        IO.inspect(sessions)
+        # Module.get_attribute(env.module, :session)
+        try do
+          session_type = ST.string_to_st(session)
+
+            ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
+
+        catch
+          x ->
+            throw(x)
+            # _ = Logger.error("Leex/Yecc error #{inspect(x)}")
+        end
+
+
 
         # case s do
         #   {:error, {line, _, message}} ->
@@ -49,13 +63,32 @@ defmodule ElixirSessions.Checking do
         #     :ok
         # end
 
-        # inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
-        # IO.puts("\nInferred sesssion type for: #{name}")
+        _inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
+        IO.puts("\nInferred sesssion type for: #{name}")
         # IO.inspect(inferred_session_type)
+        :okkk
       end
     end
 
-    # IO.inspect(body)
+
+    if sessions = Module.get_attribute(env.module, :infer_session) do
+      if length(sessions) > 0 do
+        # session = hd(sessions)
+        try do
+          session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
+
+          result = ST.st_to_string(session_type)
+          throw(result)
+        catch
+          x ->
+            throw(x)
+        end
+
+        inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
+        IO.puts("\nInferred sesssion type for: #{name}")
+        IO.inspect(inferred_session_type)
+      end
+    end
     :ok
   end
 end

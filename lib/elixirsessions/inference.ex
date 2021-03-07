@@ -110,18 +110,18 @@ defmodule ElixirSessions.Inference do
 
   @doc """
   Uses `infer_session_type_incl_recursion/2` to infer the session type (includes recursion).
-  Outputs the result as `t:session_type_joins() since it may contain sequences/joins.
+  Outputs the result as `t:session_type_joins/0` since it may contain sequences/joins.
 
   ## Examples
-          iex> ast = quote do
-          ...>   def ping(pid) do
-          ...>     send(pid, {:label})
-          ...>     ping()
-          ...>   end
-          ...> end
-          ...>
-          ...> ElixirSessions.Inference.infer_session_type_incl_recursion(:ping, ast)
-          [{:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}]
+        iex> ast = quote do
+        ...>   def ping(pid) do
+        ...>     send(pid, {:label})
+        ...>     ping()
+        ...>   end
+        ...> end
+        ...>
+        ...> ElixirSessions.Inference.infer_session_type_incl_recursion(:ping, ast)
+        [{:recurse, :X, [{:send, :label, []}, {:call_recurse, :X}]}]
   """
   @spec infer_session_type_incl_recursion(atom(), ast()) :: session_type_joins()
   def infer_session_type_incl_recursion(fun, body) do
@@ -566,23 +566,36 @@ defmodule ElixirSessions.Inference do
 
     body =
       quote do
-        send(pid, {:hello, value})
+
+        IO.puts("Sending ping to #{inspect pid}")
+
+        send(pid, {:ping, self()})
 
         receive do
-          {:label1} ->
-            receive do
-              {:option1, v} -> send(pid, {:in_label1})
-              {:option2} -> :ok
-            end
-
-          {:label2} ->
-            :ok
-
-          {:label3} ->
-            :ok
+          {:pong} ->
+            IO.puts("Received pong!")
         end
 
-        send(pid, {:end})
+        ping(pid)
+
+
+        # send(pid, {:hello, value})
+
+        # receive do
+        #   {:label1} ->
+        #     receive do
+        #       {:option1, v} -> send(pid, {:in_label1})
+        #       {:option2} -> :ok
+        #     end
+
+        #   {:label2} ->
+        #     :ok
+
+        #   {:label3} ->
+        #     :ok
+        # end
+
+        # send(pid, {:end})
 
         # send(self(), {:ping})
         # send(self(), {:ping2, 43})
