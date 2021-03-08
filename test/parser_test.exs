@@ -84,7 +84,7 @@ defmodule ParserTest do
   end
 
   test "validation no error - choice" do
-    source = "!Hello(Integer).+{!neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
+    source = "!Hello(Integer).+{!neg(number, pid).?Num(Number), !other_option(number, pid).?Num(Number)}"
 
     try do
       ElixirSessions.Parser.parse(source)
@@ -95,7 +95,7 @@ defmodule ParserTest do
   end
 
   test "validation no error - branch" do
-    source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
+    source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?other_option(number, pid).?Num(Number)}"
 
     try do
       ElixirSessions.Parser.parse(source)
@@ -105,6 +105,17 @@ defmodule ParserTest do
     end
   end
 
+
+  test "validation same label error - branch" do
+    source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+  end
   test "validation error - choice" do
     source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg2(number, pid).?Num(Number)}"
 

@@ -6,13 +6,25 @@ defmodule ElixirSessions.LargerExample do
   end
 
   # @infer_session true
-  # @session "?address(any).&{?option1().!A(any).!B(any), ?option2().!X(), ?option3(any).!Y(any).+{!hello(), !hello2(), !not_hello(any)}}"
+  @session """
+        ?address(any).
+           &{
+             ?option1().!A(any).!B(any),
+             ?option2().!X(),
+             ?option3(any).!Y(any).+{
+                                     !hello(),
+                                     !hello2(), !not_hello(any)
+                                    }
+            }
+  """
   def example1() do
     pid =
       receive do
         {:address, pid} ->
           pid
       end
+
+    # send(pid, {:label, 233})
 
     receive do
       {:option1} ->

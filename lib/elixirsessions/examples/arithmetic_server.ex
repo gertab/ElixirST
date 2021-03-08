@@ -20,7 +20,7 @@ defmodule ElixirSessions.ArithmeticServer do
   @doc """
   A simple artihmetic server that is able to do addition and negation of numbers.
   """
-  @session "&{?add(number, number, pid).!result(number), ?neg(number, pid).!result(number)}"
+  @session "&{ ?add(number, number, pid).!result(number), ?neg(number, pid).!result(number)}"
   def arith_serv() do
     receive do
       {:add, num1, num2, pid} ->
@@ -29,7 +29,35 @@ defmodule ElixirSessions.ArithmeticServer do
 
       {:neg, num, pid} ->
             IO.puts("[server] neg of #{num}")
-            send(pid, {:result, -num})
+            send(pid, {:result, -num})#
+    end
+
+    # send(self(), {:result, 33})
+  end
+
+  @doc """
+  Client which interacts with `arith_serv()`.
+  """
+  @session "+{!add(number, number, pid).?result(number), !neg(number, pid).?result(number)}"
+  def attempt1(server) when is_pid(server) do
+
+
+    a = 3
+    case a do
+      3 ->
+        send(server, {:add, 34, 54, self()})
+
+        receive do
+          {:result, res} ->
+            IO.puts("[client] = #{res}")
+        end
+      # _ ->
+      #   send(server, {:neg, 54, self()})
+
+      #   receive do
+      #     {:result, res} ->
+      #       IO.puts("[client] = #{res}")
+      #   end
     end
   end
 
@@ -50,10 +78,9 @@ defmodule ElixirSessions.ArithmeticServer do
   @doc """
   Another client which interacts with `arith_serv()`.
   """
-  @session "!neg().!value(number, pid).?result(number)"
+  @session "!neg(number, pid).?result(number)"
   def attempt2(server) when is_pid(server) do
-    send(server, {:neg})
-    send(server, {:value, 54, self()})
+    send(server, {:neg, 54, self()})
 
     receive do
       {:result, value} ->

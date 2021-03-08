@@ -5,7 +5,6 @@ defmodule ElixirSessions.Inference do
   @moduledoc """
   Performs session type inference of a given AST.
 
-
   ## Examples
       iex> ast = quote do
       ...>   def ping(pid) do

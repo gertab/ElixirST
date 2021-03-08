@@ -81,7 +81,7 @@ defmodule DualityTest do
   end
 
   test "sequence and branching choice dual = all need to match (correct) dual" do
-    s = "!Hello().&{?Neg(number, pid).!Hello(number), ?Neg(number, pid).!Hello(number)}"
+    s = "!Hello().&{?Neg(number, pid).!Hello(number), ?Neg2(number, pid).!Hello(number)}"
 
     session = Parser.parse(s)
 
@@ -91,7 +91,12 @@ defmodule DualityTest do
       next: %ST.Choice{
         choices: %{
           Neg: %ST.Send{
-            label: :Neg,
+            next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
+            types: [:number, :pid],
+            label: :Neg
+          },
+          Neg2: %ST.Send{
+            label: :Neg2,
             next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
             types: [:number, :pid]
           }
@@ -129,7 +134,8 @@ defmodule DualityTest do
   end
 
   test "dual? complex" do
-    s1 ="?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
+    s1 =
+      "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
     session1 = ST.string_to_st(s1)
     session2 = ST.dual(session1)

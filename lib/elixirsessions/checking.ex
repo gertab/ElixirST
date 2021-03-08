@@ -64,7 +64,8 @@ defmodule ElixirSessions.Checking do
         # end
 
         _inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
-        IO.puts("\nInferred sesssion type for: #{name}")
+        IO.puts("\nSesssion type for #{name} type checks successfully.")
+        # IO.puts("\nInferred sesssion type for: #{name}")
         # IO.inspect(inferred_session_type)
         :okkk
       end

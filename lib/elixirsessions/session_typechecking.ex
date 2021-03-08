@@ -145,7 +145,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
       # todo: choice with one option should be valid
       x ->
-        throw("#{line} Cannot match `#{Macro.to_string(ast)}` with #{ST.st_to_string(x)}.")
+        throw("#{line} Cannot match send statment `#{Macro.to_string(ast)}` with #{ST.st_to_string_current(x)}.")
     end
   end
 

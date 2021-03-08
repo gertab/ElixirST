@@ -18,8 +18,6 @@ defmodule ElixirSessions.Operations do
   end
 
   def validate!(%ST.Choice{choices: choices}) do
-    # todo maybe check the label; check if sorted
-    # todo check for uniqeness
     res =
       Enum.map(
         choices,
@@ -96,6 +94,7 @@ defmodule ElixirSessions.Operations do
   end
 
   # Convert session types from Erlang records (tuples) to Elixir Structs.
+  # throws error in case of branches/choices with same labels.
   # @spec convert_to_structs(session_type_tuple()) :: session_type()
   @spec convert_to_structs(
           # should be { , , [atom], }
@@ -124,32 +123,40 @@ defmodule ElixirSessions.Operations do
   def convert_to_structs({:choice, choices}) do
     %ST.Choice{
       choices:
-        Enum.map(
+        Enum.reduce(
           choices,
-          fn
-            x ->
-              converted = convert_to_structs(x)
-              label = label(converted)
-              {label, converted}
+          %{},
+          fn choice, map ->
+            converted_st = convert_to_structs(choice)
+            label = label(converted_st)
+
+            if Map.has_key?(map, label) do
+              throw("Cannot insert multiple choices with same label: #{label}.")
+            else
+              Map.put(map, label, converted_st)
+            end
           end
         )
-        |> Enum.into(%{})
     }
   end
 
   def convert_to_structs({:branch, branches}) do
     %ST.Branch{
       branches:
-        Enum.map(
+        Enum.reduce(
           branches,
-          fn
-            x ->
-              converted = convert_to_structs(x)
-              label = label(converted)
-              {label, converted}
+          %{},
+          fn branch, map ->
+            converted_st = convert_to_structs(branch)
+            label = label(converted_st)
+
+            if Map.has_key?(map, label) do
+              throw("Cannot insert multiple branches with same label: #{label}.")
+            else
+              Map.put(map, label, converted_st)
+            end
           end
         )
-        |> Enum.into(%{})
     }
   end
 
@@ -278,6 +285,7 @@ defmodule ElixirSessions.Operations do
 
   # Pattern matching with ST.session_type()
   # todo remove? use == instead
+  # ! = +{l} and & = &{l}
   @spec equal(session_type(), session_type()) :: boolean()
   def equal(session_type, session_type)
 
@@ -285,7 +293,7 @@ defmodule ElixirSessions.Operations do
         %ST.Send{label: label, types: types, next: next1},
         %ST.Send{label: label, types: types, next: next2}
       ) do
-      equal(next1, next2)
+    equal(next1, next2)
   end
 
   def equal(

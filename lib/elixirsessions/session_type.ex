@@ -248,6 +248,7 @@ defmodule ST do
 
   @doc """
   Convert session types from Erlang records to Elixir Structs.
+  Throws error in case of branches/choices with same labels.
 
   ## Example
       iex> st_erlang = {:recv, :Ping, [], {:send, :Pong, [], {:terminate}}}
