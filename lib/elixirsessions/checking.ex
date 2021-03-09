@@ -10,8 +10,8 @@ defmodule ElixirSessions.Checking do
     quote do
       import ElixirSessions.Checking
 
-      Module.register_attribute(__MODULE__, :session, accumulate: true)
-      Module.register_attribute(__MODULE__, :infer_session, accumulate: true)
+      Module.register_attribute(__MODULE__, :session, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
       # todo add @infer_session true
 
       @on_definition ElixirSessions.Checking

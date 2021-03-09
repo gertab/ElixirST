@@ -5,6 +5,7 @@ defmodule ElixirSessions.Operations do
   @type session_type :: ST.session_type()
   @type session_type_tuple() :: ST.session_type_tuple()
 
+  # todo make all methods that throw errors contain '!'. Add equivalent non '!' methods
   # Performs validations on the session type.
   @spec validate!(session_type()) :: boolean()
   def validate!(session_type)

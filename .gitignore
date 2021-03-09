@@ -22,6 +22,6 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 elixirsessions-*.tar
 
-notes.txt
+notes*.txt
 
 /src/*.erl

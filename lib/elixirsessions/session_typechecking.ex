@@ -108,8 +108,8 @@ defmodule ElixirSessions.SessionTypechecking do
   def session_typecheck_ast(
         {:send, meta, [_, send_body | _]} = ast,
         session_type,
-        _info,
-        _session_context
+        info,
+        session_context
       ) do
     # IO.puts("[in send] #{inspect(session_type)}")
 
@@ -120,12 +120,11 @@ defmodule ElixirSessions.SessionTypechecking do
         "[Line unknown]"
       end
 
+    {actual_label, actual_parameters} = parse_options(send_body)
+
     case session_type do
       %ST.Send{label: expected_label, types: expected_types, next: next} ->
         # todo ensure types correctness for parameters
-        # IO.puts("Matched send: #{expected_label}")
-
-        {actual_label, actual_parameters} = parse_options(send_body)
 
         if expected_label != actual_label do
           throw("#{line} Expected send with label :#{expected_label} but found :#{actual_label}.")
@@ -143,9 +142,26 @@ defmodule ElixirSessions.SessionTypechecking do
 
         {false, next}
 
-      # todo: choice with one option should be valid
-      x ->
-        throw("#{line} Cannot match send statment `#{Macro.to_string(ast)}` with #{ST.st_to_string_current(x)}.")
+      %ST.Choice{choices: choices} ->
+        case Map.fetch(choices, actual_label) do
+          {:ok, expected_send_sessiontype} ->
+            # Recurse with the '!' session type inside the '+'
+            session_typecheck_ast(ast, expected_send_sessiontype, info, session_context)
+
+          :error ->
+            throw(
+              "#{line} Cannot match send statment `#{Macro.to_string(ast)}` with #{
+                ST.st_to_string_current(session_type)
+              }."
+            )
+        end
+
+      _ ->
+        throw(
+          "#{line} Cannot match send statment `#{Macro.to_string(ast)}` with #{
+            ST.st_to_string_current(session_type)
+          }."
+        )
     end
   end
 
@@ -396,10 +412,6 @@ defmodule ElixirSessions.SessionTypechecking do
     end)
   end
 
-  def session_typecheck_ast({:->, _meta, [_head | _body]}, session_type, _info, _session_context) do
-    {false, session_type}
-  end
-
   def session_typecheck_ast({:|>, _meta, _args}, session_type, _info, _session_context) do
     {false, session_type}
   end
@@ -480,37 +492,39 @@ defmodule ElixirSessions.SessionTypechecking do
               pid
           end
 
-        receive do
-          {:option1} ->
-            a = 1
-            send(pid, {:A, a})
-            send(pid, {:B, a + 1})
+        send(pid, {:O111})
 
-          {:option2} ->
-            _b = 2
-            send(pid, {:X})
+        # receive do
+        #   {:option1} ->
+        #     a = 1
+        #     send(pid, {:A, a})
+        #     send(pid, {:B, a + 1})
 
-          {:option3, value} ->
-            b = 3
-            send(pid, {:Y, b})
-            case value do
-              true -> send(pid, {:hello})
-              false -> send(pid, {:hello2})
-              _ -> send(pid, {:not_hello, 3})
-            end
-        end
+        #   {:option2} ->
+        #     _b = 2
+        #     send(pid, {:X})
 
+        #   {:option3, value} ->
+        #     b = 3
+        #     send(pid, {:Y, b})
+        #     case value do
+        #       true -> send(pid, {:hello})
+        #       false -> send(pid, {:hello2})
+        #       _ -> send(pid, {:not_hello, 3})
+        #     end
+        # end
       end
 
     st = "?address(any).
-                    &{?option1().!A(any).!B(any),
-                      ?option2().!X(),
-                      ?option3(any).!Y(any).
-                            +{!hello(),
-                              !hello2(),
-                              !not_hello(any)
-                            }
-                      }"
+                    +{!O111(), !O222(), !O333()}"
+    # &{?option1().!A(any).!B(any),
+    #   ?option2().!X(),
+    #   ?option3(any).!Y(any).
+    #         +{!hello(),
+    #           !hello2(),
+    #           !not_hello(any)
+    #         }
+    #   }"
 
     session_type = ST.string_to_st(st)
 

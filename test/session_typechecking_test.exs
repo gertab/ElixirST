@@ -170,10 +170,34 @@ defmodule SessionTypecheckingTest do
       ElixirSessions.SessionTypechecking.session_typecheck(fun, 0, body, session_type)
       assert true
     catch
-      # x ->
-      #   throw(x)
-      #   assert true
+      _ ->
+        assert false
+    end
+  end
 
+  test "case - choice by send [no error]" do
+    fun = :func_name
+
+    body =
+      quote do
+        send(pid, {:value, 2432})
+
+        check = 233
+
+        send(pid, {:Option1})
+
+        send(pid, {:ThenSendSomethingElse})
+      end
+
+    st = "!value(any).+{!Option1().!ThenSendSomethingElse(),
+                        !Option2(atom).!ThenSendSomethingElse()}"
+
+    session_type = ST.string_to_st(st)
+
+    try do
+      ElixirSessions.SessionTypechecking.session_typecheck(fun, 0, body, session_type)
+      assert true
+    catch
       _ ->
         assert false
     end
