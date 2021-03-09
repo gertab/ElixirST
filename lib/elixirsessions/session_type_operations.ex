@@ -183,6 +183,7 @@ defmodule ElixirSessions.Operations do
 
   #  Converts s session type to a string
   # todo in the case of 'end'
+  # replace name to to_string
   @spec st_to_string(session_type()) :: String.t()
   def st_to_string(session_type)
 

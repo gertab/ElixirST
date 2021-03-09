@@ -35,6 +35,26 @@ defmodule ElixirSessions.PingPong do
     end
   end
 
+  @session "end"
+  defp ppp() do
+    if 2 + 3 < 2 do
+      :ok
+    end
+
+    with a <- :ok do
+      a
+    end
+
+    a = 3
+
+    cond do
+      3 + 2 < 2 ->
+        :ok
+      a ->
+        :okk
+    end
+  end
+
   @doc """
   Receives a `:ping` and sends a `:pong`.
   """
