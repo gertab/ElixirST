@@ -180,7 +180,7 @@ defmodule ElixirSessionsOperations do
       {:recurse, :X,
        {:branch,
         [
-          {:recv, :Ping, [], {:send, :Pong, [], {:call_recurse, :X}}},
+          {:recv, :Ping, [], {:send, :Pong, [], {:call, :X}}},
           {:recv, :Quit, [], {:terminate}}
         ]}}
 
@@ -202,7 +202,7 @@ defmodule ElixirSessionsOperations do
       label: :X
     }
 
-    result = ElixirSessions.Operations.convert_to_structs(input)
+    result = ST.convert_to_structs(input)
 
     assert result == expected
   end

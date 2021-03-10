@@ -45,6 +45,10 @@ defmodule ElixirSessions.Duality do
     st
   end
 
+  def dual(%ST.Call_Session_Type{} = st) do
+    st
+  end
+
   def dual(%ST.Terminate{} = st) do
     st
   end

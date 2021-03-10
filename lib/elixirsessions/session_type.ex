@@ -129,6 +129,7 @@ defmodule ST do
           | %ST.Branch{branches: %{label() => session_type()}}
           | %ST.Recurse{label: label(), body: session_type()}
           | %ST.Call_Recurse{label: label()}
+          | %ST.Call_Session_Type{label: label()}
           | %ST.Terminate{}
 
   @type session_type_incl_label() :: {label(), session_type()}
@@ -141,7 +142,8 @@ defmodule ST do
           | {:recv, atom, [atom], session_type_tuple()}
           | {:choice, [session_type_tuple]}
           | {:branch, [session_type_tuple]}
-          | {:call_recurse, atom}
+          # Call can either be a recursion variable (ST.Call_Recurse) or a continuation session type (ST.Call_Session_Type)
+          | {:call, atom}
           | {:recurse, atom, session_type_tuple}
           | {:terminate}
 
@@ -248,9 +250,20 @@ defmodule ST do
     @type t :: %__MODULE__{label: label()}
   end
 
+  defmodule Call_Session_Type do
+    @moduledoc false
+    @enforce_keys [:label]
+    defstruct [:label]
+
+    @type session_type() :: ST.session_type()
+    @type label() :: ST.label()
+    @type t :: %__MODULE__{label: label()}
+  end
+
   @doc """
   Convert session types from Erlang records to Elixir Structs.
-  Throws error in case of branches/choices with same labels.
+  Throws error in case of branches/choices with same labels, or
+  if the types are not valid.
 
   ## Example
       iex> st_erlang = {:recv, :Ping, [], {:send, :Pong, [], {:terminate}}}
@@ -263,7 +276,7 @@ defmodule ST do
   """
   @spec convert_to_structs(session_type_tuple()) :: session_type()
   def convert_to_structs(session_type_tuple) do
-    ElixirSessions.Operations.convert_to_structs(session_type_tuple)
+    ElixirSessions.Operations.convert_to_structs(session_type_tuple, [])
   end
 
   @doc """
@@ -311,6 +324,11 @@ defmodule ST do
   @spec string_to_st(String.t()) :: session_type()
   def string_to_st(st_string) do
     ElixirSessions.Parser.parse(st_string)
+  end
+
+  @spec string_to_st_incl_label(String.t()) :: {label(), session_type()}
+  def string_to_st_incl_label(st_string) do
+    ElixirSessions.Parser.parse_incl_label(st_string)
   end
 
   @doc """

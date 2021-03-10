@@ -87,6 +87,10 @@ defmodule ElixirSessions.Operations do
     true
   end
 
+  def validate!(%ST.Call_Session_Type{}) do
+    true
+  end
+
   def validate!(%ST.Terminate{}) do
     true
   end
@@ -96,41 +100,75 @@ defmodule ElixirSessions.Operations do
     false
   end
 
+  @correct_types [
+    :any,
+    :atom,
+    :binary,
+    :bitstring,
+    :boolean,
+    :exception,
+    :float,
+    :function,
+    :integer,
+    :list,
+    :map,
+    nil,
+    :number,
+    :pid,
+    :port,
+    :reference,
+    :struct,
+    :tuple,
+    :string
+  ]
+
   # Convert session types from Erlang records (tuples) to Elixir Structs.
-  # throws error in case of branches/choices with same labels.
-  # @spec convert_to_structs(session_type_tuple()) :: session_type()
+  # throws error in case of branches/choices with same labels, or
+  # if the types are not valid
+  # @spec convert_to_structs(session_type_tuple(), [label()]) :: session_type()
   @spec convert_to_structs(
           # should be { , , [atom], }
           {:send, atom, any, session_type_tuple()}
           | {:recv, atom, any, session_type_tuple()}
           | {:choice, [session_type_tuple()]}
           | {:branch, [session_type_tuple()]}
-          | {:call_recurse, atom}
+          | {:call, atom}
           | {:recurse, atom, session_type_tuple()}
-          | {:terminate}
+          | {:terminate},
+          [label()]
         ) :: session_type()
-  def convert_to_structs(session_type)
+  def convert_to_structs(session_type, recurse_var)
 
-  def convert_to_structs({:terminate}) do
+  def convert_to_structs({:terminate}, _recurse_var) do
     %ST.Terminate{}
   end
 
-  def convert_to_structs({:send, label, types, next}) do
-    %ST.Send{label: label, types: types, next: convert_to_structs(next)}
+  def convert_to_structs({:send, label, types, next}, recurse_var) do
+    invalid_type = Enum.filter(types, fn t -> t not in @correct_types end)
+    if length(invalid_type) > 0 do
+      throw("Invalid type/s: #{inspect invalid_type}")
+    end
+
+    %ST.Send{label: label, types: types, next: convert_to_structs(next, recurse_var)}
   end
 
-  def convert_to_structs({:recv, label, types, next}) do
-    %ST.Recv{label: label, types: types, next: convert_to_structs(next)}
+  def convert_to_structs({:recv, label, types, next}, recurse_var) do
+    invalid_type = Enum.filter(types, fn t -> t not in @correct_types end)
+    if length(invalid_type) > 0 do
+      throw("Invalid type/s: #{inspect invalid_type}")
+    end
+
+    %ST.Recv{label: label, types: types, next: convert_to_structs(next, recurse_var)}
   end
 
-  def convert_to_structs({:choice, choices}) do
+  def convert_to_structs({:choice, choices}, recurse_var) do
     %ST.Choice{
       choices:
         Enum.reduce(
           choices,
           %{},
           fn choice, map ->
-            converted_st = convert_to_structs(choice)
+            converted_st = convert_to_structs(choice, recurse_var)
             label = label(converted_st)
 
             if Map.has_key?(map, label) do
@@ -143,14 +181,14 @@ defmodule ElixirSessions.Operations do
     }
   end
 
-  def convert_to_structs({:branch, branches}) do
+  def convert_to_structs({:branch, branches}, recurse_var) do
     %ST.Branch{
       branches:
         Enum.reduce(
           branches,
           %{},
           fn branch, map ->
-            converted_st = convert_to_structs(branch)
+            converted_st = convert_to_structs(branch, recurse_var)
             label = label(converted_st)
 
             if Map.has_key?(map, label) do
@@ -163,12 +201,20 @@ defmodule ElixirSessions.Operations do
     }
   end
 
-  def convert_to_structs({:recurse, label, body}) do
-    %ST.Recurse{label: label, body: convert_to_structs(body)}
+  def convert_to_structs({:recurse, label, body}, recurse_var) do
+    if label in recurse_var do
+      throw("Cannot have multiple recursions with same variable: #{label}.")
+    end
+
+    %ST.Recurse{label: label, body: convert_to_structs(body, [label | recurse_var])}
   end
 
-  def convert_to_structs({:call_recurse, label}) do
-    %ST.Call_Recurse{label: label}
+  def convert_to_structs({:call, label}, recurse_var) do
+    if label in recurse_var do
+      %ST.Call_Recurse{label: label}
+    else
+      %ST.Call_Session_Type{label: label}
+    end
   end
 
   defp label(%ST.Send{label: label}) do
@@ -241,6 +287,10 @@ defmodule ElixirSessions.Operations do
     "#{label}"
   end
 
+  def st_to_string(%ST.Call_Session_Type{label: label}) do
+    "#{label}"
+  end
+
   def st_to_string(%ST.Terminate{}) do
     ""
   end
@@ -284,6 +334,10 @@ defmodule ElixirSessions.Operations do
   end
 
   def st_to_string_current(%ST.Call_Recurse{label: label}) do
+    "#{label}"
+  end
+
+  def st_to_string_current(%ST.Call_Session_Type{label: label}) do
     "#{label}"
   end
 
@@ -346,6 +400,10 @@ defmodule ElixirSessions.Operations do
     true
   end
 
+  def equal(%ST.Call_Session_Type{} = s1, %ST.Call_Session_Type{} = s2) do
+    s1 == s2
+  end
+
   def equal(%ST.Terminate{}, %ST.Terminate{}) do
     true
   end
@@ -382,6 +440,9 @@ end
 # end
 
 # def xyz(%ST.Call_Recurse{label: label}) do
+# end
+
+# def xyz(%ST.Call_Session_Type{label: label}) do
 # end
 
 # def xyz(%ST.Terminate{}) do

@@ -10,9 +10,9 @@ defmodule ElixirSessions.Checking do
     quote do
       import ElixirSessions.Checking
 
-      Module.register_attribute(__MODULE__, :session, accumulate: true, persist: true)
-      Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
-      # todo add @infer_session true
+      Module.register_attribute(__MODULE__, :session_type_checking, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :session, accumulate: true)
+      Module.register_attribute(__MODULE__, :infer_session, accumulate: true)
 
       @on_definition ElixirSessions.Checking
       # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
@@ -33,17 +33,19 @@ defmodule ElixirSessions.Checking do
         IO.inspect(sessions)
         # Module.get_attribute(env.module, :session)
         try do
-          session_type = ST.string_to_st(session)
+          {_session_type_label, session_type} = ST.string_to_st_incl_label(session)
 
-            ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
-
+          ElixirSessions.SessionTypechecking.session_typecheck(
+            name,
+            length(args),
+            body[:do],
+            session_type
+          )
         catch
           x ->
             throw(x)
             # _ = Logger.error("Leex/Yecc error #{inspect(x)}")
         end
-
-
 
         # case s do
         #   {:error, {line, _, message}} ->
@@ -71,7 +73,6 @@ defmodule ElixirSessions.Checking do
       end
     end
 
-
     if sessions = Module.get_attribute(env.module, :infer_session) do
       if length(sessions) > 0 do
         # session = hd(sessions)
@@ -90,6 +91,7 @@ defmodule ElixirSessions.Checking do
         IO.inspect(inferred_session_type)
       end
     end
+
     :ok
   end
 end

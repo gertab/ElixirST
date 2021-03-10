@@ -543,7 +543,7 @@ defmodule ElixirSessions.Inference do
   end
 
   def fix_structure_no_joins([{:call_recurse, label}]) do
-    {:call_recurse, label}
+    {:call, label}
   end
 
   def fix_structure_no_joins([{:recurse, label, body} ]) do
