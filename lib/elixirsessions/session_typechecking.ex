@@ -62,6 +62,33 @@ defmodule ElixirSessions.SessionTypechecking do
           {boolean(), session_type()}
   def session_typecheck_ast(body, session_type, info, session_context)
 
+  def session_typecheck_ast(body, %ST.Recurse{} = recurse, info, session_context) do
+    %ST.Recurse{label: label, body: session_type_body} = recurse
+
+    session_context =
+      if Map.has_key?(session_context, label) do
+        # confirm that body is the same
+        session_context
+      else
+        Map.put(session_context, label, session_type_body)
+      end
+
+    session_typecheck_ast(body, session_type_body, info, session_context)
+  end
+
+  # todo
+  # def session_typecheck_ast(body, %ST.Call_Recurse{label: label}, _info, session_context) do
+  #   {found_label, _, _parameters} = body
+  #   # _arity = length(parameters)
+  #   # todo what about __module__.label
+  #   if Map.has_key?(session_context, found_label) do
+  #     {false, %ST.Terminate{}}
+  #   else
+  #     throw("Expected recursion on #{label}")
+  #   end
+  #   # session_typecheck_ast(body, call_recurse, info, session_context)
+  # end
+
   # literals
   def session_typecheck_ast(x, session_type, _info, _session_context)
       when is_atom(x) or is_number(x) or is_binary(x) do
@@ -69,21 +96,17 @@ defmodule ElixirSessions.SessionTypechecking do
     {false, session_type}
   end
 
-  def session_typecheck_ast({_a, _b}, session_type, _info, _session_context) do
+  def session_typecheck_ast({a, b}, session_type, info, session_context) do
     # IO.puts("\nTuple: ")
 
-    # todo check if ok, maybe check each element
-    {false, session_type}
+    {_, remaining_session_type} = session_typecheck_ast(a, session_type, info, session_context)
+    session_typecheck_ast(b, remaining_session_type, info, session_context)
   end
 
   # def session_typecheck_ast({type, _, _} = ast, [session_type], info, session_context) when type != :__block__ do
   #   # session_type is a list of size 1
   #   session_typecheck_ast(ast, session_type, info, session_context)
   # end
-  def session_typecheck_ast([], session_type, _info, _session_context) do
-    # todo ensure that session_type = terminate
-    {false, session_type}
-  end
 
   def session_typecheck_ast([head | tail], session_type, info, session_context) do
     # IO.puts("\nlist:")
@@ -132,11 +155,10 @@ defmodule ElixirSessions.SessionTypechecking do
 
         if length(expected_types) != length(actual_parameters) do
           throw(
-            "#{line} Session type parameter length mismatch. Expected #{
-              ST.st_to_string_current(session_type)
-            } (length = #{length(expected_types)}), but found #{Macro.to_string(send_body)} (length = #{
-              List.to_string(actual_parameters)
-            })."
+            "#{line} Session type parameter length mismatch. Expected " <>
+              "#{ST.st_to_string_current(session_type)} (length = " <>
+              "#{length(expected_types)}), but found #{Macro.to_string(send_body)} " <>
+              "(length = #{List.to_string(actual_parameters)})."
           )
         end
 
@@ -150,17 +172,15 @@ defmodule ElixirSessions.SessionTypechecking do
 
           :error ->
             throw(
-              "#{line} Cannot match send statment `#{Macro.to_string(ast)}` with #{
-                ST.st_to_string_current(session_type)
-              }."
+              "#{line} Cannot match send statment `#{Macro.to_string(ast)}` " <>
+                "with #{ST.st_to_string_current(session_type)}."
             )
         end
 
       _ ->
         throw(
-          "#{line} Cannot match send statment `#{Macro.to_string(ast)}` with #{
-            ST.st_to_string_current(session_type)
-          }."
+          "#{line} Cannot match send statment `#{Macro.to_string(ast)}` " <>
+            "with #{ST.st_to_string_current(session_type)}."
         )
     end
   end
@@ -205,9 +225,8 @@ defmodule ElixirSessions.SessionTypechecking do
     # Each branch from the session type should have an equivalent branch in the receive cases
     if map_size(branches_session_types) != length(cases) do
       throw(
-        "#{line} [in branch/receive] Mismatch in number of receive and & branches. Expected session type #{
-          ST.st_to_string_current(%ST.Branch{branches: branches_session_types})
-        }"
+        "#{line} [in branch/receive] Mismatch in number of receive and & branches. " <>
+          "Expected session type #{ST.st_to_string_current(session_type)}"
       )
     end
 
@@ -238,11 +257,9 @@ defmodule ElixirSessions.SessionTypechecking do
 
             if length(expected_types) != length(actual_parameters) do
               throw(
-                "#{line} Session type parameter length mismatch. Expected #{
-                  ST.st_to_string_current(session_type)
-                } (length = #{length(expected_types)}), but found #{inspect(actual_parameters)} (length = #{
-                  length(actual_parameters)
-                })."
+                "#{line} Session type parameter length mismatch. Expected " <>
+                  "#{ST.st_to_string_current(session_type)} (length = #{length(expected_types)}), " <>
+                  "but found #{inspect(actual_parameters)} (length = #{length(actual_parameters)})."
               )
             end
 
@@ -256,9 +273,8 @@ defmodule ElixirSessions.SessionTypechecking do
 
           :error ->
             throw(
-              "Receive branch with label :#{st_label} expected but not found. Session type #{
-                ST.st_to_string_current(%ST.Branch{branches: branches_session_types})
-              }."
+              "Receive branch with label :#{st_label} expected but not found. Session type " <>
+                "#{ST.st_to_string_current(%ST.Branch{branches: branches_session_types})}."
             )
         end
       end
@@ -272,9 +288,8 @@ defmodule ElixirSessions.SessionTypechecking do
         {x, st}
       else
         throw(
-          "#{line} Mismatch in session type following the branch: #{ST.st_to_string(st)} and #{
-            ST.st_to_string(acc)
-          }"
+          "#{line} Mismatch in session type following the branch: " <>
+            "#{ST.st_to_string(st)} and #{ST.st_to_string(acc)}"
         )
       end
     end)
@@ -317,11 +332,9 @@ defmodule ElixirSessions.SessionTypechecking do
     # the case statements
     if map_size(choices_session_types) < length(cases) do
       throw(
-        "#{line} [in case/choice] More cases found (#{length(cases)}) than expected (#{
-          map_size(choices_session_types)
-        }). Expected session type #{
-          ST.st_to_string_current(%ST.Choice{choices: choices_session_types})
-        }"
+        "#{line} [in case/choice] More cases found (#{length(cases)}) than expected " <>
+          "(#{map_size(choices_session_types)}). Expected session type " <>
+          "#{ST.st_to_string_current(%ST.Choice{choices: choices_session_types})}"
       )
     end
 
@@ -381,11 +394,9 @@ defmodule ElixirSessions.SessionTypechecking do
           case remaining_session_type_list do
             [] ->
               throw(
-                "Couldn't match case with session type: #{
-                  ST.st_to_string_current(%ST.Choice{choices: choices_session_types})
-                }. The following errors were found: #{
-                  inspect(Enum.join(errors_session_type_list, ", or "))
-                }."
+                "Couldn't match case with session type: " <>
+                  "#{ST.st_to_string_current(%ST.Choice{choices: choices_session_types})}. The following " <>
+                  "errors were found: #{inspect(Enum.join(errors_session_type_list, ", or "))}."
               )
 
             x ->
@@ -404,9 +415,8 @@ defmodule ElixirSessions.SessionTypechecking do
         {x, st}
       else
         throw(
-          "#{line} Mismatch in session type following the choice: #{ST.st_to_string(st)} and #{
-            ST.st_to_string(acc)
-          }"
+          "#{line} Mismatch in session type following the choice: #{ST.st_to_string(st)} " <>
+            "and #{ST.st_to_string(acc)}"
         )
       end
     end)
@@ -463,9 +473,8 @@ defmodule ElixirSessions.SessionTypechecking do
 
         x ->
           throw(
-            "Needs to be a tuple contain at least a label. E.g. {:do_something} or {:value, 54}. Found #{
-              inspect(x)
-            }."
+            "Needs to be a tuple contain at least a label. E.g. {:do_something} or {:value, 54}. " <>
+              "Found #{inspect(x)}."
           )
       end
 
@@ -494,6 +503,8 @@ defmodule ElixirSessions.SessionTypechecking do
 
         send(pid, {:O111})
 
+        ping()
+
         # receive do
         #   {:option1} ->
         #     a = 1
@@ -515,8 +526,8 @@ defmodule ElixirSessions.SessionTypechecking do
         # end
       end
 
-    st = "?address(any).
-                    +{!O111(), !O222(), !O333()}"
+    st = "rec X.(?address(any).
+                    +{!O111(), !O222(), !O333().X})"
     # &{?option1().!A(any).!B(any),
     #   ?option2().!X(),
     #   ?option3(any).!Y(any).

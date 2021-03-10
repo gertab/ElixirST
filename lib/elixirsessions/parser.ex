@@ -6,14 +6,19 @@ defmodule ElixirSessions.Parser do
 
   @typedoc false
   @type session_type :: ST.session_type()
+  @type session_type_incl_label :: ST.session_type_incl_label()
 
   # Parses a session type from a string to an Elixir data structure.
-  @spec parse(bitstring() | charlist()) :: session_type()
-  def parse(string) when is_bitstring(string), do: string |> String.to_charlist() |> parse()
+  @spec parse_incl_label(bitstring() | charlist()) :: session_type_incl_label()
+  def parse_incl_label(string) when is_bitstring(string) do
+    string
+    |> String.to_charlist()
+    |> parse_incl_label()
+  end
 
-  def parse(string) do
+  def parse_incl_label(string) do
     with {:ok, tokens, _} <- lexer(string) do
-      {:ok, session_type} = :parse.parse(tokens)
+      {:ok, {label, session_type}} = :parse.parse(tokens)
 
       session_type_s = ST.convert_to_structs(session_type)
 
@@ -21,13 +26,19 @@ defmodule ElixirSessions.Parser do
       # and choices with one choice to send
 
       ST.validate!(session_type_s)
-      session_type_s
+      {label, session_type_s}
     else
       err ->
         # todo: cuter error message needed
         _ = Logger.error(err)
         []
     end
+  end
+
+  @spec parse(bitstring() | charlist()) :: session_type()
+  def parse(s) do
+    {_label, st} = parse_incl_label(s)
+    st
   end
 
   defp lexer(string) do
@@ -41,14 +52,13 @@ defmodule ElixirSessions.Parser do
     _leex_res = :leex.file('src/lexer.xrl')
 
     # source = "!Hello()"
-    source = "&{?Neg(number, pid).?Hello(number)}"
+    source = "S_1 = &{?Neg(number, pid).?Hello(number)}"
     # source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
     # source = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
     # source = "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"
     # source = "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
-    parse(source)
-
+    parse_incl_label(source)
     |> ST.st_to_string()
   end
 end

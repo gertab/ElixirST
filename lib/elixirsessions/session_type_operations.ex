@@ -4,6 +4,8 @@ defmodule ElixirSessions.Operations do
 
   @type session_type :: ST.session_type()
   @type session_type_tuple() :: ST.session_type_tuple()
+  @typep label :: ST.label()
+  @type session_type_incl_label() :: {label(), session_type()}
 
   # todo make all methods that throw errors contain '!'. Add equivalent non '!' methods
   # Performs validations on the session type.
@@ -184,8 +186,12 @@ defmodule ElixirSessions.Operations do
   #  Converts s session type to a string
   # todo in the case of 'end'
   # replace name to to_string
-  @spec st_to_string(session_type()) :: String.t()
+  @spec st_to_string(session_type() | session_type_incl_label()) :: String.t()
   def st_to_string(session_type)
+
+  def st_to_string({label, session_type}) do
+    "#{label} = " <> st_to_string(session_type)
+  end
 
   def st_to_string(%ST.Send{label: label, types: types, next: next}) do
     types_string = types |> Enum.join(", ")
