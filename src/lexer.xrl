@@ -8,7 +8,7 @@ CHOICE      = choice|select|\+
 BRANCH      = branch|\&
 SEQUENCE    = \.
 REC         = rec
-LABEL       = [a-zA-Z0-9_]+
+LABEL       = [a-zA-Z0-9_/]+
 END         = end|End
 
 Rules.

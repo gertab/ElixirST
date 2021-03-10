@@ -71,6 +71,22 @@ defmodule ElixirSessions.Retriever do
         end
       )
 
+      # defmacro __using__(_) do
+      #   [
+      #     (quote do: Module.register_attribute __MODULE__,
+      #       :langs, accumulate: true) |
+      #     for lang <- ["es", "en"] do
+      #       quote do
+      #         def lang(unquote(lang)), do: unquote(lang)
+      #         Module.put_attribute __MODULE__,
+      #           :"lang_#{unquote(lang)}", unquote(lang)
+      #         Module.put_attribute __MODULE__,
+      #           :langs, unquote(lang)
+      #       end
+      #     end
+      #   ]
+      # end
+
     def_defp
     |> IO.inspect()
 

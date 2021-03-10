@@ -23,7 +23,7 @@ defmodule ElixirSessions.PingPong do
   @doc """
   Sends `:pong` when a `:ping` is received.
   """
-  @session "!ping(any).?pong().end"
+  @session "ping/0 = !ping(any).?pong().end"
   def ping(pid) when is_pid(pid) do
     IO.puts("Sending ping to #{inspect pid}")
 
@@ -58,7 +58,7 @@ defmodule ElixirSessions.PingPong do
   @doc """
   Receives a `:ping` and sends a `:pong`.
   """
-  @session "?ping(any).!pong()"
+  @session "pong = ?ping(any).!pong()"
   def pong() do
     receive do
       {:ping, pid} ->
