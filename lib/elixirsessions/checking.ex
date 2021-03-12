@@ -126,6 +126,7 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
+      |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -170,21 +171,16 @@ defmodule ElixirSessions.Checking do
       end)
       |> Enum.filter(fn elem -> !is_nil(elem) end)
 
-    module_data = %ST.Module{
+    %ST.Module{
       functions: to_map(all_functions),
       function_mapped_st: to_map(matching_session_types_functions),
-      session_types: to_map(all_session_types)
+      session_types: to_map(all_session_types),
+      file: dbgi_map[:file],
+      relative_file: dbgi_map[:relative_file],
+      line: dbgi_map[:line],
+      module_name: dbgi_map[:module]
     }
-
-    session_typechecking(module_data)
-  end
-
-  @spec session_typechecking(%ST.Module{}) :: any
-  def session_typechecking(module_data) do
-    module_data.functions
-    # module_data.function_mapped_st
-    # module_data.session_types
-    |> IO.inspect()
+    |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
 
   defp to_map(list) do

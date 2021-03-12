@@ -262,7 +262,13 @@ defmodule ST do
 
   defmodule Module do
     @moduledoc false
-    defstruct [functions: %{}, function_mapped_st: %{}, session_types: %{}]
+    defstruct functions: %{},
+              function_mapped_st: %{},
+              session_types: %{},
+              module_name: :"",
+              file: "",
+              relative_file: "",
+              line: 1
 
     @type session_type() :: ST.session_type()
     @type label() :: ST.label()
@@ -271,7 +277,11 @@ defmodule ST do
     @type t :: %__MODULE__{
             functions: %{func_name_arity => ast()},
             function_mapped_st: %{func_name_arity() => label()},
-            session_types: %{label() => session_type()}
+            session_types: %{label() => session_type()},
+            module_name: atom(),
+            file: String.t(),
+            relative_file: String.t(),
+            line: integer()
           }
   end
 

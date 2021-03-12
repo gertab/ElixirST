@@ -18,15 +18,21 @@ defmodule ElixirSessions.Parser do
 
   def parse_incl_label(string) do
     with {:ok, tokens, _} <- lexer(string) do
-      {:ok, {label, session_type}} = :parse.parse(tokens)
+      if tokens == [] do
+        # Empty input
+        {:nolabel, %ST.Terminate{}}
+      else
+        {:ok, {label, session_type}} = :parse.parse(tokens)
+        # YeccRet = {ok, Parserfile} | {ok, Parserfile, Warnings} | error | {error, Errors, Warnings}
 
-      session_type_s = ST.convert_to_structs(session_type)
+        session_type_s = ST.convert_to_structs(session_type)
 
-      # todo convert branches with one option to receive statements
-      # and choices with one choice to send
+        # todo convert branches with one option to receive statements
+        # and choices with one choice to send
 
-      ST.validate!(session_type_s)
-      {label, session_type_s}
+        ST.validate!(session_type_s)
+        {label, session_type_s}
+      end
     else
       err ->
         # todo: cuter error message needed
@@ -44,6 +50,7 @@ defmodule ElixirSessions.Parser do
   defp lexer(string) do
     # IO.inspect tokens
     :lexer.string(string)
+    |> IO.inspect
   end
 
   @doc false
@@ -51,8 +58,8 @@ defmodule ElixirSessions.Parser do
   def run() do
     _leex_res = :leex.file('src/lexer.xrl')
 
-    # source = "!Hello()"
-    source = "S_1 = &{?Neg(number, pid).?Hello(number)}"
+    source = "jhasd = "
+    # source = "S_1 = &{?Neg(number, pid).?Hello(number)}"
     # source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
     # source = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
     # source = "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"

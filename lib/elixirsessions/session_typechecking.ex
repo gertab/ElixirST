@@ -21,6 +21,34 @@ defmodule ElixirSessions.SessionTypechecking do
   @typedoc false
   @type session_type :: ST.session_type()
   @typep session_context :: %{atom() => session_type()}
+  @type st_module :: ST.Module.t()
+
+  # Session type checking a whole module, which may include multiple functions with multiple session type definitions
+  @spec session_typecheck_module(st_module) :: any
+  def session_typecheck_module(%ST.Module{} = module_context) do
+    %ST.Module{
+      functions: functions,
+      function_mapped_st: function_mapped_st,
+      session_types: session_types,
+      file: file,
+      relative_file: relative_file,
+      line: line,
+      module_name: module_name
+    } = module_context
+
+    # IO.inspect(module_context)
+    IO.inspect(functions)
+    IO.inspect(function_mapped_st)
+    IO.inspect(session_types)
+    IO.inspect(file)
+    IO.inspect(relative_file)
+    IO.inspect(line)
+    IO.inspect(module_name)
+
+    IO.puts("Session type checking #{inspect function_mapped_st}")
+
+    # Enum.each(function_mapped_st, fn)
+  end
 
   @doc """
   Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.

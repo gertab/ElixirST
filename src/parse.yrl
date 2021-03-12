@@ -6,8 +6,9 @@ send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')'
 
 Rootsymbol session_type.
 
-session_type -> session : {nolabel, '$1'}.
-session_type -> label '=' session : {unwrap('$1'), '$3'}.
+session_type -> label '='                                  : {nolabel, #terminate{}}.
+session_type -> session                                    : {nolabel, '$1'}.
+session_type -> label '=' session                          : {unwrap('$1'), '$3'}.
 
 session -> terminate                                       : #terminate{}.
 session -> send label '(' ')'                              : #send{label=unwrap('$2'), types=[], next=#terminate{}}.

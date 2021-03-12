@@ -145,8 +145,9 @@ defmodule ElixirSessions.Operations do
 
   def convert_to_structs({:send, label, types, next}, recurse_var) do
     invalid_type = Enum.filter(types, fn t -> t not in @correct_types end)
+
     if length(invalid_type) > 0 do
-      throw("Invalid type/s: #{inspect invalid_type}")
+      throw("Invalid type/s: #{inspect(invalid_type)}")
     end
 
     %ST.Send{label: label, types: types, next: convert_to_structs(next, recurse_var)}
@@ -154,8 +155,9 @@ defmodule ElixirSessions.Operations do
 
   def convert_to_structs({:recv, label, types, next}, recurse_var) do
     invalid_type = Enum.filter(types, fn t -> t not in @correct_types end)
+
     if length(invalid_type) > 0 do
-      throw("Invalid type/s: #{inspect invalid_type}")
+      throw("Invalid type/s: #{inspect(invalid_type)}")
     end
 
     %ST.Recv{label: label, types: types, next: convert_to_structs(next, recurse_var)}
@@ -236,7 +238,13 @@ defmodule ElixirSessions.Operations do
   def st_to_string(session_type)
 
   def st_to_string({label, session_type}) do
-    "#{label} = " <> st_to_string(session_type)
+    case label do
+      :nolabel ->
+        st_to_string(session_type)
+
+      _ ->
+        "#{label} = " <> st_to_string(session_type)
+    end
   end
 
   def st_to_string(%ST.Send{label: label, types: types, next: next}) do
@@ -293,6 +301,7 @@ defmodule ElixirSessions.Operations do
 
   def st_to_string(%ST.Terminate{}) do
     ""
+    # "end"
   end
 
   #  Converts one item in a session type to a string. E.g. ?Hello().!hi() would return ?Hello() only.
