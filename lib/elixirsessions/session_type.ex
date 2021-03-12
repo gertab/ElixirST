@@ -260,6 +260,21 @@ defmodule ST do
     @type t :: %__MODULE__{label: label()}
   end
 
+  defmodule Module do
+    @moduledoc false
+    defstruct [functions: %{}, function_mapped_st: %{}, session_types: %{}]
+
+    @type session_type() :: ST.session_type()
+    @type label() :: ST.label()
+    @type ast() :: ST.ast()
+    @type func_name_arity() :: {label(), non_neg_integer()}
+    @type t :: %__MODULE__{
+            functions: %{func_name_arity => ast()},
+            function_mapped_st: %{func_name_arity() => label()},
+            session_types: %{label() => session_type()}
+          }
+  end
+
   @doc """
   Convert session types from Erlang records to Elixir Structs.
   Throws error in case of branches/choices with same labels, or

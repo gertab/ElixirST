@@ -103,12 +103,14 @@ defmodule ElixirSessions.Checking do
   def __after_compile__(_env, bytecode) do
     IO.puts("AFTER COMPILE")
 
+    # Gets debug_info chunk from BEAM file
     chunks =
       case :beam_lib.chunks(bytecode, [:debug_info]) do
         {:ok, {_mod, chunks}} -> chunks
         {:error, _, error} -> throw("Error: #{inspect(error)}")
       end
 
+    # Gets the (extened) Elixir abstract syntax tree from debug_info chunk
     dbgi_map =
       case chunks[:debug_info] do
         {:debug_info_v1, :elixir_erl, metadata} ->
@@ -128,46 +130,69 @@ defmodule ElixirSessions.Checking do
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
 
+    # Gets the list of session types, which were stored as attributes in the module
     raw_session_types = Keyword.get_values(dbgi_map[:attributes], :session)
 
+    # Parses session type from string to Elixir data
     all_session_types =
       raw_session_types
       |> Enum.map(&ST.string_to_st_incl_label(&1))
-      |> IO.inspect()
 
+    # Parses session type labels: e.g. ["ping/2": %ST.Terminate{}] becomes [{{:ping, 2}, :"ping/2"}]
     session_types_name_arity =
       all_session_types
       |> Keyword.keys()
       |> Enum.map(fn x -> {split_name(x), x} end)
 
+    # Ensures unique session type names
     session_types_name_arity
-      |> Enum.map(&elem(&1, 1))
-      |> ensure_no_duplicates()
+    |> Enum.map(&elem(&1, 1))
+    |> ensure_no_duplicates()
 
     all_functions = get_all_functions(dbgi_map)
 
     matching_session_types_functions =
-    session_types_name_arity
-    |> Enum.map(fn {split_name_arity, name_arity} ->
-      case all_functions_filter(all_functions, split_name_arity) do
-        [] ->
-          nil
+      session_types_name_arity
+      |> Enum.map(fn {split_name_arity, name_arity} ->
+        case all_functions_filter(all_functions, split_name_arity) do
+          [] ->
+            nil
 
-        [value] ->
-          {value, name_arity}
+          [value] ->
+            {value, name_arity}
 
-        [{name, arity} | _] = values ->
-          throw(
-            "Session type #{inspect(elem(split_name_arity, 0))} matched with multiple functions: " <>
-              "#{inspect(values)}. Specify the arity, e.g. #{name}/#{arity}."
-          )
-      end
-    end)
-    |> Enum.filter(fn elem -> !is_nil(elem) end)
-    |> Enum.into(%{})
+          [{name, arity} | _] = values ->
+            throw(
+              "Session type #{inspect(elem(split_name_arity, 0))} matched with multiple functions: " <>
+                "#{inspect(values)}. Specify the arity, e.g. #{name}/#{arity}."
+            )
+        end
+      end)
+      |> Enum.filter(fn elem -> !is_nil(elem) end)
+
+    module_data = %ST.Module{
+      functions: to_map(all_functions),
+      function_mapped_st: to_map(matching_session_types_functions),
+      session_types: to_map(all_session_types)
+    }
+
+    session_typechecking(module_data)
+  end
+
+  @spec session_typechecking(%ST.Module{}) :: any
+  def session_typechecking(module_data) do
+    module_data.functions
+    # module_data.function_mapped_st
+    # module_data.session_types
     |> IO.inspect()
   end
 
+  defp to_map(list) do
+    list
+    |> Enum.into(%{})
+  end
+
+  # Returns a list of all functions that match with the given {function_name, arity}.
   defp all_functions_filter(all_functions, {expected_name}) do
     all_functions
     |> Enum.filter(fn {{name, _arity}, _func_body} -> name == expected_name end)
@@ -188,6 +213,7 @@ defmodule ElixirSessions.Checking do
     end
   end
 
+  # Checks if a list has duplicate elements. Returns true/false.
   defp has_duplicates?(list) do
     list
     |> Enum.reduce_while([], fn x, acc ->
@@ -200,6 +226,8 @@ defmodule ElixirSessions.Checking do
     |> is_boolean()
   end
 
+  # Given the debug info chunk from the Beam files,
+  # return a list of all functions
   defp get_all_functions(dbgi_map) do
     dbgi_map[:definitions]
     |> Enum.map(fn
@@ -215,7 +243,8 @@ defmodule ElixirSessions.Checking do
   end
 
   # Given "name/arity" returns {name, arity} where name is an atom and arity is a number
-  # Given "name" returns {:name, :no_arity}
+  # Given "name" returns {:name}
+  # E.g. :"ping/2" becomes {:ping, 2}
   defp split_name(name_arity) do
     split = String.split(Atom.to_string(name_arity), "/", parts: 2)
 

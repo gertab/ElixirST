@@ -25,3 +25,5 @@ elixirsessions-*.tar
 notes*.txt
 
 /src/*.erl
+
+/lib/elixirsessions/snippets/
