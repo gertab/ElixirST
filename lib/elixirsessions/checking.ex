@@ -133,14 +133,71 @@ defmodule ElixirSessions.Checking do
     all_session_types =
       raw_session_types
       |> Enum.map(&ST.string_to_st_incl_label(&1))
-      |> Enum.map(fn {func_name_arity, body} -> {split_name(func_name_arity), body} end)
       |> IO.inspect()
 
-    # all_session_types
-    # |> IO.inspect()
+    session_types_name_arity =
+      all_session_types
+      |> Keyword.keys()
+      |> Enum.map(fn x -> {split_name(x), x} end)
+
+    session_types_name_arity
+      |> Enum.map(&elem(&1, 1))
+      |> ensure_no_duplicates()
 
     all_functions = get_all_functions(dbgi_map)
+
+    matching_session_types_functions =
+    session_types_name_arity
+    |> Enum.map(fn {split_name_arity, name_arity} ->
+      case all_functions_filter(all_functions, split_name_arity) do
+        [] ->
+          nil
+
+        [value] ->
+          {value, name_arity}
+
+        [{name, arity} | _] = values ->
+          throw(
+            "Session type #{inspect(elem(split_name_arity, 0))} matched with multiple functions: " <>
+              "#{inspect(values)}. Specify the arity, e.g. #{name}/#{arity}."
+          )
+      end
+    end)
+    |> Enum.filter(fn elem -> !is_nil(elem) end)
+    |> Enum.into(%{})
     |> IO.inspect()
+  end
+
+  defp all_functions_filter(all_functions, {expected_name}) do
+    all_functions
+    |> Enum.filter(fn {{name, _arity}, _func_body} -> name == expected_name end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp all_functions_filter(all_functions, {expected_name, expected_arity}) do
+    all_functions
+    |> Enum.filter(fn {{name, arity}, _func_body} ->
+      name == expected_name and arity == expected_arity
+    end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp ensure_no_duplicates(check) do
+    if has_duplicates?(check) do
+      throw("Cannot have session types with same name")
+    end
+  end
+
+  defp has_duplicates?(list) do
+    list
+    |> Enum.reduce_while([], fn x, acc ->
+      if x in acc do
+        {:halt, false}
+      else
+        {:cont, [x | acc]}
+      end
+    end)
+    |> is_boolean()
   end
 
   defp get_all_functions(dbgi_map) do
@@ -164,17 +221,17 @@ defmodule ElixirSessions.Checking do
 
     name = String.to_atom(Enum.at(split, 0))
 
-    arity =
-      case Enum.at(split, 1, :no_arity) do
-        :no_arity ->
-          :no_arity
+    case Enum.at(split, 1, :no_arity) do
+      :no_arity ->
+        {name}
 
-        x ->
+      x ->
+        arity =
           Integer.parse(x)
           |> elem(0)
-      end
 
-    {name, arity}
+        {name, arity}
+    end
   end
 
   # defmacro left ::: right do
