@@ -285,6 +285,16 @@ defmodule ST do
           }
   end
 
+  defmodule Function do
+    @moduledoc false
+
+    @enforce_keys [:name]
+    defstruct [:name, arity: 0]
+
+    @type label() :: ST.label()
+    @type t :: %__MODULE__{name: label(), arity: non_neg_integer()}
+  end
+
   @doc """
   Convert session types from Erlang records to Elixir Structs.
   Throws error in case of branches/choices with same labels, or

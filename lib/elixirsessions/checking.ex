@@ -18,7 +18,7 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :session, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
 
-      @on_definition ElixirSessions.Checking
+      # @on_definition ElixirSessions.Checking
       # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
       # __after_compile__/2 runs after elixir has compiled the AST into BEAM bytecode
       @after_compile ElixirSessions.Checking
@@ -28,77 +28,77 @@ defmodule ElixirSessions.Checking do
   end
 
   # Definition of a function head, therefore do nothing
-  def __on_definition__(_env, _access, _name, _args, _guards, nil), do: nil
-  def __on_definition__(_env, _access, _name, _args, _guards, []), do: nil
+  # def __on_definition__(_env, _access, _name, _args, _guards, nil), do: nil
+  # def __on_definition__(_env, _access, _name, _args, _guards, []), do: nil
 
-  def __on_definition__(env, _access, name, args, _guards, body) do
-    if sessions = Module.get_attribute(env.module, :session) do
-      if length(sessions) > 0 do
-        session = hd(sessions)
-        IO.inspect(sessions)
-        # Module.get_attribute(env.module, :session)
-        try do
-          {_session_type_label, session_type} = ST.string_to_st_incl_label(session)
+  # def __on_definition__(env, _access, name, args, _guards, body) do
+  #   if sessions = Module.get_attribute(env.module, :session) do
+  #     if length(sessions) > 0 do
+  #       session = hd(sessions)
+  #       IO.inspect(sessions)
+  #       # Module.get_attribute(env.module, :session)
+  #       try do
+  #         {_session_type_label, session_type} = ST.string_to_st_incl_label(session)
 
-          ElixirSessions.SessionTypechecking.session_typecheck(
-            name,
-            length(args),
-            body[:do],
-            session_type
-          )
-        catch
-          x ->
-            throw(x)
-            # _ = Logger.error("Leex/Yecc error #{inspect(x)}")
-        end
+  #         ElixirSessions.SessionTypechecking.session_typecheck(
+  #           name,
+  #           length(args),
+  #           body[:do],
+  #           session_type
+  #         )
+  #       catch
+  #         x ->
+  #           throw(x)
+  #           # _ = Logger.error("Leex/Yecc error #{inspect(x)}")
+  #       end
 
-        # case s do
-        #   {:error, {line, _, message}} ->
-        #     _ = Logger.error("Session type parsing error on line #{line}: #{inspect(message)}")
-        #     :ok
+  #       # case s do
+  #       #   {:error, {line, _, message}} ->
+  #       #     _ = Logger.error("Session type parsing error on line #{line}: #{inspect(message)}")
+  #       #     :ok
 
-        #   {:error, x} ->
-        #     _ = Logger.error("Session type parsing error: #{inspect(x)}")
-        #     :ok
+  #       #   {:error, x} ->
+  #       #     _ = Logger.error("Session type parsing error: #{inspect(x)}")
+  #       #     :ok
 
-        #   session_type when is_list(session_type) ->
-        #     ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
-        #     :ok
+  #       #   session_type when is_list(session_type) ->
+  #       #     ElixirSessions.SessionTypechecking.session_typecheck(name, length(args), body[:do], session_type)
+  #       #     :ok
 
-        #   x ->
-        #     _ = Logger.error("Leex/Yecc error #{inspect(x)}")
-        #     :ok
-        # end
+  #       #   x ->
+  #       #     _ = Logger.error("Leex/Yecc error #{inspect(x)}")
+  #       #     :ok
+  #       # end
 
-        _inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
-        IO.puts("\nSesssion type for #{name} type checks successfully.")
-        # IO.puts("\nInferred sesssion type for: #{name}")
-        # IO.inspect(inferred_session_type)
-        :okkk
-      end
-    end
+  #       _inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
+  #       IO.puts("\nSesssion type for #{name} type checks successfully.")
+  #       # IO.puts("\nInferred sesssion type for: #{name}")
+  #       # IO.inspect(inferred_session_type)
+  #       :okkk
+  #     end
+  #   end
 
-    if sessions = Module.get_attribute(env.module, :infer_session) do
-      if length(sessions) > 0 do
-        # session = hd(sessions)
-        try do
-          session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
+  #   if sessions = Module.get_attribute(env.module, :infer_session) do
+  #     if length(sessions) > 0 do
+  #       # session = hd(sessions)
+  #       try do
+  #         session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
 
-          result = ST.st_to_string(session_type)
-          throw(result)
-        catch
-          x ->
-            throw(x)
-        end
+  #         result = ST.st_to_string(session_type)
+  #         throw(result)
+  #       catch
+  #         x ->
+  #           throw(x)
+  #       end
 
-        inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
-        IO.puts("\nInferred sesssion type for: #{name}")
-        IO.inspect(inferred_session_type)
-      end
-    end
+  #       inferred_session_type = ElixirSessions.Inference.infer_session_type(name, body[:do])
+  #       IO.puts("\nInferred sesssion type for: #{name}")
+  #       IO.inspect(inferred_session_type)
+  #     end
+  #   end
 
-    :ok
-  end
+  #   :ok
+  # end
 
   def __after_compile__(_env, bytecode) do
     IO.puts("AFTER COMPILE")
@@ -126,7 +126,7 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
-      |> IO.inspect()
+      # |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -145,12 +145,12 @@ defmodule ElixirSessions.Checking do
       |> Keyword.keys()
       |> Enum.map(fn x -> {split_name(x), x} end)
 
-    # Ensures unique session type names
-    session_types_name_arity
-    |> Enum.map(&elem(&1, 1))
-    |> ensure_no_duplicates()
+      # Ensures unique session type names
+      session_types_name_arity
+      |> Enum.map(&elem(&1, 1))
+      |> ensure_no_duplicates()
 
-    all_functions = get_all_functions(dbgi_map)
+      all_functions = get_all_functions(dbgi_map)
 
     matching_session_types_functions =
       session_types_name_arity
@@ -182,6 +182,7 @@ defmodule ElixirSessions.Checking do
     }
     |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
+  # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile)
 
   defp to_map(list) do
     list

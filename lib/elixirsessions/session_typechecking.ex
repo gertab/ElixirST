@@ -7,20 +7,9 @@ defmodule ElixirSessions.SessionTypechecking do
   @typedoc false
   @type ast :: ST.ast()
   @typedoc false
-  # @typedoc """
-  # Information related to a function body.
-  # """
-  @type info() :: %{
-          # recursion: boolean(),
-          call_recursion: atom,
-          function_name: atom,
-          arity: arity
-          # session_type: any
-          # todo maybe add __module__
-        }
-  @typedoc false
   @type session_type :: ST.session_type()
-  @typep session_context :: %{atom() => session_type()}
+  @typep module_context :: ST.Module.t()
+  @typep function_context :: ST.Function.t()
   @type st_module :: ST.Module.t()
 
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
@@ -30,137 +19,204 @@ defmodule ElixirSessions.SessionTypechecking do
       functions: functions,
       function_mapped_st: function_mapped_st,
       session_types: session_types,
-      file: file,
-      relative_file: relative_file,
-      line: line,
-      module_name: module_name
+      file: _file,
+      relative_file: _relative_file,
+      line: _line,
+      module_name: _module_name
     } = module_context
 
+    IO.puts("Starting session type checking #{inspect(function_mapped_st)}")
+
+    function_mapped_st
+    # |> Enum.to_list()
+    # |> hd()
+    # |> (fn x -> [x] end).()
+    # Session type check all (matched) functions
+    |> Enum.each(fn
+      {{name, arity}, name_arity_st} ->
+        ast = Map.fetch!(functions, {name, arity})
+        expected_session_type = Map.fetch!(session_types, name_arity_st)
+        session_typecheck_by_function(ast, expected_session_type, {name, arity}, module_context)
+        :ok
+    end)
+  end
+
+  @spec session_typecheck_by_function(
+          ast(),
+          session_type(),
+          {atom(), integer()},
+          module_context()
+        ) ::
+          :ok
+  def session_typecheck_by_function(ast, expected_session_type, {name, arity}, module_context) do
+    # IO.inspect(ast)
+    # IO.inspect(expected_session_type)
     # IO.inspect(module_context)
-    IO.inspect(functions)
-    IO.inspect(function_mapped_st)
-    IO.inspect(session_types)
-    IO.inspect(file)
-    IO.inspect(relative_file)
-    IO.inspect(line)
-    IO.inspect(module_name)
 
-    IO.puts("Session type checking #{inspect function_mapped_st}")
+    IO.puts("Session type checking: #{ST.st_to_string(expected_session_type)}")
 
-    # Enum.each(function_mapped_st, fn)
+    function_context = %ST.Function{
+      name: name,
+      arity: arity
+    }
+
+    {_, remaining_session_type} =
+      session_typecheck_ast(ast, expected_session_type, function_context, module_context)
+
+    case remaining_session_type do
+      %ST.Terminate{} ->
+        IO.puts("Session type checking was successful.")
+        :ok
+
+      # todo what if call_recursive
+      _ ->
+        throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
+    end
   end
 
   @doc """
-  Given a function (and its body), it is compared to a session type. `fun` is the function name and `body` is the function body as AST.
-
+  Given a function (and its body), it is compared to a session type. `fun` is
+  the function name and `body` is the function body as AST.
   """
-  @spec session_typecheck(atom(), arity(), ast(), session_type()) :: true
+  # todo remove
+  @spec session_typecheck(atom(), arity(), ast(), session_type()) :: :ok
   def session_typecheck(fun, arity, body, session_type) do
     IO.puts("Session typechecking of &#{to_string(fun)}/#{arity}")
 
-    info = %{
-      call_recursion: fun,
-      function_name: fun,
+    function_context = %ST.Function{
+      name: fun,
       arity: arity
     }
 
     IO.puts("Session typechecking: #{ST.st_to_string(session_type)}")
-    {_, remaining_session_type} = session_typecheck_ast(body, session_type, info, %{})
+
+    {_, remaining_session_type} =
+      session_typecheck_ast(body, session_type, function_context, %ST.Module{})
 
     case remaining_session_type do
-      %ST.Terminate{} -> :ok
+      %ST.Terminate{} ->
+        IO.puts("Session type checking was successful.")
+        :ok
+
       # todo what if call_recursive
-      _ -> throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
+      _ ->
+        throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
     end
-
-    IO.puts("Session type checking was successful.")
-
     # case contains_recursion?(inferred_session_type) do
     #   true -> [{:recurse, :X, inferred_session_type}]
     #   false -> inferred_session_type
     # end
-
-    true
   end
 
   @doc """
   Traverses the given Elixir `ast` and session-typechecks it with respect to the `session_type`.
   """
-  @spec session_typecheck_ast(ast(), session_type(), info(), session_context()) ::
+  @spec session_typecheck_ast(ast(), session_type(), function_context(), module_context()) ::
           {boolean(), session_type()}
-  def session_typecheck_ast(body, session_type, info, session_context)
+  def session_typecheck_ast(body, session_type, function_context, module_context)
 
-  def session_typecheck_ast(body, %ST.Recurse{} = recurse, info, session_context) do
-    %ST.Recurse{label: label, body: session_type_body} = recurse
+  def session_typecheck_ast(body, %ST.Recurse{} = recurse, function_context, module_context) do
+    %ST.Recurse{label: _label, body: session_type_body} = recurse
 
-    session_context =
-      if Map.has_key?(session_context, label) do
-        # confirm that body is the same
-        session_context
-      else
-        Map.put(session_context, label, session_type_body)
-      end
+    # todo fix
+    # module_context =
+    #   if Map.has_key?(module_context, label) do
+    #     # confirm that body is the same
+    #     module_context
+    #   else
+    #     Map.put(module_context, label, session_type_body)
+    #   end
 
-    session_typecheck_ast(body, session_type_body, info, session_context)
+    session_typecheck_ast(body, session_type_body, function_context, module_context)
   end
 
   # todo
-  # def session_typecheck_ast(body, %ST.Call_Recurse{label: label}, _info, session_context) do
+  # def session_typecheck_ast(body, %ST.Call_Recurse{label: label}, _function_context, module_context) do
   #   {found_label, _, _parameters} = body
   #   # _arity = length(parameters)
   #   # todo what about __module__.label
-  #   if Map.has_key?(session_context, found_label) do
+  #   if Map.has_key?(module_context, found_label) do
   #     {false, %ST.Terminate{}}
   #   else
   #     throw("Expected recursion on #{label}")
   #   end
-  #   # session_typecheck_ast(body, call_recurse, info, session_context)
+  #   # session_typecheck_ast(body, call_recurse, function_context, module_context)
   # end
 
   # literals
-  def session_typecheck_ast(x, session_type, _info, _session_context)
+  def session_typecheck_ast(x, session_type, _function_context, _module_context)
       when is_atom(x) or is_number(x) or is_binary(x) do
     # IO.puts("\literal: ")
     {false, session_type}
   end
 
-  def session_typecheck_ast({a, b}, session_type, info, session_context) do
+  def session_typecheck_ast({a, b}, session_type, function_context, module_context) do
     # IO.puts("\nTuple: ")
 
-    {_, remaining_session_type} = session_typecheck_ast(a, session_type, info, session_context)
-    session_typecheck_ast(b, remaining_session_type, info, session_context)
+    {_, remaining_session_type} =
+      session_typecheck_ast(a, session_type, function_context, module_context)
+
+    session_typecheck_ast(b, remaining_session_type, function_context, module_context)
   end
 
-  # def session_typecheck_ast({type, _, _} = ast, [session_type], info, session_context) when type != :__block__ do
+  # def session_typecheck_ast({type, _, _} = ast, [session_type], function_context, module_context) when type != :__block__ do
   #   # session_type is a list of size 1
-  #   session_typecheck_ast(ast, session_type, info, session_context)
+  #   session_typecheck_ast(ast, session_type, function_context, module_context)
   # end
 
-  def session_typecheck_ast([head | tail], session_type, info, session_context) do
+  def session_typecheck_ast([head | tail], session_type, function_context, module_context) do
     # IO.puts("\nlist:")
 
     # Split the session type in two.
     # First, perform session type checking for the first operation (head).
     # Then, do the remaining session type checking for the remaining statements (tail).
-    {_, remaining_session_type} = session_typecheck_ast(head, session_type, info, session_context)
-    session_typecheck_ast(tail, remaining_session_type, info, session_context)
+    {_, remaining_session_type} =
+      session_typecheck_ast(head, session_type, function_context, module_context)
+
+    session_typecheck_ast(tail, remaining_session_type, function_context, module_context)
   end
 
   # Non literals
-  def session_typecheck_ast({:__block__, _meta, args}, session_type, info, session_context) do
-    session_typecheck_ast(args, session_type, info, session_context)
-  end
-
-  def session_typecheck_ast({:=, _meta, [_left, right]}, session_type, info, session_context) do
-    # Session type check the right part of the pattern matching operator (i.e. =)
-    session_typecheck_ast(right, session_type, info, session_context)
+  def session_typecheck_ast(
+        {:__block__, _meta, args},
+        session_type,
+        function_context,
+        module_context
+      ) do
+    session_typecheck_ast(args, session_type, function_context, module_context)
   end
 
   def session_typecheck_ast(
-        {:send, meta, [_, send_body | _]} = ast,
+        {:=, _meta, [_left, right]},
         session_type,
-        info,
-        session_context
+        function_context,
+        module_context
+      ) do
+    # Session type check the right part of the pattern matching operator (i.e. =)
+    session_typecheck_ast(right, session_type, function_context, module_context)
+  end
+
+  def session_typecheck_ast(
+        {:send, meta, [a, send_body | _]},
+        session_type,
+        function_context,
+        module_context
+      ) do
+    # todo make ast expand -> then remove this shit
+    session_typecheck_ast(
+      {{:., [], [:erlang, :send]}, meta, [a, send_body]},
+      session_type,
+      function_context,
+      module_context
+    )
+  end
+
+  def session_typecheck_ast(
+        {{:., _, [:erlang, :send]}, meta, [_, send_body | _]} = ast,
+        # {:send, meta, [_, send_body | _]} = ast,
+        session_type,
+        function_context,
+        module_context
       ) do
     # IO.puts("[in send] #{inspect(session_type)}")
 
@@ -196,7 +252,12 @@ defmodule ElixirSessions.SessionTypechecking do
         case Map.fetch(choices, actual_label) do
           {:ok, expected_send_sessiontype} ->
             # Recurse with the '!' session type inside the '+'
-            session_typecheck_ast(ast, expected_send_sessiontype, info, session_context)
+            session_typecheck_ast(
+              ast,
+              expected_send_sessiontype,
+              function_context,
+              module_context
+            )
 
           :error ->
             throw(
@@ -216,8 +277,8 @@ defmodule ElixirSessions.SessionTypechecking do
   def session_typecheck_ast(
         {:receive, meta, [body | _]},
         session_type,
-        info,
-        session_context
+        function_context,
+        module_context
       ) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
     # IO.puts("[in recv] #{inspect(session_type)}")
@@ -295,8 +356,8 @@ defmodule ElixirSessions.SessionTypechecking do
             session_typecheck_ast(
               inside_ast,
               inside_branch_session_type,
-              info,
-              session_context
+              function_context,
+              module_context
             )
 
           :error ->
@@ -326,8 +387,8 @@ defmodule ElixirSessions.SessionTypechecking do
   def session_typecheck_ast(
         {:case, meta, [_what_you_are_checking, body | _]},
         session_type,
-        info,
-        session_context
+        function_context,
+        module_context
       ) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
     # IO.puts("[in case/choice] #{inspect(session_type)}")
@@ -392,8 +453,8 @@ defmodule ElixirSessions.SessionTypechecking do
                   session_typecheck_ast(
                     ast,
                     potential_session_type,
-                    info,
-                    session_context
+                    function_context,
+                    module_context
                   )
                 catch
                   error -> {:error, error}
@@ -450,21 +511,21 @@ defmodule ElixirSessions.SessionTypechecking do
     end)
   end
 
-  def session_typecheck_ast({:|>, _meta, _args}, session_type, _info, _session_context) do
+  def session_typecheck_ast({:|>, _meta, _args}, session_type, _function_context, _module_context) do
     {false, session_type}
   end
 
   def session_typecheck_ast(
         {fun, _meta, [_function_name, _body]},
         session_type,
-        _info,
-        _session_context
+        _function_context,
+        _module_context
       )
       when fun in [:def, :defp] do
     {false, session_type}
   end
 
-  def session_typecheck_ast(_, session_type, _info, _session_context) do
+  def session_typecheck_ast(_, session_type, _function_context, _module_context) do
     # IO.puts("Other input")
     {false, session_type}
   end
