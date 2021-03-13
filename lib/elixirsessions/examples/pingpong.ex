@@ -4,14 +4,14 @@ defmodule ElixirSessions.PingPong do
   def run() do
     IO.puts("Spawning process")
     ponger = spawn(__MODULE__, :pong, [])
-    IO.puts("Process spawned as #{inspect ponger}")
+    IO.puts("Process spawned as #{inspect(ponger)}")
 
     ping(ponger)
   end
 
   @session "ping = !ping(any).?pong().end"
   def ping(pid) when is_pid(pid) do
-    IO.puts("Sending ping to #{inspect pid}")
+    IO.puts("Sending ping to #{inspect(pid)}")
 
     send(pid, {:ping, self()})
 
@@ -45,7 +45,12 @@ defmodule ElixirSessions.PingPong do
   def pong() do
     receive do
       {:ping, pid} ->
-        IO.puts("Received ping from #{inspect pid}. Replying pong from #{inspect self()} to #{inspect pid}")
+        IO.puts(
+          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} to #{
+            inspect(pid)
+          }"
+        )
+
         send(pid, {:pong})
     end
   end
@@ -56,9 +61,15 @@ defmodule ElixirSessions.PingPong do
   def pong(hello) do
     b = 1
     a = b
+
     receive do
       {:ping, pid} ->
-        IO.puts("Received ping from #{inspect pid}. Replying pong from #{inspect self()} to #{inspect pid}")
+        IO.puts(
+          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} to #{
+            inspect(pid)
+          }"
+        )
+
         send(pid, {:pong})
     end
 
@@ -67,13 +78,64 @@ defmodule ElixirSessions.PingPong do
     jkhnsdfjknds()
 
     ping(self())
-
   end
 
   # @session "jkhnsdfjknds = !helloooo().!helloooo2()"
   def jkhnsdfjknds() do
     send(self(), {:helloooo})
-    send(self(), {:helloooo2})
 
+    abc()
   end
+
+  def abc() do
+    a = 3
+    send(self(), {:helloooo2})
+    # jkhnsdfjknds()
+    a + 3
+  end
+
+  # @session "loop = rec X.(+{!abc().X, !def().X})"
+  # @session "loop = rec X.(&{?abc().X, ?def().X})"
+  # def loop() do
+    # receive do
+    #   {:abc} ->
+    #     :ok
+
+    #   {:def} ->
+    #     :ok
+    # end
+    # receive do
+    #   {:abc} ->
+    #     :ok
+
+    #   {:def} ->
+    #     :ok
+    # end
+
+    # case true do
+    #   true ->
+    #     send(self(), {:abc})
+
+    #   true ->
+    #     send(self(), {:def})
+    # end
+
+    # send(self(), {:hello})
+
+    # case true do
+    #   true ->
+    #     send(self(), {:abc})
+
+    #   true ->
+    #     send(self(), {:def})
+    # end
+
+  #   loop()
+  # end
+
+
+
+  # def abc() do
+  #   send(self(), {:hello})
+  # end
 end

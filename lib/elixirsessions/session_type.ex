@@ -260,31 +260,6 @@ defmodule ST do
     @type t :: %__MODULE__{label: label()}
   end
 
-  defmodule Module do
-    @moduledoc false
-    defstruct functions: %{},
-              function_mapped_st: %{},
-              session_types: %{},
-              module_name: :"",
-              file: "",
-              relative_file: "",
-              line: 1
-
-    @type session_type() :: ST.session_type()
-    @type label() :: ST.label()
-    @type ast() :: ST.ast()
-    @type func_name_arity() :: {label(), non_neg_integer()}
-    @type t :: %__MODULE__{
-            functions: %{func_name_arity => ast()},
-            function_mapped_st: %{func_name_arity() => label()},
-            session_types: %{label() => session_type()},
-            module_name: atom(),
-            file: String.t(),
-            relative_file: String.t(),
-            line: integer()
-          }
-  end
-
   defmodule Function do
     @moduledoc false
 
@@ -293,6 +268,34 @@ defmodule ST do
 
     @type label() :: ST.label()
     @type t :: %__MODULE__{name: label(), arity: non_neg_integer()}
+  end
+
+  defmodule Module do
+    @moduledoc false
+    defstruct functions: %{},
+              function_mapped_st: %{},
+              session_types: %{},
+              module_name: :"",
+              file: "",
+              relative_file: "",
+              line: 1,
+              cur_function: %ST.Function{name: nil}
+
+    @type session_type() :: ST.session_type()
+    @type label() :: ST.label()
+    @type ast() :: ST.ast()
+    @type func :: ST.Function.t()
+    @type func_name_arity() :: {label(), non_neg_integer()}
+    @type t :: %__MODULE__{
+            functions: %{func_name_arity => ast()},
+            function_mapped_st: %{func_name_arity() => label()},
+            session_types: %{label() => session_type()},
+            module_name: atom(),
+            file: String.t(),
+            relative_file: String.t(),
+            line: integer(),
+            cur_function: func
+          }
   end
 
   @doc """
