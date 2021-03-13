@@ -148,18 +148,21 @@ defmodule ElixirSessions.SessionTypechecking do
     session_typecheck_ast(body, session_type_body, rec_var, module_context)
   end
 
-  # # todo
-  # def session_typecheck_ast(body, %ST.Call_Recurse{label: label}, _rec_var, module_context) do
-  #   {found_label, _, _parameters} = body
-  #   # _arity = length(parameters)
-  #   # todo what about __module__.label
-  #   if Map.has_key?(module_context, found_label) do
-  #     {false, %ST.Terminate{}}
-  #   else
-  #     throw("Expected recursion on #{label}")
-  #   end
-  #   # session_typecheck_ast(body, call_recurse, rec_var, module_context)
-  # end
+  def session_typecheck_ast(body, %ST.Call_Session_Type{} = call, rec_var, module_context) do
+    %ST.Call_Session_Type{label: label} = call
+
+    %ST.Module{
+      session_types: session_types
+    } = module_context
+
+    case Map.fetch(session_types, label) do
+      {:ok, session_type_call} ->
+        session_typecheck_ast(body, session_type_call, rec_var, module_context)
+
+      :error ->
+        throw("Session type '#{label}' not found.")
+    end
+  end
 
   # literals
   def session_typecheck_ast(x, session_type, _rec_var, _module_context)
@@ -225,7 +228,6 @@ defmodule ElixirSessions.SessionTypechecking do
 
   def session_typecheck_ast(
         {{:., _, [:erlang, :send]}, meta, [_, send_body | _]} = ast,
-        # {:send, meta, [_, send_body | _]} = ast,
         session_type,
         rec_var,
         module_context
@@ -301,7 +303,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def session_typecheck_ast(
-        {:receive, meta, [body | _]} = ast,
+        {:receive, meta, [body | _]},
         session_type,
         rec_var,
         module_context
@@ -333,20 +335,17 @@ defmodule ElixirSessions.SessionTypechecking do
         %ST.Recv{label: label, types: types, next: next} ->
           %{label => %ST.Recv{label: label, types: types, next: next}}
 
-        # %ST.Call_Recurse{label: label} ->
-        #   case Map.fetch(rec_var, label) do
-        #     {:ok, recurse_type} ->
-        #       # session_typecheck_ast(
-        #       #   ast,
-        #       #   recurse_type,
-        #       #   rec_var,
-        #       #   module_context
-        #       # )
+        %ST.Call_Recurse{label: label} ->
+          case Map.fetch(rec_var, label) do
+            {:ok, %ST.Branch{branches: branches}} ->
+              branches
 
-        #       recurse_type
-        #     :error ->
-        #       throw("#{line} Found receive but expected (unknown) recurse variable #{label}.")
-        #   end
+            {:ok, %ST.Recv{label: label, types: types, next: next}} ->
+              %{label => %ST.Recv{label: label, types: types, next: next}}
+
+            :error ->
+              throw("#{line} Found receive but expected (unknown) recurse variable #{label}.")
+          end
 
         x ->
           throw("#{line} Found a receive/branch, but expected #{ST.st_to_string(x)}.")
@@ -598,6 +597,7 @@ defmodule ElixirSessions.SessionTypechecking do
     if function_cxt_name == function_name and function_cxt_arity == arity do
       case session_type do
         %ST.Call_Recurse{label: _label} ->
+          # todo
           # case Map.fetch(rec_var, label) do
           #   {:ok, _} ->
           #   :error =>
@@ -689,22 +689,9 @@ defmodule ElixirSessions.SessionTypechecking do
           end
       end
     end
-
-    # {false, session_type}
-    # todo
   end
 
-  # def session_typecheck_ast(
-  #       {fun, _meta, [_function_name, _body]},
-  #       session_type,
-  #       _rec_var,
-  #       _module_context
-  #     )
-  #     when fun in [:def, :defp] do
-  #   {false, session_type}
-  # end
-
-  def session_typecheck_ast(_, session_type, _rec_var, _module_context) do
+  def session_typecheck_ast(_, session_type, _, _) do
     # IO.puts("Other input")
     {false, session_type}
   end
@@ -769,7 +756,7 @@ defmodule ElixirSessions.SessionTypechecking do
               pid
           end
 
-        send(pid, {:O111})
+        send(pid, {:a111})
 
         ping()
 
@@ -794,8 +781,7 @@ defmodule ElixirSessions.SessionTypechecking do
         # end
       end
 
-    st = "rec X.(?address(any).
-                    +{!O111(), !O222(), !O333().X})"
+    st = "rec X.(?address(any).!a111().X)"
     # &{?option1().!A(any).!B(any),
     #   ?option2().!X(),
     #   ?option3(any).!Y(any).

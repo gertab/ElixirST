@@ -12,7 +12,7 @@ defmodule ElixirSessions.Generator do
   @type session_type :: ST.session_type()
 
   # Given a session type, generates the corresponding Elixir code, formatted as a string.
-  @spec generate_to_string(session_type()) :: String.t()
+  # @spec generate_to_string(session_type()) :: String.t()
   def generate_to_string(session_type) do
     generate_quoted(session_type)
     |> Macro.to_string()

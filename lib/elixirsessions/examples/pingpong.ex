@@ -55,12 +55,11 @@ defmodule ElixirSessions.PingPong do
     end
   end
 
-  @session "a = ?ping(any).!pong()"
-  @session "s = ?ping(any).!pong()"
-  @session "pong/1 = ?ping(any).!pong().!helloooo().!helloooo2().ping"
+  @session "S_1 = !helloooo().!helloooo2().ping"
+  @session "pong/1 = ?ping(any).!pong().S_1"
   def pong(hello) do
     b = 1
-    a = b
+    _a = b
 
     receive do
       {:ping, pid} ->
@@ -83,59 +82,27 @@ defmodule ElixirSessions.PingPong do
   # @session "jkhnsdfjknds = !helloooo().!helloooo2()"
   def jkhnsdfjknds() do
     send(self(), {:helloooo})
-
-    abc()
-  end
-
-  def abc() do
-    a = 3
     send(self(), {:helloooo2})
-    # jkhnsdfjknds()
-    a + 3
+
+    # abc()
   end
 
-  # @session "loop = rec X.(+{!abc().X, !def().X})"
-  # @session "loop = rec X.(&{?abc().X, ?def().X})"
-  # def loop() do
-    # receive do
-    #   {:abc} ->
-    #     :ok
+  @session "loop = rec X.(!hello().X)"
+  def loop() do
+    send(self(), {:hello})
 
-    #   {:def} ->
-    #     :ok
-    # end
-    # receive do
-    #   {:abc} ->
-    #     :ok
+    loop()
+  end
 
-    #   {:def} ->
-    #     :ok
-    # end
+  @session "abc = rec X.(&{?hello().!aaa().X, ?stop()})"
+  def abc() do
+    receive do
+      {:hello} ->
+        send(self(), {:aaa})
+        abc()
 
-    # case true do
-    #   true ->
-    #     send(self(), {:abc})
-
-    #   true ->
-    #     send(self(), {:def})
-    # end
-
-    # send(self(), {:hello})
-
-    # case true do
-    #   true ->
-    #     send(self(), {:abc})
-
-    #   true ->
-    #     send(self(), {:def})
-    # end
-
-  #   loop()
-  # end
-
-
-
-  # def abc() do
-  #   send(self(), {:hello})
-  # end
+      {:stop} ->
+        :ok
+    end
+  end
 end

@@ -437,7 +437,7 @@ defmodule ST do
             end
           end
   """
-  @spec generate_to_string(session_type()) :: String.t()
+  # @spec generate_to_string(session_type()) :: String.t()
   def generate_to_string(session_type) do
     ElixirSessions.Generator.generate_to_string(session_type)
   end
