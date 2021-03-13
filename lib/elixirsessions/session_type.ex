@@ -378,9 +378,20 @@ defmodule ST do
   # todo examples
   # todo (confirm before implement) branches need more than one branch
   # todo confirm if sorted
+  # todo maybe defp (no external use?)
   @spec validate!(session_type()) :: boolean()
   def validate!(session_type) do
     ElixirSessions.Operations.validate!(session_type)
+  end
+
+  @spec validate(session_type()) :: {:ok} | {:error, any()}
+  def validate(session_type) do
+    try do
+      ElixirSessions.Operations.validate!(session_type)
+      {:ok}
+    catch
+      x -> {:error, x}
+    end
   end
 
   @doc """
@@ -447,5 +458,15 @@ defmodule ST do
   @spec generate_quoted(session_type()) :: ast()
   def generate_quoted(session_type) do
     ElixirSessions.Generator.generate_quoted(session_type)
+  end
+
+  @spec compare_session_types!(session_type(), session_type()) :: session_type()
+  def compare_session_types!(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.compare_session_types!(session_type, session_type_internal_function)
+  end
+
+  @spec compare_session_types(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  def compare_session_types(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.compare_session_types(session_type, session_type_internal_function)
   end
 end

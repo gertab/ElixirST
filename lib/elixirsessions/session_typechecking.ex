@@ -49,11 +49,13 @@ defmodule ElixirSessions.SessionTypechecking do
         ) ::
           :ok
   def session_typecheck_by_function(ast, expected_session_type, {name, arity}, module_context) do
-    # IO.inspect(ast)
+    IO.inspect(ast)
     # IO.inspect(expected_session_type)
     # IO.inspect(module_context)
 
-    IO.puts("Session type checking: #{ST.st_to_string(expected_session_type)}")
+    IO.puts(
+      "Session type checking #{inspect(name)}/#{arity}: #{ST.st_to_string(expected_session_type)}"
+    )
 
     function_context = %ST.Function{
       name: name,
@@ -102,6 +104,7 @@ defmodule ElixirSessions.SessionTypechecking do
       _ ->
         throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
     end
+
     # case contains_recursion?(inferred_session_type) do
     #   true -> [{:recurse, :X, inferred_session_type}]
     #   false -> inferred_session_type
@@ -158,11 +161,6 @@ defmodule ElixirSessions.SessionTypechecking do
 
     session_typecheck_ast(b, remaining_session_type, function_context, module_context)
   end
-
-  # def session_typecheck_ast({type, _, _} = ast, [session_type], function_context, module_context) when type != :__block__ do
-  #   # session_type is a list of size 1
-  #   session_typecheck_ast(ast, session_type, function_context, module_context)
-  # end
 
   def session_typecheck_ast([head | tail], session_type, function_context, module_context) do
     # IO.puts("\nlist:")
@@ -513,17 +511,141 @@ defmodule ElixirSessions.SessionTypechecking do
 
   def session_typecheck_ast({:|>, _meta, _args}, session_type, _function_context, _module_context) do
     {false, session_type}
+    # todo
   end
 
   def session_typecheck_ast(
-        {fun, _meta, [_function_name, _body]},
+        {{:., _, _args}, _meta, _},
         session_type,
         _function_context,
         _module_context
-      )
-      when fun in [:def, :defp] do
+      ) do
+    # Remote function call, ignore
     {false, session_type}
   end
+
+  # Function call
+  def session_typecheck_ast(
+        {function_name, meta, parameters},
+        session_type,
+        function_context,
+        module_context
+      )
+      when is_list(parameters) do
+    arity = length(parameters)
+
+    %ST.Function{
+      name: function_cxt_name,
+      arity: function_cxt_arity
+    } = function_context
+
+    %ST.Module{
+      functions: functions,
+      function_mapped_st: function_mapped_st,
+      session_types: session_types,
+      module_name: _module_name
+    } = module_context
+
+    line =
+      if meta[:line] do
+        "[Line #{meta[:line]}]"
+      else
+        "[Line unknown]"
+      end
+
+    if function_cxt_name == function_name and function_cxt_arity == arity do
+      throw("#{line} Doing recursion")
+    else
+      # Call to other function (in same module)
+      # Check if a session type already exists for the current function call
+      case Map.fetch(function_mapped_st, {function_name, arity}) do
+        {:ok, session_type_name} ->
+          IO.puts(
+            "#{line} From function_mapped_st found mapping from #{inspect({function_name, arity})} " <>
+              "to session type with label #{inspect(session_type_name)}."
+          )
+
+          case session_type do
+            %ST.Call_Session_Type{label: label} ->
+              if label == session_type_name do
+                # session type matches expected label
+
+                IO.puts("#{line} Matched call to st: #{ST.st_to_string(session_type)}.")
+                {false, %ST.Terminate{}}
+              else
+                throw(
+                  "#{line} Expected call to function with session type labelled #{inspect(label)}. " <>
+                    "Instead found a call to function #{inspect({function_name, arity})} with session type " <>
+                    "labelled #{session_type_name}."
+                )
+              end
+
+            _ ->
+              case Map.fetch(session_types, session_type_name) do
+                {:ok, session_type_internal_function} ->
+                  IO.puts(
+                    "#{line} Comparing session-typed function #{inspect({function_name, arity})} with session type " <>
+                      "#{ST.st_to_string(session_type_internal_function)} to the expected session type: " <>
+                      "#{ST.st_to_string(session_type)}."
+                  )
+
+                  case ST.compare_session_types(session_type, session_type_internal_function) do
+                    {:ok, remaining_session_type} ->
+                      {false, remaining_session_type}
+
+                    {:error, error} ->
+                      throw(error)
+                  end
+
+                :error ->
+                  throw(
+                    "#{line} Should not happen. Couldn't find ast for unknown (local) call " <>
+                      "to function #{inspect({function_name, arity})}"
+                  )
+              end
+          end
+
+        :error ->
+          # Call to un-(session)-typed function
+          # Session type check the ast of this function
+
+          IO.puts(
+            "#{line} Call to un-(session)-typed function. Comparing function " <>
+              "#{inspect({function_name, arity})} with session type " <>
+              "#{ST.st_to_string(session_type)}."
+          )
+
+          case Map.fetch(functions, {function_name, arity}) do
+            {:ok, ast} ->
+              IO.puts(
+                "#{line} Comparing #{ST.st_to_string(session_type)} to " <>
+                  "#{inspect({function_name, arity})}"
+              )
+
+              session_typecheck_ast(ast, session_type, function_context, module_context)
+
+            :error ->
+              throw(
+                "#{line} Should not happen. Couldn't find ast for unknown (local) call " <>
+                  "to function #{inspect({function_name, arity})}"
+              )
+          end
+      end
+    end
+
+    # {false, session_type}
+    # todo
+  end
+
+  # def session_typecheck_ast(
+  #       {fun, _meta, [_function_name, _body]},
+  #       session_type,
+  #       _function_context,
+  #       _module_context
+  #     )
+  #     when fun in [:def, :defp] do
+  #   {false, session_type}
+  # end
 
   def session_typecheck_ast(_, session_type, _function_context, _module_context) do
     # IO.puts("Other input")

@@ -1,17 +1,6 @@
 defmodule ElixirSessions.PingPong do
   use ElixirSessions.Checking
-  @moduledoc """
-  Sample module which uses concurrency and session types.
-  Ping pong:
-  Send 'ping' and receive 'pong'.
 
-  To run:
-  `ElixirSessions.PingPong.run()`
-  """
-
-  @doc """
-  Entry point for PingPong.
-  """
   def run() do
     IO.puts("Spawning process")
     ponger = spawn(__MODULE__, :pong, [])
@@ -20,9 +9,6 @@ defmodule ElixirSessions.PingPong do
     ping(ponger)
   end
 
-  @doc """
-  Sends `:pong` when a `:ping` is received.
-  """
   @session "ping = !ping(any).?pong().end"
   def ping(pid) when is_pid(pid) do
     IO.puts("Sending ping to #{inspect pid}")
@@ -55,10 +41,7 @@ defmodule ElixirSessions.PingPong do
   #   end
   # end
 
-  @doc """
-  Receives a `:ping` and sends a `:pong`.
-  """
-  @session "pong/0 = ?ping(any).!pong()"
+  # @session "pong/0 = ?ping(any).!pong()"
   def pong() do
     receive do
       {:ping, pid} ->
@@ -69,12 +52,28 @@ defmodule ElixirSessions.PingPong do
 
   @session "a = ?ping(any).!pong()"
   @session "s = ?ping(any).!pong()"
-  @session "pong/1 = ?ping(any).!pong()"
+  @session "pong/1 = ?ping(any).!pong().!helloooo().!helloooo2().ping"
   def pong(hello) do
+    b = 1
+    a = b
     receive do
       {:ping, pid} ->
         IO.puts("Received ping from #{inspect pid}. Replying pong from #{inspect self()} to #{inspect pid}")
         send(pid, {:pong})
     end
+
+    # pong()
+
+    jkhnsdfjknds()
+
+    ping(self())
+
+  end
+
+  # @session "jkhnsdfjknds = !helloooo().!helloooo2()"
+  def jkhnsdfjknds() do
+    send(self(), {:helloooo})
+    send(self(), {:helloooo2})
+
   end
 end
