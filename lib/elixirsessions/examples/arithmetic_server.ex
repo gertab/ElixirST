@@ -11,19 +11,19 @@ defmodule ElixirSessions.ArithmeticServer do
     attempt2(server)
   end
 
-  @session "arith_serv = &{ ?add(number, number, pid).!result(number), ?neg(number, pid).!result(number)}"
+  @session "arith_serv = &{ ?add(number, number, pid).!result(number), ?neg(number, pid).!result(number) }"
   def arith_serv() do
     receive do
       {:add, num1, num2, pid} ->
             IO.puts("[server] #{num1} + #{num2}")
-            # send(pid, {:result, num1 + num2})
+            send(pid, {:result, num1 + num2})
 
       {:neg, num, pid} ->
             IO.puts("[server] neg of #{num}")
-            # send(pid, {:result, -num})#
+            send(pid, {:result, -num})#
     end
 
-    send(self(), {:result, 33})
+    # send(self(), {:result, 33})
     # send_result(33, self())
   end
 

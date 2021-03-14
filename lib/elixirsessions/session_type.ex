@@ -463,13 +463,13 @@ defmodule ST do
     ElixirSessions.Generator.generate_quoted(session_type)
   end
 
-  @spec compare_session_types!(session_type(), session_type()) :: session_type()
-  def compare_session_types!(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.compare_session_types!(session_type, session_type_internal_function)
+  @spec session_remainder!(session_type(), session_type()) :: session_type()
+  def session_remainder!(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.session_remainder!(session_type, session_type_internal_function)
   end
 
-  @spec compare_session_types(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
-  def compare_session_types(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.compare_session_types(session_type, session_type_internal_function)
+  @spec session_remainder(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  def session_remainder(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.session_remainder(session_type, session_type_internal_function)
   end
 end

@@ -102,6 +102,7 @@ defmodule ElixirSessions.Checking do
 
   def __after_compile__(_env, bytecode) do
     IO.puts("AFTER COMPILE")
+    # todo pattern matched functions?????
 
     # Gets debug_info chunk from BEAM file
     chunks =
@@ -126,7 +127,8 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
-      # |> IO.inspect()
+
+    # |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -145,12 +147,12 @@ defmodule ElixirSessions.Checking do
       |> Keyword.keys()
       |> Enum.map(fn x -> {split_name(x), x} end)
 
-      # Ensures unique session type names
-      session_types_name_arity
-      |> Enum.map(&elem(&1, 1))
-      |> ensure_no_duplicates()
+    # Ensures unique session type names
+    session_types_name_arity
+    |> Enum.map(&elem(&1, 1))
+    |> ensure_no_duplicates()
 
-      all_functions = get_all_functions(dbgi_map)
+    all_functions = get_all_functions(dbgi_map)
 
     matching_session_types_functions =
       session_types_name_arity
@@ -182,6 +184,7 @@ defmodule ElixirSessions.Checking do
     }
     |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
+
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile)
 
   defp to_map(list) do

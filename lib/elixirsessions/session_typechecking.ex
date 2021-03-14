@@ -646,7 +646,7 @@ defmodule ElixirSessions.SessionTypechecking do
                       "#{ST.st_to_string(session_type)}."
                   )
 
-                  case ST.compare_session_types(session_type, session_type_internal_function) do
+                  case ST.session_remainder(session_type, session_type_internal_function) do
                     {:ok, remaining_session_type} ->
                       {false, remaining_session_type}
 

@@ -212,7 +212,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).!Hello(atom, list)"
 
-    case ST.compare_session_types(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         assert expected_remaining_st == remaining_st
@@ -228,7 +228,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).!Hello(atom, list)"
 
-    case ST.compare_session_types(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         # throw("#{ST.st_to_string(remaining_st)}")
@@ -243,7 +243,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).+{!Hello(atom, list)}"
 
-    case ST.compare_session_types(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         # throw("#{ST.st_to_string(remaining_st)}")
@@ -260,7 +260,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).?Hello(atom, list)"
 
-    case ST.compare_session_types(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         assert false
 
@@ -275,7 +275,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).&{?Hello(atom, list), ?Hello2(atom, list)}"
 
-    case ST.compare_session_types(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         # throw("#{ST.st_to_string(remaining_st)}")

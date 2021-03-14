@@ -431,10 +431,10 @@ defmodule ElixirSessions.Operations do
   # session_type:          !Hello().end
   # session_type_internal: !Hello().!Hello2().end
   # throws error
-  @spec compare_session_types(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
-  def compare_session_types(session_type, session_type_internal) do
+  @spec session_remainder(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  def session_remainder(session_type, session_type_internal) do
     try do
-      remaining_session_type = compare_session_types!(session_type, session_type_internal)
+      remaining_session_type = session_remainder!(session_type, session_type_internal)
 
       {:ok, remaining_session_type}
     catch
@@ -442,31 +442,31 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  @spec compare_session_types!(session_type(), session_type()) :: session_type()
-  def compare_session_types!(session_type, session_type_internal)
+  @spec session_remainder!(session_type(), session_type()) :: session_type()
+  def session_remainder!(session_type, session_type_internal)
 
-  def compare_session_types!(
+  def session_remainder!(
         %ST.Send{label: label, types: types, next: next1},
         %ST.Send{label: label, types: types, next: next2}
       ) do
-    compare_session_types!(next1, next2)
+    session_remainder!(next1, next2)
   end
 
-  def compare_session_types!(
+  def session_remainder!(
         %ST.Recv{label: label, types: types, next: next1},
         %ST.Recv{label: label, types: types, next: next2}
       ) do
-    compare_session_types!(next1, next2)
+    session_remainder!(next1, next2)
   end
 
-  def compare_session_types!(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
+  def session_remainder!(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
     # Sorting is done (automatically) by the map
     choices2
     |> Enum.map(fn
       {choice2_key, choice2_value} ->
         case Map.fetch(choices1, choice2_key) do
           {:ok, choice1_value} ->
-            compare_session_types!(choice1_value, choice2_value)
+            session_remainder!(choice1_value, choice2_value)
 
           :error ->
             throw("Choosing non exisiting choice: #{ST.st_to_string(choice2_value)}.")
@@ -485,7 +485,7 @@ defmodule ElixirSessions.Operations do
     end)
   end
 
-  def compare_session_types!(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
+  def session_remainder!(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
     # Sorting is done (automatically) by the map
 
     if map_size(branches1) != map_size(branches2) do
@@ -498,7 +498,7 @@ defmodule ElixirSessions.Operations do
     Enum.zip(Map.values(branches1), Map.values(branches2))
     |> Enum.map(fn
       {branch1, branch2} ->
-        compare_session_types!(branch1, branch2)
+        session_remainder!(branch1, branch2)
     end)
     |> Enum.reduce(fn
       remaining_st, acc ->
@@ -513,17 +513,17 @@ defmodule ElixirSessions.Operations do
     end)
   end
 
-  def compare_session_types!(%ST.Choice{choices: choices1}, %ST.Send{label: label} = choice2) do
+  def session_remainder!(%ST.Choice{choices: choices1}, %ST.Send{label: label} = choice2) do
       case Map.fetch(choices1, label) do
         {:ok, choice1_value} ->
-          compare_session_types!(choice1_value, choice2)
+          session_remainder!(choice1_value, choice2)
 
         :error ->
           throw("Choosing non exisiting choice: #{ST.st_to_string(choice2)}.")
       end
   end
 
-  def compare_session_types!(%ST.Branch{branches: branches1} = b1, %ST.Recv{label: label} = branch2) do
+  def session_remainder!(%ST.Branch{branches: branches1} = b1, %ST.Recv{label: label} = branch2) do
 
     if map_size(branches1) != 1 do
       throw("Cannot match #{ST.st_to_string(branch2)} with #{ST.st_to_string(b1)}.")
@@ -531,40 +531,40 @@ defmodule ElixirSessions.Operations do
 
     case Map.fetch(branches1, label) do
       {:ok, branch1_value} ->
-        compare_session_types!(branch1_value, branch2)
+        session_remainder!(branch1_value, branch2)
 
       :error ->
         throw("Choosing non exisiting choice: #{ST.st_to_string(branch2)}.")
     end
 end
 
-  def compare_session_types!(%ST.Recurse{label: label, body: body1}, %ST.Recurse{
+  def session_remainder!(%ST.Recurse{label: label, body: body1}, %ST.Recurse{
         label: label,
         body: body2
       }) do
-    compare_session_types!(body1, body2)
+    session_remainder!(body1, body2)
   end
 
-  def compare_session_types!(%ST.Call_Recurse{label: label}, %ST.Call_Recurse{label: label}) do
+  def session_remainder!(%ST.Call_Recurse{label: label}, %ST.Call_Recurse{label: label}) do
     # todo alpha equivalence?
     %ST.Terminate{}
   end
 
-  def compare_session_types!(%ST.Call_Session_Type{}, %ST.Call_Session_Type{}) do
+  def session_remainder!(%ST.Call_Session_Type{}, %ST.Call_Session_Type{}) do
     %ST.Terminate{}
   end
 
-  def compare_session_types!(remaining_session_type, %ST.Terminate{}) do
+  def session_remainder!(remaining_session_type, %ST.Terminate{}) do
     remaining_session_type
   end
 
-  def compare_session_types!(%ST.Terminate{}, remaining_session_type) do
+  def session_remainder!(%ST.Terminate{}, remaining_session_type) do
     throw(
       "Session type larger than expected. Remaining: #{ST.st_to_string(remaining_session_type)}."
     )
   end
 
-  def compare_session_types!(session_type, session_type_internal) do
+  def session_remainder!(session_type, session_type_internal) do
     throw(
       "Session type #{ST.st_to_string(session_type)} does not match session type " <>
         "#{ST.st_to_string(session_type_internal)}."
@@ -576,7 +576,7 @@ end
     s1 = "!Hello2(atom, list).+{!Hello(atom, list).?H11(), !Hello2(atom, list).?H11(), !Hello3(atom, list).?H11()}"
     s2 = "!Hello2(atom, list) !Hello(atom, list)"
 
-    compare_session_types!(ST.string_to_st(s1), ST.string_to_st(s2))
+    session_remainder!(ST.string_to_st(s1), ST.string_to_st(s2))
   end
 end
 
