@@ -7,6 +7,7 @@ defmodule ElixirSessions.PingPong do
     IO.puts("Process spawned as #{inspect(ponger)}")
 
     ping(ponger)
+    pong(ponger)
   end
 
   @session "ping = !ping(any).?pong().end"
@@ -46,9 +47,8 @@ defmodule ElixirSessions.PingPong do
     receive do
       {:ping, pid} ->
         IO.puts(
-          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} to #{
-            inspect(pid)
-          }"
+          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} " <>
+            "to #{inspect(pid)}"
         )
 
         send(pid, {:pong})
@@ -64,23 +64,19 @@ defmodule ElixirSessions.PingPong do
     receive do
       {:ping, pid} ->
         IO.puts(
-          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} to #{
-            inspect(pid)
-          }"
+          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} " <>
+            "to #{inspect(pid)}"
         )
 
         send(pid, {:pong})
     end
 
-    # pong()
-
-    jkhnsdfjknds()
+    so_something()
 
     ping(self())
   end
 
-  # @session "jkhnsdfjknds = !helloooo().!helloooo2()"
-  def jkhnsdfjknds() do
+  def so_something() do
     send(self(), {:helloooo})
     send(self(), {:helloooo2})
 
