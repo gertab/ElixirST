@@ -25,15 +25,11 @@ session -> recurse label sequences '(' session ')'         : #recurse{label=unwr
 session -> recurse label '(' session ')'                   : #recurse{label=unwrap('$2'), body='$4'}.
 session -> label                                           : #call{label=unwrap('$1')}.
 
-% todo allow only &{?} and not &{!}
-% todo allow only branches/choices with different labels
-% todo allow !Number()
+sequences -> sequence                                      : nil.
+sequences -> sequences sequence                            : nil.
 
-sequences -> sequence                        : nil.
-sequences -> sequences sequence              : nil.
-
-sessions -> session                          : '$1'.
-sessions -> sequences session                : '$2'.
+sessions -> session                                        : '$1'.
+sessions -> sequences session                              : '$2'.
 
 choice_label_sessions -> session ',' choice_label_sessions : ['$1' | '$3' ].
 choice_label_sessions -> session                           : ['$1'].
@@ -41,10 +37,10 @@ choice_label_sessions -> session                           : ['$1'].
 branch_label_sessions -> session ',' branch_label_sessions : ['$1' | '$3' ].
 branch_label_sessions -> session                           : ['$1'].
 
-types_list -> label ':' label                : [lowercase_atom(unwrap('$3'))].
-types_list -> label                          : [lowercase_atom(unwrap('$1'))].
-types_list -> label ':' label ',' types_list : [lowercase_atom(unwrap('$3')) | '$5' ].
-types_list -> label ',' types_list           : [lowercase_atom(unwrap('$1')) | '$3' ].
+types_list -> label ':' label                              : [lowercase_atom(unwrap('$3'))].
+types_list -> label                                        : [lowercase_atom(unwrap('$1'))].
+types_list -> label ':' label ',' types_list               : [lowercase_atom(unwrap('$3')) | '$5' ].
+types_list -> label ',' types_list                         : [lowercase_atom(unwrap('$1')) | '$3' ].
 
 Erlang code.
 
@@ -60,6 +56,3 @@ Erlang code.
 lowercase_atom(V) -> list_to_atom(string:lowercase(atom_to_list(V))).
 
 unwrap({_, _, V}) -> V.
-% unwrap2({_, V}) -> V.
-% put_tuple({Key, Value}) -> maps:put(Key,Value, #{}).
-% put_tuple({Key, Value}, Other) -> maps:merge(maps:put(Key,Value, #{}), Other).

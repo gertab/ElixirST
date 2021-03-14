@@ -26,4 +26,6 @@ notes*.txt
 
 /src/*.erl
 
+/lib/elixirsessions/parser/*.erl
+
 /lib/elixirsessions/snippets/

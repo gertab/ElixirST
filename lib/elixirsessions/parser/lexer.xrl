@@ -1,3 +1,5 @@
+% Compiled - set in mix.exs: erlc_paths: ["lib/elixirsessions/parser"]
+
 Definitions.
 
 WHITESPACE  = [\s\t\n\r]
@@ -33,4 +35,3 @@ Rules.
 {WHITESPACE}+  : skip_token.
 
 Erlang code.
-

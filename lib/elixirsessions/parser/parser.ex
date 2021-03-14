@@ -22,7 +22,7 @@ defmodule ElixirSessions.Parser do
         # Empty input
         {:nolabel, %ST.Terminate{}}
       else
-        {:ok, {label, session_type}} = :parse.parse(tokens)
+        {:ok, {label, session_type}} = :parser.parse(tokens)
         # YeccRet = {ok, Parserfile} | {ok, Parserfile, Warnings} | error | {error, Errors, Warnings}
 
         session_type_s = ST.convert_to_structs(session_type)
@@ -55,10 +55,10 @@ defmodule ElixirSessions.Parser do
   @doc false
   # recompile && ElixirSessions.Parser.run
   def run() do
-    _leex_res = :leex.file('src/lexer.xrl')
+    # _leex_res = :leex.file('/lib/elixirsessions/parser/lexer.xrl')
 
-    source = "jhasd = "
-    # source = "S_1 = &{?Neg(number, pid).?Hello(number)}"
+    # source = "jhasd = "
+    source = "S_1 = &{?Neg(number, pid).?Hello(number)}"
     # source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg(number, pid).?Num(Number)}"
     # source = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
     # source = "?Hello().!ABc(number).!ABc(number, number).&{?Hello().?Hello2(), ?Hello(number)}"

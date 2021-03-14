@@ -14,7 +14,11 @@ defmodule ElixirSessions.MixProject do
       name: "ElixirSessions",
       source_url: "https://github.com/gertab/ElixirSessions",
       # The main page in the docs
-      docs: [main: "ElixirSessions", extras: ["README.md"]]
+      docs: [main: "ElixirSessions", extras: ["README.md"]],
+
+      # Leex/Yecc options
+      # leex_options: [],
+      erlc_paths: ["lib/elixirsessions/parser"]
     ]
   end
 
