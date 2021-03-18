@@ -7,21 +7,35 @@ defmodule ElixirSessions.FileServer do
   # CanRead = &{READ: ⊕{EOF: FileChannel , DATA: ! String . CanRead } , CLOSE: FileChannel }
   # Create the opposite side automatically
   def run() do
-    spawn(__MODULE__, :example1, [])
+    server = spawn(__MODULE__, :fileChannel, [])
+
+    spawn(__MODULE__, :remoteFile, [
+      server,
+      "/mnt/c/Users/Gerard/Google Drive/Masters/Elixir/ElixirSessions/notes.txt",
+      0
+    ])
   end
 
-  @session "fileChannel = rec X.(&{?open(string).+{!ok().canRead, !error().X}, ?quit()})"
+  ### SERVER ###
+  @session "fileChannel = rec X.(?pid(pid).&{?open(string).+{!ok().canRead, !error().X}, ?quit()})"
   def fileChannel() do
-    client = self()
+    client =
+      receive do
+        {:pid, value} ->
+          value
+      end
 
     receive do
       {:open, file} ->
-        case true do
-          true ->
+        case File.read(file) do
+          {:ok, contents} ->
             send(client, {:ok})
-            canRead(client)
 
-          false ->
+            splitFile = String.split(contents, "\n", trim: true)
+
+            canRead(client, splitFile)
+
+          {:error, _} ->
             send(client, {:error})
             fileChannel()
         end
@@ -34,45 +48,37 @@ defmodule ElixirSessions.FileServer do
   end
 
   @session "canRead = rec Y.(&{?read().+{!eof().fileChannel, !data(string).Y}, ?close().fileChannel})"
-  def canRead(pid) do
+  def canRead(pid, splitFile) do
     receive do
       {:read} ->
-        case true do
-          true ->
+        case splitFile do
+          [head | tail] ->
+            send(pid, {:data, head})
+            canRead(pid, tail)
+
+          [] ->
             send(pid, {:eof})
             fileChannel()
-
-          false ->
-            send(pid, {:data, "lines from file"})
-            canRead(pid)
         end
 
       {:close} ->
         fileChannel()
     end
   end
-end
 
-defmodule ElixirSessions.RemoteFile do
-  use ElixirSessions.Checking
-  @moduledoc false
-
+  ### CLIENT ###
   # dual of FileServer
-  def run() do
-    spawn(__MODULE__, :fileChannel, [0])
-  end
-
-  @session "fileChannel = rec X.(+{!open(string).&{?ok().read, ?error().X}, !quit()})"
-  def fileChannel(tries) do
-    server = self()
+  @session "remoteFile = rec X.(!pid(pid).+{!open(string).&{?ok().read, ?error().X}, !quit()})"
+  def remoteFile(server, fileToRead, tries) do
+    send(server, {:pid, self()})
 
     case tries do
       x when x < 5 ->
-        send(server, {:open, "file.txt"})
+        send(server, {:open, fileToRead})
 
         receive do
-          {:ok} -> read(server)
-          {:error} -> fileChannel(tries + 1)
+          {:ok} -> read(server, fileToRead)
+          {:error} -> remoteFile(server, fileToRead, tries + 1)
         end
 
       _ ->
@@ -80,24 +86,24 @@ defmodule ElixirSessions.RemoteFile do
     end
   end
 
-  @session "read = rec Y.(+{!read().&{?eof().fileChannel, ?data(string).Y}, !close().fileChannel})"
-  def read(pid) do
-    case true do
+  @session "read = rec Y.(+{!read().&{?eof().remoteFile, ?data(string).Y}, !close().remoteFile})"
+  def read(server, fileToRead) do
+    case is_binary(fileToRead) do
       true ->
-        send(pid, {:read})
+        send(server, {:read})
 
         receive do
           {:eof} ->
-            fileChannel(0)
+            remoteFile(server, fileToRead, :eof)
 
           {:data, data} ->
-            IO.puts("Data received: #{inspect data}")
-            read(pid)
+            IO.puts("Data received: #{inspect(data)}")
+            read(server, fileToRead)
         end
 
       false ->
-        send(pid, {:close})
-        fileChannel(0)
+        send(server, {:close})
+        remoteFile(server, fileToRead, 0)
     end
   end
 end
