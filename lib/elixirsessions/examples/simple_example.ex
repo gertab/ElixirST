@@ -20,6 +20,7 @@ defmodule ElixirSessions.SmallExample do
         :ok
     end
 
+
     example1()
   end
 
@@ -29,8 +30,7 @@ defmodule ElixirSessions.SmallExample do
 
   @session "example2 = !ok().?something(any)"
   def example2() do
-    send(self(), {:ok})
-    # send_call()
+    send_call()
 
     receive do
       {:something, _} ->
@@ -38,6 +38,7 @@ defmodule ElixirSessions.SmallExample do
     end
   end
 
+  @session "send_call = !ok()"
   def send_call() do
     send(self(), {:ok})
   end

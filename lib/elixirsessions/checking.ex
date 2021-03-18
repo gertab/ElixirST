@@ -128,7 +128,7 @@ defmodule ElixirSessions.Checking do
           throw("Error: #{inspect(x)}")
       end
 
-    # |> IO.inspect()
+    |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)

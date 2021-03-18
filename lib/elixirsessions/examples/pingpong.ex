@@ -56,9 +56,12 @@ defmodule ElixirSessions.PingPong do
   end
 
   @session "S_1 = !helloooo().!helloooo2().ping"
-  @session "pong/1 = ?ping(any).!pong().S_1"
+  @session "pong/2 = ?ping(any).!pong().S_1"
   def pong(hello) do
-    b = 1
+
+  end
+  def pong(hello, _hello2, :okk) when is_atom(hello) do
+      b = hello + 2
     _a = b
 
     receive do

@@ -564,6 +564,11 @@ end
     )
   end
 
+  def session_remainder!(st, %ST.Recurse{body: body}) do
+    # todo alpha equivalence?
+    session_remainder!(st, body)
+  end
+
   def session_remainder!(session_type, session_type_internal) do
     throw(
       "Session type #{ST.st_to_string(session_type)} does not match session type " <>
