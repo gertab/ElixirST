@@ -135,7 +135,7 @@ defmodule ElixirSessions.Operations do
           | {:call, atom}
           | {:recurse, atom, session_type_tuple()}
           | {:terminate},
-          [label()]
+          %{}
         ) :: session_type()
   def convert_to_structs(session_type, recurse_var)
 
@@ -204,16 +204,19 @@ defmodule ElixirSessions.Operations do
   end
 
   def convert_to_structs({:recurse, label, body}, recurse_var) do
-    if label in recurse_var do
+    if Map.has_key?(recurse_var, label) do
       throw("Cannot have multiple recursions with same variable: #{label}.")
     end
 
-    %ST.Recurse{label: label, body: convert_to_structs(body, [label | recurse_var])}
+    ref = make_ref()
+    recurse_var = Map.put(recurse_var, label, ref)
+
+    %ST.Recurse{label: label, body: convert_to_structs(body, recurse_var), ref: ref}
   end
 
   def convert_to_structs({:call, label}, recurse_var) do
-    if label in recurse_var do
-      %ST.Call_Recurse{label: label}
+    if Map.has_key?(recurse_var, label) do
+      %ST.Call_Recurse{label: label, ref: Map.fetch!(recurse_var, label)}
     else
       %ST.Call_Session_Type{label: label}
     end
@@ -431,7 +434,8 @@ defmodule ElixirSessions.Operations do
   # session_type:          !Hello().end
   # session_type_internal: !Hello().!Hello2().end
   # throws error
-  @spec session_remainder(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  @spec session_remainder(session_type(), session_type()) ::
+          {:ok, session_type()} | {:error, any()}
   def session_remainder(session_type, session_type_internal) do
     try do
       remaining_session_type = session_remainder!(session_type, session_type_internal)
@@ -514,17 +518,16 @@ defmodule ElixirSessions.Operations do
   end
 
   def session_remainder!(%ST.Choice{choices: choices1}, %ST.Send{label: label} = choice2) do
-      case Map.fetch(choices1, label) do
-        {:ok, choice1_value} ->
-          session_remainder!(choice1_value, choice2)
+    case Map.fetch(choices1, label) do
+      {:ok, choice1_value} ->
+        session_remainder!(choice1_value, choice2)
 
-        :error ->
-          throw("Choosing non exisiting choice: #{ST.st_to_string(choice2)}.")
-      end
+      :error ->
+        throw("Choosing non exisiting choice: #{ST.st_to_string(choice2)}.")
+    end
   end
 
   def session_remainder!(%ST.Branch{branches: branches1} = b1, %ST.Recv{label: label} = branch2) do
-
     if map_size(branches1) != 1 do
       throw("Cannot match #{ST.st_to_string(branch2)} with #{ST.st_to_string(b1)}.")
     end
@@ -536,7 +539,7 @@ defmodule ElixirSessions.Operations do
       :error ->
         throw("Choosing non exisiting choice: #{ST.st_to_string(branch2)}.")
     end
-end
+  end
 
   def session_remainder!(%ST.Recurse{label: label, body: body1}, %ST.Recurse{
         label: label,
@@ -576,12 +579,50 @@ end
     )
   end
 
+  def recurse_var_mapping(%ST.Send{next: next}, mapping) do
+    recurse_var_mapping(next, mapping)
+  end
+
+  def recurse_var_mapping(%ST.Recv{next: next}, mapping) do
+    recurse_var_mapping(next, mapping)
+  end
+
+  def recurse_var_mapping(%ST.Choice{choices: choices}, mapping) do
+    Enum.reduce(choices, mapping, fn {_label, choice}, acc ->
+      Map.merge(acc, recurse_var_mapping(choice, mapping))
+    end)
+  end
+
+  def recurse_var_mapping(%ST.Branch{branches: branches}, mapping) do
+    Enum.reduce(branches, mapping, fn {_label, branch}, acc ->
+      Map.merge(acc, recurse_var_mapping(branch, mapping))
+    end)
+  end
+
+  def recurse_var_mapping(%ST.Recurse{label: _label, ref: ref, body: body} = st, mapping) do
+    recurse_var_mapping(body, Map.put(mapping, ref, st))
+  end
+
+  def recurse_var_mapping(%ST.Call_Recurse{}, mapping) do
+    mapping
+  end
+
+  def recurse_var_mapping(%ST.Call_Session_Type{}, mapping) do
+    mapping
+  end
+
+  def recurse_var_mapping(%ST.Terminate{}, mapping) do
+    mapping
+  end
+
   # recompile && ElixirSessions.Operations.run
   def run() do
-    s1 = "!Hello2(atom, list).+{!Hello(atom, list).?H11(), !Hello2(atom, list).?H11(), !Hello3(atom, list).?H11()}"
-    s2 = "!Hello2(atom, list) !Hello(atom, list)"
+    # s1 = "!Hello2(atom, list).+{!Hello(atom, list).?H11(), !Hello2(atom, list).?H11(), !Hello3(atom, list).?H11().rec X.(X)}"
+    s1 = "!Hello2(atom, list).rec X.(!Hello().rec Y.(!Hello().X))"
 
-    session_remainder!(ST.string_to_st(s1), ST.string_to_st(s2))
+    ST.string_to_st(s1)
+    |> recurse_var_mapping(%{})
+    # convert_to_structs(ST.string_to_st(s1), ST.string_to_st(s2))
   end
 end
 

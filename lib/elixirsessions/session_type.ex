@@ -45,8 +45,8 @@ defmodule ST do
   - `%Recv{label, types, next}`
   - `%Choice{choices}`
   - `%Branch{branches}`
-  - `%Recurse{label, body}`
-  - `%Call_Recurse{label}`
+  - `%Recurse{label, body, ref}`
+  - `%Call_Recurse{label, ref}`
   - `%Terminate{}`
 
   The labels and types are of type `t:label/0` and `t:types/0` respectively. `next`, `choices`, `branches` and `body` have the type
@@ -232,22 +232,22 @@ defmodule ST do
 
   defmodule Recurse do
     @moduledoc false
-    @enforce_keys [:label, :body]
-    defstruct [:label, :body]
+    @enforce_keys [:label, :body, :ref]
+    defstruct [:label, :body, :ref]
 
     @type session_type() :: ST.session_type()
     @type label() :: ST.label()
-    @type t :: %__MODULE__{label: label(), body: session_type()}
+    @type t :: %__MODULE__{label: label(), body: session_type(), ref: reference()}
   end
 
   defmodule Call_Recurse do
     @moduledoc false
-    @enforce_keys [:label]
-    defstruct [:label]
+    @enforce_keys [:label, :ref]
+    defstruct [:label, :ref]
 
     @type session_type() :: ST.session_type()
     @type label() :: ST.label()
-    @type t :: %__MODULE__{label: label()}
+    @type t :: %__MODULE__{label: label(), ref: reference()}
   end
 
   defmodule Call_Session_Type do
@@ -275,6 +275,7 @@ defmodule ST do
     defstruct functions: %{},
               function_mapped_st: %{},
               session_types: %{},
+              recurse_var: %{},
               module_name: :"",
               file: "",
               relative_file: "",
@@ -314,7 +315,7 @@ defmodule ST do
   """
   @spec convert_to_structs(session_type_tuple()) :: session_type()
   def convert_to_structs(session_type_tuple) do
-    ElixirSessions.Operations.convert_to_structs(session_type_tuple, [])
+    ElixirSessions.Operations.convert_to_structs(session_type_tuple, %{})
   end
 
   @doc """
@@ -471,5 +472,9 @@ defmodule ST do
   @spec session_remainder(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
   def session_remainder(session_type, session_type_internal_function) do
     ElixirSessions.Operations.session_remainder(session_type, session_type_internal_function)
+  end
+
+  def recurse_mapping(session_type) do
+    ElixirSessions.Operations.recurse_var_mapping(session_type, %{})
   end
 end
