@@ -11,60 +11,48 @@ defmodule ElixirSessions.Duality do
 
   # Returns the dual of the session type `session_type`
   @spec dual(session_type()) :: session_type()
-  def dual(session_type), do: dual(session_type, %{})
+  def dual(session_type)
 
-  @spec dual(session_type(), %{}) :: session_type()
-  defp dual(session_type, recurse_var)
-
-  defp dual(%ST.Send{label: label, types: types, next: next}, recurse_var) do
-    %ST.Recv{label: label, types: types, next: dual(next, recurse_var)}
+  def dual(%ST.Send{label: label, types: types, next: next}) do
+    %ST.Recv{label: label, types: types, next: dual(next)}
   end
 
-  defp dual(%ST.Recv{label: label, types: types, next: next}, recurse_var) do
-    %ST.Send{label: label, types: types, next: dual(next, recurse_var)}
+  def dual(%ST.Recv{label: label, types: types, next: next}) do
+    %ST.Send{label: label, types: types, next: dual(next)}
   end
 
-  defp dual(%ST.Choice{choices: choices}, recurse_var) do
+  def dual(%ST.Choice{choices: choices}) do
     %ST.Branch{
       branches:
-        Enum.map(choices, fn {label, choice} -> {label, dual(choice, recurse_var)} end)
+        Enum.map(choices, fn {label, choice} -> {label, dual(choice)} end)
         |> Enum.into(%{})
     }
   end
 
-  defp dual(%ST.Branch{branches: branches}, recurse_var) do
+  def dual(%ST.Branch{branches: branches}) do
     %ST.Choice{
       choices:
-        Enum.map(branches, fn {label, branches} -> {label, dual(branches, recurse_var)} end)
+        Enum.map(branches, fn {label, branches} -> {label, dual(branches)} end)
         |> Enum.into(%{})
     }
   end
 
-  defp dual(%ST.Recurse{label: label, body: body}, recurse_var) do
-    ref = make_ref()
-    recurse_var = Map.put(recurse_var, label, ref)
-
-    %ST.Recurse{label: label, body: dual(body, recurse_var), ref: ref}
+  def dual(%ST.Recurse{label: label, body: body}) do
+    %ST.Recurse{label: label, body: dual(body)}
   end
 
-  defp dual(%ST.Call_Recurse{label: label}, recurse_var) do
-    ref = case Map.fetch(recurse_var, label) do
-      {:ok, value} -> value
-      :error -> throw("Recursing on unknown symbol #{inspect label}")
-    end
-
-    %ST.Call_Recurse{label: label, ref: ref}
-  end
-
-  defp dual(%ST.Call_Session_Type{} = st, _recurse_var) do
+  def dual(%ST.Call_Recurse{} = st) do
     st
   end
 
-  defp dual(%ST.Terminate{} = st, _recurse_var) do
+  def dual(%ST.Call_Session_Type{} = st) do
     st
   end
 
-  # todo rec X.(!Hello().X) should be dual of rec Y.(?Hello().Y)
+  def dual(%ST.Terminate{} = st) do
+    st
+  end
+
   # Checks if the two given session types are dual of each other
   @spec dual?(session_type(), session_type()) :: boolean()
   def dual?(session_type1, session_type2)

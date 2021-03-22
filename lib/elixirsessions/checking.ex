@@ -127,7 +127,8 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
-      |> IO.inspect()
+
+    |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -176,7 +177,6 @@ defmodule ElixirSessions.Checking do
       functions: to_map(all_functions),
       function_mapped_st: to_map(matching_session_types_functions),
       session_types: to_map(all_session_types),
-      recurse_var: recusive_mappings(all_session_types),
       file: dbgi_map[:file],
       relative_file: dbgi_map[:relative_file],
       line: dbgi_map[:line],
@@ -261,11 +261,6 @@ defmodule ElixirSessions.Checking do
 
         {name, arity}
     end
-  end
-
-  defp recusive_mappings(all_session_types) do
-    Enum.reduce(all_session_types, %{}, fn {name, st}, acc -> IO.inspect({name, st})
-     Map.merge(acc, ST.recurse_mapping(st)) end)
   end
 
   # defmacro left ::: right do
