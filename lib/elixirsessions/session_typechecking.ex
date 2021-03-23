@@ -413,6 +413,7 @@ defmodule ElixirSessions.SessionTypechecking do
       {x, st} = full_st
       {_, acc} = full_acc
 
+      # todo ensure that session type equality is correct
       if st == acc do
         {x, st}
       else
@@ -446,27 +447,6 @@ defmodule ElixirSessions.SessionTypechecking do
       throw("Should not happen [case statements need to have 1 or more cases]")
     end
 
-    # 1 or more case option (assume that it is a choice)
-    # choices_session_types is of type %{label() => session_type()}
-    choices_session_types =
-      case session_type do
-        %ST.Choice{choices: choices} ->
-          choices
-
-        x ->
-          throw("Found a choice, but expected #{ST.st_to_string(x)}")
-      end
-
-    # Each branch from the session type could have (up to) one equivalent choice in
-    # the case statements
-    if map_size(choices_session_types) < length(cases) do
-      throw(
-        "#{line} [in case/choice] More cases found (#{length(cases)}) than expected " <>
-          "(#{map_size(choices_session_types)}). Expected session type " <>
-          "#{ST.st_to_string_current(%ST.Choice{choices: choices_session_types})}"
-      )
-    end
-
     inner_ast =
       Enum.map(cases, fn
         {:->, _, [[_lhs] | rhs]} ->
@@ -477,69 +457,26 @@ defmodule ElixirSessions.SessionTypechecking do
           rhs
       end)
 
-    # Compare the actual choices (from label_parameters_ast)
-    # with the choice session type (in choices_session_types)
-
+    # Do session type checking with each branch in the case.
+    # All branches need to be correct (no violations), and
+    # all branches need to end up in the same session type state.
     Enum.map(
       inner_ast,
       fn ast ->
-        # Compare the current branch to all possible session types (in the choice map)
-        tentative_remaining_session_types =
-          Enum.map(
-            choices_session_types,
-            fn
-              {_l, potential_session_type} ->
-                try do
-                  session_typecheck_ast(
-                    ast,
-                    potential_session_type,
-                    rec_var,
-                    module_context
-                  )
-                catch
-                  error -> {:error, error}
-                end
-            end
-          )
-
-        # remaining_session_type_list may contain either [] or
-        # a list with one element containing the matching session type
-        remaining_session_type_list =
-          Enum.filter(tentative_remaining_session_types, fn
-            {:error, _} -> false
-            _ -> true
-          end)
-
-        # errors_session_type_list contains a list of all erros caught
-        errors_session_type_list =
-          Enum.filter(tentative_remaining_session_types, fn
-            {:error, _} -> true
-            _ -> false
-          end)
-          |> Enum.map(fn {:error, x} -> x end)
-
-        # If all return nils (meaning that all choice threw an error), then this case fails
-        remaining_session_type =
-          case remaining_session_type_list do
-            [] ->
-              throw(
-                "Couldn't match case with session type: " <>
-                  "#{ST.st_to_string_current(%ST.Choice{choices: choices_session_types})}. The following " <>
-                  "errors were found: #{inspect(Enum.join(errors_session_type_list, ", or "))}."
-              )
-
-            x ->
-              hd(x)
-          end
-
-        remaining_session_type
+        session_typecheck_ast(
+          ast,
+          session_type,
+          rec_var,
+          module_context
+        )
       end
     )
-    # Ensure that all element in remaining_branches_session_types are the same, and return the last one
+    # Ensure that all session types are in the same, and return the last one
     |> Enum.reduce(fn full_st, full_acc ->
       {x, st} = full_st
       {_, acc} = full_acc
 
+      # todo ensure that session type equality is correct
       if st == acc do
         {x, st}
       else
@@ -594,102 +531,103 @@ defmodule ElixirSessions.SessionTypechecking do
         "[Line unknown]"
       end
 
-    if function_cxt_name == function_name and function_cxt_arity == arity do
-      case session_type do
-        %ST.Call_Recurse{label: _label} ->
-          # todo
-          # case Map.fetch(rec_var, label) do
-          #   {:ok, _} ->
-          #   :error =>
-          # end
+    # if function_cxt_name == function_name and function_cxt_arity == arity do
+    #   case session_type do
+    #     %ST.Call_Recurse{label: _label} ->
+    #       # todo
+    #       # case Map.fetch(rec_var, label) do
+    #       #   {:ok, _} ->
+    #       #   :error =>
+    #       # end
 
-          IO.puts("#{line} Doing recursion for function #{inspect({function_name, arity})}.")
-          {false, %ST.Terminate{}}
+    #       IO.puts("#{line} Doing recursion for function #{inspect({function_name, arity})}.")
+    #       {false, %ST.Terminate{}}
 
-        x ->
-          throw(
-            "#{line} Doing recursion for function #{inspect({function_name, arity})}. " <>
-              "Expected #{ST.st_to_string_current(x)}."
-          )
-      end
-    else
-      # Call to other function (in same module)
-      # Check if a session type already exists for the current function call
-      case Map.fetch(function_mapped_st, {function_name, arity}) do
-        {:ok, session_type_name} ->
-          IO.puts(
-            "#{line} From function_mapped_st found mapping from #{inspect({function_name, arity})} " <>
-              "to session type with label #{inspect(session_type_name)}."
-          )
+    #     x ->
+    #       throw(
+    #         "#{line} Doing recursion for function #{inspect({function_name, arity})}. " <>
+    #           "Expected #{ST.st_to_string_current(x)}."
+    #       )
+    #   end
+    # else
+    # Call to other function (in same module)
+    # Check if a session type already exists for the current function call
+    case Map.fetch(function_mapped_st, {function_name, arity}) do
+      {:ok, session_type_name} ->
+        IO.puts(
+          "#{line} From function_mapped_st found mapping from #{inspect({function_name, arity})} " <>
+            "to session type with label #{inspect(session_type_name)}."
+        )
 
-          case session_type do
-            %ST.Call_Session_Type{label: label} ->
-              if label == session_type_name do
-                # session type matches expected label
+        case session_type do
+          %ST.Call_Session_Type{label: label} ->
+            if label == session_type_name do
+              # session type matches expected label
 
-                IO.puts("#{line} Matched call to st: #{ST.st_to_string(session_type)}.")
-                {false, %ST.Terminate{}}
-              else
-                throw(
-                  "#{line} Expected call to function with session type labelled #{inspect(label)}. " <>
-                    "Instead found a call to function #{inspect({function_name, arity})} with session type " <>
-                    "labelled #{session_type_name}."
-                )
-              end
-
-            _ ->
-              case Map.fetch(session_types, session_type_name) do
-                {:ok, session_type_internal_function} ->
-                  IO.puts(
-                    "#{line} Comparing session-typed function #{inspect({function_name, arity})} with session type " <>
-                      "#{ST.st_to_string(session_type_internal_function)} to the expected session type: " <>
-                      "#{ST.st_to_string(session_type)}."
-                  )
-
-                  case ST.session_remainder(session_type, session_type_internal_function) do
-                    {:ok, remaining_session_type} ->
-                      {false, remaining_session_type}
-
-                    {:error, error} ->
-                      throw(error)
-                  end
-
-                :error ->
-                  throw(
-                    "#{line} Should not happen. Couldn't find ast for unknown (local) call " <>
-                      "to function #{inspect({function_name, arity})}"
-                  )
-              end
-          end
-
-        :error ->
-          # Call to un-(session)-typed function
-          # Session type check the ast of this function
-
-          IO.puts(
-            "#{line} Call to un-(session)-typed function. Comparing function " <>
-              "#{inspect({function_name, arity})} with session type " <>
-              "#{ST.st_to_string(session_type)}."
-          )
-
-          case Map.fetch(functions, {function_name, arity}) do
-            {:ok, ast} ->
-              IO.puts(
-                "#{line} Comparing #{ST.st_to_string(session_type)} to " <>
-                  "#{inspect({function_name, arity})}"
-              )
-
-              session_typecheck_ast(ast, session_type, rec_var, module_context)
-
-            :error ->
+              IO.puts("#{line} Matched call to st: #{ST.st_to_string(session_type)}.")
+              {false, %ST.Terminate{}}
+            else
               throw(
-                "#{line} Should not happen. Couldn't find ast for unknown (local) call " <>
-                  "to function #{inspect({function_name, arity})}"
+                "#{line} Expected call to function with session type labelled #{inspect(label)}. " <>
+                  "Instead found a call to function #{inspect({function_name, arity})} with session type " <>
+                  "labelled #{session_type_name}."
               )
-          end
-      end
+            end
+
+          _ ->
+            case Map.fetch(session_types, session_type_name) do
+              {:ok, session_type_internal_function} ->
+                IO.puts(
+                  "#{line} Comparing session-typed function #{inspect({function_name, arity})} with session type " <>
+                    "#{ST.st_to_string(session_type_internal_function)} to the expected session type: " <>
+                    "#{ST.st_to_string(session_type)}."
+                )
+
+                case ST.session_remainder(session_type, session_type_internal_function) do
+                  {:ok, remaining_session_type} ->
+                    {false, remaining_session_type}
+
+                  {:error, error} ->
+                    throw(error)
+                end
+
+              :error ->
+                throw(
+                  "#{line} Should not happen. Couldn't find ast for unknown (local) call " <>
+                    "to function #{inspect({function_name, arity})}"
+                )
+            end
+        end
+
+      :error ->
+        # Call to un-(session)-typed function
+        # Session type check the ast of this function
+
+        IO.puts(
+          "#{line} Call to un-(session)-typed function. Comparing function " <>
+            "#{inspect({function_name, arity})} with session type " <>
+            "#{ST.st_to_string(session_type)}."
+        )
+
+        case Map.fetch(functions, {function_name, arity}) do
+          {:ok, ast} ->
+            IO.puts(
+              "#{line} Comparing #{ST.st_to_string(session_type)} to " <>
+                "#{inspect({function_name, arity})}"
+            )
+
+            session_typecheck_ast(ast, session_type, rec_var, module_context)
+
+          :error ->
+            throw(
+              "#{line} Should not happen. Couldn't find ast for unknown (local) call " <>
+                "to function #{inspect({function_name, arity})}"
+            )
+        end
     end
   end
+
+  # end
 
   def session_typecheck_ast(_, session_type, _, _) do
     # IO.puts("Other input")

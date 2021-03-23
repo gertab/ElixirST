@@ -251,6 +251,7 @@ defmodule ST do
   end
 
   defmodule Call_Session_Type do
+    # todo remove
     @moduledoc false
     @enforce_keys [:label]
     defstruct [:label]
