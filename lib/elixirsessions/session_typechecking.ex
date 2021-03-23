@@ -413,8 +413,7 @@ defmodule ElixirSessions.SessionTypechecking do
       {x, st} = full_st
       {_, acc} = full_acc
 
-      # todo ensure that session type equality is correct
-      if st == acc do
+      if ST.equal(st, acc) do
         {x, st}
       else
         throw(
@@ -477,7 +476,7 @@ defmodule ElixirSessions.SessionTypechecking do
       {_, acc} = full_acc
 
       # todo ensure that session type equality is correct
-      if st == acc do
+      if ST.equal(st, acc) do
         {x, st}
       else
         throw(

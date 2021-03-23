@@ -9,7 +9,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -22,7 +22,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -35,7 +35,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -48,7 +48,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -61,7 +61,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -74,7 +74,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -87,7 +87,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -100,7 +100,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -113,8 +113,21 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = false
+
+    assert actual == expected
+  end
+
+  test "equal recursion variable not same" do
+    s1 = "rec X.(!Hello().X)"
+    s2 = "rec Y.(!Hello().Y)"
+
+    session1 = ST.string_to_st(s1)
+    session2 = ST.string_to_st(s2)
+
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    expected = true
 
     assert actual == expected
   end
@@ -129,7 +142,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -145,10 +158,110 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2)
+    actual = ElixirSessions.Operations.equal(session1, session2, %{})
     expected = false
 
     assert actual == expected
+  end
+
+  test "unfold_current simple" do
+    s1 = "rec X.(!A().X)"
+
+    result = "!A().rec X.(!A().X)"
+
+    session1 = ST.string_to_st(s1)
+    session_result = ST.string_to_st(result)
+
+    actual = ST.unfold_current(session1)
+
+    assert ST.st_to_string(actual) == ST.st_to_string(session_result)
+  end
+
+  test "unfold_current more complex" do
+    s1 = "rec X.(!A().+{!B().X, !C().?D().X})"
+
+    result =
+      "!A().+{!B().rec X.(!A().+{!B().X, !C().?D().X}), !C().?D().rec X.(!A().+{!B().X, !C().?D().X})}"
+
+    session1 = ST.string_to_st(s1)
+    session_result = ST.string_to_st(result)
+
+    actual = ST.unfold_current(session1)
+
+    assert ST.st_to_string(actual) == ST.st_to_string(session_result)
+  end
+
+  test "unfold_current more complex - branch" do
+    s1 = "rec X.(!A().&{?B().X, ?C().?D().X})"
+
+    result =
+      "!A().&{?B().rec X.(!A().&{?B().X, ?C().?D().X}), ?C().?D().rec X.(!A().&{?B().X, ?C().?D().X})}"
+
+    session1 = ST.string_to_st(s1)
+    session_result = ST.string_to_st(result)
+
+    actual = ST.unfold_current(session1)
+
+    assert ST.st_to_string(actual) == ST.st_to_string(session_result)
+  end
+
+  test "unfold_current rec in rec" do
+    s1 = "rec X.(!A().rec Y.(&{?B().X, ?C().Y}))"
+
+    result = "!A().rec Y.(&{?B().rec X.(!A().rec Y.(&{?B().X, ?C().Y})), ?C().Y})"
+
+    session1 = ST.string_to_st(s1)
+    session_result = ST.string_to_st(result)
+
+    actual = ST.unfold_current(session1)
+
+    assert ST.st_to_string(actual) == ST.st_to_string(session_result)
+  end
+
+  test "unfold_current exception" do
+    s1 = "!B().rec X.(!A().X)"
+
+    result = "!A().rec X.(!A().X)"
+
+    session1 = ST.string_to_st(s1)
+    session_result = ST.string_to_st(result)
+
+    try do
+      ST.unfold_current(session1)
+      assert false
+    catch
+      _ -> assert true
+    end
+  end
+
+  test "unfold_unknown simple" do
+    s1 = "!A().X"
+    x_st = "rec X.(!B().X)"
+
+    expected = "!A().rec X.(!B().X)"
+
+    session_type = ST.string_to_st(s1)
+    expected_session_type = ST.string_to_st(expected)
+    x_session_type = ST.string_to_st(x_st)
+
+    result_session_type = ST.unfold_unknown(session_type, %{:X => x_session_type})
+
+    assert ST.st_to_string(expected_session_type) == ST.st_to_string(result_session_type)
+  end
+
+  test "unfold_unknown more complex" do
+    s1 = "!A().rec Y(+{!B().X, !C().Y})"
+    x_st = "rec X.(!okk().X)"
+
+    expected = "!A().rec Y.(+{!B().rec X.(!okk().X), !C().Y})"
+
+    session_type = ST.string_to_st(s1)
+    expected_session_type = ST.string_to_st(expected)
+    x_session_type = ST.string_to_st(x_st)
+
+    result_session_type = ST.unfold_unknown(session_type, %{:X => x_session_type})
+
+    assert ST.st_to_string(expected_session_type) == ST.st_to_string(result_session_type)
   end
 
   test "st_to_string_current complex" do
@@ -255,8 +368,7 @@ defmodule ElixirSessionsOperations do
   end
 
   test "Comparing session types 1 branch fail" do
-    s1 =
-      "!Hello2(atom, list).&{?Hello(atom, list).?H11(), ?Hello2(atom, list).?H11()}"
+    s1 = "!Hello2(atom, list).&{?Hello(atom, list).?H11(), ?Hello2(atom, list).?H11()}"
 
     s2 = "!Hello2(atom, list).?Hello(atom, list)"
 
@@ -267,11 +379,11 @@ defmodule ElixirSessionsOperations do
       {:error, _} ->
         assert true
 
-        x -> throw(x)
+      x ->
+        throw(x)
     end
 
-    s1 =
-      "!Hello2(atom, list).&{?Hello(atom, list).?H11(), ?Hello2(atom, list).?H11()}"
+    s1 = "!Hello2(atom, list).&{?Hello(atom, list).?H11(), ?Hello2(atom, list).?H11()}"
 
     s2 = "!Hello2(atom, list).&{?Hello(atom, list), ?Hello2(atom, list)}"
 

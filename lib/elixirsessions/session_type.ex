@@ -423,6 +423,43 @@ defmodule ST do
     ElixirSessions.Duality.dual(session_type)
   end
 
+  # Equality, takes into consideration that recursions with a different variable name are equal
+  @spec equal(session_type(), session_type()) :: boolean()
+  def equal(session_type1, session_type2) do
+    ElixirSessions.Operations.equal(session_type1, session_type2, %{})
+  end
+
+  @doc """
+  Takes a session type (starting with a recursion, e.g. rec X.(...)) and outputs a single unfold of X.
+
+
+  ## Examples
+          iex> st = "rec X.(!A().X)"
+          ...> session_type = ST.string_to_st(st)
+          ...> unfolded = ST.unfold_current(session_type)
+          ...> ST.st_to_string(unfolded)
+          "!A().rec X.(!A().X)"
+  """
+  @spec unfold_current(ST.Recurse.t()) :: session_type()
+  def unfold_current(%ST.Recurse{label: label, body: body} = rec) do
+    ElixirSessions.Operations.unfold_current_inside(body, label, rec)
+  end
+
+  def unfold_current(_) do
+    throw("Expected a rec X.(...)")
+  end
+
+  @doc """
+
+  ## Examples
+          iex> 1
+          1
+  """
+  @spec unfold_unknown(session_type(), %{}) :: session_type()
+  def unfold_unknown(session_type, recurse_var_map) do
+    ElixirSessions.Operations.unfold_unknown_inside(session_type, recurse_var_map, [])
+  end
+
   @doc """
     Given a session type, generates the corresponding Elixir code, formatted as a string.
 
@@ -469,7 +506,8 @@ defmodule ST do
     ElixirSessions.Operations.session_remainder!(session_type, session_type_internal_function)
   end
 
-  @spec session_remainder(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  @spec session_remainder(session_type(), session_type()) ::
+          {:ok, session_type()} | {:error, any()}
   def session_remainder(session_type, session_type_internal_function) do
     ElixirSessions.Operations.session_remainder(session_type, session_type_internal_function)
   end
