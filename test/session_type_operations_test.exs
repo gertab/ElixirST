@@ -164,6 +164,18 @@ defmodule ElixirSessionsOperations do
     assert actual == expected
   end
 
+  test "equality of receive and call rec" do
+    s1 = "?B().X"
+    s2 = "?B().X"
+    session1 = ST.string_to_st(s1)
+    session2 = ST.string_to_st(s2)
+
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
+    expected = true
+
+    assert actual == expected
+  end
+
   test "unfold_current simple" do
     s1 = "rec X.(!A().X)"
 
@@ -450,15 +462,12 @@ defmodule ElixirSessionsOperations do
     end
   end
 
-
   test "Tail subtract session types choice" do
-    s1 =
-      "+{!A().X, !B().Y, !C().!ok()}"
+    s1 = "+{!A().X, !B().Y, !C().!ok()}"
 
     s2 = "!ok()"
 
-    expected =
-      "+{!A().X, !B().Y, !C()}"
+    expected = "+{!A().X, !B().Y, !C()}"
 
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->

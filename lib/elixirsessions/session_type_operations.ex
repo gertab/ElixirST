@@ -403,12 +403,12 @@ defmodule ElixirSessions.Operations do
         %ST.Call_Recurse{label: label2},
         recurse_var_mapping
       ) do
-    # todo alpha equivalence?
-    true
 
     case Map.fetch(recurse_var_mapping, label1) do
       {:ok, ^label2} -> true
-      _ -> false
+      _ ->
+        # In case of free var
+        label1 == label2
     end
   end
 
@@ -608,6 +608,8 @@ defmodule ElixirSessions.Operations do
   end
 
   defp session_tail_subtraction!(%ST.Recv{} = st, st_tail) do
+    # throw("Checking #{ST.st_to_string(st)} and #{ST.st_to_string(st_tail)}")
+
     if ST.equal?(st, st_tail) do
       {true, %ST.Terminate{}}
     else
@@ -687,11 +689,13 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  defp session_tail_subtraction!(%ST.Recurse{body: body} = st, st_tail) do
+  defp session_tail_subtraction!(%ST.Recurse{body: body, label: label} = st, st_tail) do
     if ST.equal?(st, st_tail) do
       {true, %ST.Terminate{}}
     else
-      session_tail_subtraction!(body, st_tail)
+      {found, next} = session_tail_subtraction!(body, st_tail)
+
+      {found, %ST.Recurse{label: label, body: next}}
     end
   end
 
@@ -826,9 +830,9 @@ defmodule ElixirSessions.Operations do
 
     equal?(ST.string_to_st(s1), ST.string_to_st(s2), %{})
 
-    s1 = "!A().&{?ASSDD().?B().?C(), ?XX().?B().?C(), ?A().?C().?B().?C()}"
+    s1 = "!A().rec X.(!AA().?B().X)"
 
-    s2 = "?B().?C()"
+    s2 = "?B().X"
 
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->

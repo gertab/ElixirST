@@ -505,7 +505,6 @@ defmodule ST do
     ElixirSessions.Operations.session_subtraction(session_type, session_type_internal_function)
   end
 
-
   @spec session_tail_subtraction(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
   def session_tail_subtraction(session_type, session_type_internal_function) do
     ElixirSessions.Operations.session_tail_subtraction(session_type, session_type_internal_function)
