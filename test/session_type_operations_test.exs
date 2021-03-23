@@ -9,7 +9,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -22,7 +22,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -35,7 +35,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -48,7 +48,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -61,7 +61,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -74,7 +74,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -87,7 +87,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -100,7 +100,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -113,7 +113,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -126,7 +126,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -142,7 +142,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = true
 
     assert actual == expected
@@ -158,7 +158,7 @@ defmodule ElixirSessionsOperations do
     session1 = ST.string_to_st(s1)
     session2 = ST.string_to_st(s2)
 
-    actual = ElixirSessions.Operations.equal(session1, session2, %{})
+    actual = ElixirSessions.Operations.equal?(session1, session2, %{})
     expected = false
 
     assert actual == expected
@@ -325,7 +325,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).!Hello(atom, list)"
 
-    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         assert expected_remaining_st == remaining_st
@@ -341,7 +341,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).!Hello(atom, list)"
 
-    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         # throw("#{ST.st_to_string(remaining_st)}")
@@ -356,7 +356,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).+{!Hello(atom, list)}"
 
-    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         # throw("#{ST.st_to_string(remaining_st)}")
@@ -372,7 +372,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).?Hello(atom, list)"
 
-    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         assert false
 
@@ -387,7 +387,7 @@ defmodule ElixirSessionsOperations do
 
     s2 = "!Hello2(atom, list).&{?Hello(atom, list), ?Hello2(atom, list)}"
 
-    case ST.session_remainder(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("?H11()")
         # throw("#{ST.st_to_string(remaining_st)}")
@@ -395,6 +395,122 @@ defmodule ElixirSessionsOperations do
 
       {:error, _} ->
         assert false
+    end
+  end
+
+  test "Tail subtract session types simple" do
+    s1 = "!Hello2(atom, list).!Hello(atom, list).?H11()"
+    s2 = "?H11()"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st("!Hello2(atom, list).!Hello(atom, list)")
+        assert expected_remaining_st == remaining_st
+
+      :error ->
+        assert false
+    end
+  end
+
+  test "Tail subtract session types 1 choice" do
+    s1 =
+      "!Hello2(atom, list).+{!Hello(atom, list).?H11(), !Hello2(atom, list).?H11(), !Hello3(atom, list).?H11()}"
+
+    s2 = "?H11()"
+
+    expected =
+      "!Hello2(atom, list).+{!Hello(atom, list), !Hello2(atom, list), !Hello3(atom, list)}"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st(expected)
+        # throw("#{ST.st_to_string(remaining_st)}")
+        assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
+
+      {:error, x} ->
+        assert false
+    end
+
+    s1 =
+      "!Hello2(atom, list).+{!Hello(atom, list).?H11(), !Hello2(atom, list).?H11(), !Hello3(atom, list).?H11()}"
+
+    s2 = "?H11()"
+
+    expected =
+      "!Hello2(atom, list).+{!Hello(atom, list), !Hello2(atom, list), !Hello3(atom, list)}"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st(expected)
+        # throw("#{ST.st_to_string(remaining_st)}")
+        assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
+
+      :error ->
+        assert false
+    end
+  end
+
+
+  test "Tail subtract session types choice" do
+    s1 =
+      "+{!A().X, !B().Y, !C().!ok()}"
+
+    s2 = "!ok()"
+
+    expected =
+      "+{!A().X, !B().Y, !C()}"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st(expected)
+        assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
+
+      {:error, x} ->
+        assert false
+    end
+  end
+
+  test "Tail subtract session types 1 branch fail" do
+    s1 = "!A().&{?B().?C(), ?A().?C()}"
+
+    s2 = "?AAA()"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        assert false
+
+      {:error, _} ->
+        # Test should fail. No reduction
+        assert true
+    end
+
+    s1 = "!A().&{?B().?C(), ?A().?C()}"
+
+    s2 = "?C()"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st("!A().&{?B(), ?A()}")
+        # throw("#{ST.st_to_string(remaining_st)}")
+        assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
+
+      {:error, _} ->
+        assert false
+    end
+  end
+
+  test "Tail subtract session types empty branch" do
+    s1 = "!A().&{?B().?C(), ?A().?C()}"
+
+    s2 = "?B().?C()"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        assert false
+
+      {:error, _} ->
+        # Test should fail, empty branch
+        assert true
     end
   end
 end

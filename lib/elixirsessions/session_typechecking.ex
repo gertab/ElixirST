@@ -148,21 +148,21 @@ defmodule ElixirSessions.SessionTypechecking do
     session_typecheck_ast(body, session_type_body, rec_var, module_context)
   end
 
-  def session_typecheck_ast(body, %ST.Call_Session_Type{} = call, rec_var, module_context) do
-    %ST.Call_Session_Type{label: label} = call
+  # def session_typecheck_ast(body, %ST.Call_Session_Type{} = call, rec_var, module_context) do
+  #   %ST.Call_Session_Type{label: label} = call
 
-    %ST.Module{
-      session_types: session_types
-    } = module_context
+  #   %ST.Module{
+  #     session_types: session_types
+  #   } = module_context
 
-    case Map.fetch(session_types, label) do
-      {:ok, session_type_call} ->
-        session_typecheck_ast(body, session_type_call, rec_var, module_context)
+  #   case Map.fetch(session_types, label) do
+  #     {:ok, session_type_call} ->
+  #       session_typecheck_ast(body, session_type_call, rec_var, module_context)
 
-      :error ->
-        throw("Session type '#{label}' not found.")
-    end
-  end
+  #     :error ->
+  #       throw("Session type '#{label}' not found.")
+  #   end
+  # end
 
   # literals
   def session_typecheck_ast(x, session_type, _rec_var, _module_context)
@@ -413,7 +413,7 @@ defmodule ElixirSessions.SessionTypechecking do
       {x, st} = full_st
       {_, acc} = full_acc
 
-      if ST.equal(st, acc) do
+      if ST.equal?(st, acc) do
         {x, st}
       else
         throw(
@@ -475,8 +475,7 @@ defmodule ElixirSessions.SessionTypechecking do
       {x, st} = full_st
       {_, acc} = full_acc
 
-      # todo ensure that session type equality is correct
-      if ST.equal(st, acc) do
+      if ST.equal?(st, acc) do
         {x, st}
       else
         throw(
@@ -559,19 +558,19 @@ defmodule ElixirSessions.SessionTypechecking do
         )
 
         case session_type do
-          %ST.Call_Session_Type{label: label} ->
-            if label == session_type_name do
-              # session type matches expected label
+        #   %ST.Call_Session_Type{label: label} ->
+        #     if label == session_type_name do
+        #       # session type matches expected label
 
-              IO.puts("#{line} Matched call to st: #{ST.st_to_string(session_type)}.")
-              {false, %ST.Terminate{}}
-            else
-              throw(
-                "#{line} Expected call to function with session type labelled #{inspect(label)}. " <>
-                  "Instead found a call to function #{inspect({function_name, arity})} with session type " <>
-                  "labelled #{session_type_name}."
-              )
-            end
+        #       IO.puts("#{line} Matched call to st: #{ST.st_to_string(session_type)}.")
+        #       {false, %ST.Terminate{}}
+        #     else
+        #       throw(
+        #         "#{line} Expected call to function with session type labelled #{inspect(label)}. " <>
+        #           "Instead found a call to function #{inspect({function_name, arity})} with session type " <>
+        #           "labelled #{session_type_name}."
+        #       )
+        #     end
 
           _ ->
             case Map.fetch(session_types, session_type_name) do
@@ -582,7 +581,7 @@ defmodule ElixirSessions.SessionTypechecking do
                     "#{ST.st_to_string(session_type)}."
                 )
 
-                case ST.session_remainder(session_type, session_type_internal_function) do
+                case ST.session_subtraction(session_type, session_type_internal_function) do
                   {:ok, remaining_session_type} ->
                     {false, remaining_session_type}
 

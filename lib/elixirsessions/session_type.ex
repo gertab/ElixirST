@@ -129,7 +129,6 @@ defmodule ST do
           | %ST.Branch{branches: %{label() => session_type()}}
           | %ST.Recurse{label: label(), body: session_type()}
           | %ST.Call_Recurse{label: label()}
-          | %ST.Call_Session_Type{label: label()}
           | %ST.Terminate{}
 
   @type session_type_incl_label() :: {label(), session_type()}
@@ -142,7 +141,6 @@ defmodule ST do
           | {:recv, atom, [atom], session_type_tuple()}
           | {:choice, [session_type_tuple]}
           | {:branch, [session_type_tuple]}
-          # Call can either be a recursion variable (ST.Call_Recurse) or a continuation session type (ST.Call_Session_Type)
           | {:call, atom}
           | {:recurse, atom, session_type_tuple}
           | {:terminate}
@@ -241,17 +239,6 @@ defmodule ST do
   end
 
   defmodule Call_Recurse do
-    @moduledoc false
-    @enforce_keys [:label]
-    defstruct [:label]
-
-    @type session_type() :: ST.session_type()
-    @type label() :: ST.label()
-    @type t :: %__MODULE__{label: label()}
-  end
-
-  defmodule Call_Session_Type do
-    # todo remove
     @moduledoc false
     @enforce_keys [:label]
     defstruct [:label]
@@ -424,9 +411,9 @@ defmodule ST do
   end
 
   # Equality, takes into consideration that recursions with a different variable name are equal
-  @spec equal(session_type(), session_type()) :: boolean()
-  def equal(session_type1, session_type2) do
-    ElixirSessions.Operations.equal(session_type1, session_type2, %{})
+  @spec equal?(session_type(), session_type()) :: boolean()
+  def equal?(session_type1, session_type2) do
+    ElixirSessions.Operations.equal?(session_type1, session_type2, %{})
   end
 
   @doc """
@@ -450,10 +437,16 @@ defmodule ST do
   end
 
   @doc """
+  Given !A().X, it will unfold the (unbound) recursive variable X. The value of X should be found in `recurse_var_map`.
+  Will not unfold any bound recursive variables.
 
   ## Examples
-          iex> 1
-          1
+          iex> st = "!A().X"
+          ...> session_type = ST.string_to_st(st)
+          ...> recurse_var_map = %{:X => ST.string_to_st("rec X.(!B().X)")}
+          ...> unfolded_session_type = ST.unfold_unknown(session_type, recurse_var_map)
+          ...> ST.st_to_string(unfolded_session_type)
+          "!A().rec X.(!B().X)"
   """
   @spec unfold_unknown(session_type(), %{}) :: session_type()
   def unfold_unknown(session_type, recurse_var_map) do
@@ -501,14 +494,20 @@ defmodule ST do
     ElixirSessions.Generator.generate_quoted(session_type)
   end
 
-  @spec session_remainder!(session_type(), session_type()) :: session_type()
-  def session_remainder!(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.session_remainder!(session_type, session_type_internal_function)
+  @spec session_subtraction!(session_type(), session_type()) :: session_type()
+  def session_subtraction!(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.session_subtraction!(session_type, session_type_internal_function)
   end
 
-  @spec session_remainder(session_type(), session_type()) ::
+  @spec session_subtraction(session_type(), session_type()) ::
           {:ok, session_type()} | {:error, any()}
-  def session_remainder(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.session_remainder(session_type, session_type_internal_function)
+  def session_subtraction(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.session_subtraction(session_type, session_type_internal_function)
+  end
+
+
+  @spec session_tail_subtraction(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  def session_tail_subtraction(session_type, session_type_internal_function) do
+    ElixirSessions.Operations.session_tail_subtraction(session_type, session_type_internal_function)
   end
 end

@@ -87,10 +87,6 @@ defmodule ElixirSessions.Operations do
     true
   end
 
-  def validate!(%ST.Call_Session_Type{}) do
-    true
-  end
-
   def validate!(%ST.Terminate{}) do
     true
   end
@@ -212,11 +208,7 @@ defmodule ElixirSessions.Operations do
   end
 
   def convert_to_structs({:call, label}, recurse_var) do
-    if label in recurse_var do
-      %ST.Call_Recurse{label: label}
-    else
-      %ST.Call_Session_Type{label: label}
-    end
+    %ST.Call_Recurse{label: label}
   end
 
   defp label(%ST.Send{label: label}) do
@@ -295,10 +287,6 @@ defmodule ElixirSessions.Operations do
     "#{label}"
   end
 
-  def st_to_string(%ST.Call_Session_Type{label: label}) do
-    "#{label}"
-  end
-
   def st_to_string(%ST.Terminate{}) do
     ""
     # "end"
@@ -346,10 +334,6 @@ defmodule ElixirSessions.Operations do
     "#{label}"
   end
 
-  def st_to_string_current(%ST.Call_Session_Type{label: label}) do
-    "#{label}"
-  end
-
   def st_to_string_current(%ST.Terminate{}) do
     ""
   end
@@ -357,26 +341,26 @@ defmodule ElixirSessions.Operations do
   # Pattern matching with ST.session_type()
   # todo remove? use == instead
   # ! = +{l} and & = &{l}
-  @spec equal(session_type(), session_type(), %{}) :: boolean()
-  def equal(session_type, session_type, recurse_var_mapping)
+  @spec equal?(session_type(), session_type(), %{}) :: boolean()
+  def equal?(session_type, session_type, recurse_var_mapping)
 
-  def equal(
+  def equal?(
         %ST.Send{label: label, types: types, next: next1},
         %ST.Send{label: label, types: types, next: next2},
         recurse_var_mapping
       ) do
-    equal(next1, next2, recurse_var_mapping)
+    equal?(next1, next2, recurse_var_mapping)
   end
 
-  def equal(
+  def equal?(
         %ST.Recv{label: label, types: types, next: next1},
         %ST.Recv{label: label, types: types, next: next2},
         recurse_var_mapping
       ) do
-    equal(next1, next2, recurse_var_mapping)
+    equal?(next1, next2, recurse_var_mapping)
   end
 
-  def equal(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}, recurse_var_mapping) do
+  def equal?(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}, recurse_var_mapping) do
     # Sorting is done (automatically) by the map
 
     Enum.zip(Map.values(choices1), Map.values(choices2))
@@ -384,12 +368,16 @@ defmodule ElixirSessions.Operations do
       true,
       fn
         {choice1, choice2}, acc ->
-          acc and equal(choice1, choice2, recurse_var_mapping)
+          acc and equal?(choice1, choice2, recurse_var_mapping)
       end
     )
   end
 
-  def equal(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}, recurse_var_mapping) do
+  def equal?(
+        %ST.Branch{branches: branches1},
+        %ST.Branch{branches: branches2},
+        recurse_var_mapping
+      ) do
     # Sorting is done (automatically) by the map
 
     Enum.zip(Map.values(branches1), Map.values(branches2))
@@ -397,20 +385,24 @@ defmodule ElixirSessions.Operations do
       true,
       fn
         {branche1, branche2}, acc ->
-          acc and equal(branche1, branche2, recurse_var_mapping)
+          acc and equal?(branche1, branche2, recurse_var_mapping)
       end
     )
   end
 
-  def equal(
+  def equal?(
         %ST.Recurse{label: label1, body: body1},
         %ST.Recurse{label: label2, body: body2},
         recurse_var_mapping
       ) do
-    equal(body1, body2, Map.put(recurse_var_mapping, label1, label2))
+    equal?(body1, body2, Map.put(recurse_var_mapping, label1, label2))
   end
 
-  def equal(%ST.Call_Recurse{label: label1}, %ST.Call_Recurse{label: label2}, recurse_var_mapping) do
+  def equal?(
+        %ST.Call_Recurse{label: label1},
+        %ST.Call_Recurse{label: label2},
+        recurse_var_mapping
+      ) do
     # todo alpha equivalence?
     true
 
@@ -420,33 +412,31 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  def equal(%ST.Call_Session_Type{} = s1, %ST.Call_Session_Type{} = s2, _recurse_var_mapping) do
-    s1 == s2
-  end
-
-  def equal(%ST.Terminate{}, %ST.Terminate{}, _recurse_var_mapping) do
+  def equal?(%ST.Terminate{}, %ST.Terminate{}, _recurse_var_mapping) do
     true
   end
 
-  def equal(_, _, _) do
+  def equal?(_, _, _) do
     false
   end
 
-  # Walks through session_type by session_type_internal and returns the remaining session type.
+  # Walks through session_type by header_session_type and returns the remaining session type.
+  # !A().!B().!C() - !A() = !B().!C()
+
   # E.g.:
   # session_type:          !Hello().!Hello2().end
-  # session_type_internal: !Hello().end
+  # header_session_type:   !Hello().end
   # results in the remaining type !Hello2()
 
   # E.g. 2:
   # session_type:          !Hello().end
-  # session_type_internal: !Hello().!Hello2().end
+  # header_session_type:   !Hello().!Hello2().end
   # throws error
-  @spec session_remainder(session_type(), session_type()) ::
+  @spec session_subtraction(session_type(), session_type()) ::
           {:ok, session_type()} | {:error, any()}
-  def session_remainder(session_type, session_type_internal) do
+  def session_subtraction(session_type, header_session_type) do
     try do
-      remaining_session_type = session_remainder!(session_type, session_type_internal)
+      remaining_session_type = session_subtraction!(session_type, header_session_type)
 
       {:ok, remaining_session_type}
     catch
@@ -454,31 +444,31 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  @spec session_remainder!(session_type(), session_type()) :: session_type()
-  def session_remainder!(session_type, session_type_internal)
+  @spec session_subtraction!(session_type(), session_type()) :: session_type()
+  def session_subtraction!(session_type, header_session_type)
 
-  def session_remainder!(
+  def session_subtraction!(
         %ST.Send{label: label, types: types, next: next1},
         %ST.Send{label: label, types: types, next: next2}
       ) do
-    session_remainder!(next1, next2)
+    session_subtraction!(next1, next2)
   end
 
-  def session_remainder!(
+  def session_subtraction!(
         %ST.Recv{label: label, types: types, next: next1},
         %ST.Recv{label: label, types: types, next: next2}
       ) do
-    session_remainder!(next1, next2)
+    session_subtraction!(next1, next2)
   end
 
-  def session_remainder!(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
+  def session_subtraction!(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
     # Sorting is done (automatically) by the map
     choices2
     |> Enum.map(fn
       {choice2_key, choice2_value} ->
         case Map.fetch(choices1, choice2_key) do
           {:ok, choice1_value} ->
-            session_remainder!(choice1_value, choice2_value)
+            session_subtraction!(choice1_value, choice2_value)
 
           :error ->
             throw("Choosing non exisiting choice: #{ST.st_to_string(choice2_value)}.")
@@ -497,7 +487,7 @@ defmodule ElixirSessions.Operations do
     end)
   end
 
-  def session_remainder!(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
+  def session_subtraction!(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
     # Sorting is done (automatically) by the map
 
     if map_size(branches1) != map_size(branches2) do
@@ -510,7 +500,7 @@ defmodule ElixirSessions.Operations do
     Enum.zip(Map.values(branches1), Map.values(branches2))
     |> Enum.map(fn
       {branch1, branch2} ->
-        session_remainder!(branch1, branch2)
+        session_subtraction!(branch1, branch2)
     end)
     |> Enum.reduce(fn
       remaining_st, acc ->
@@ -525,66 +515,200 @@ defmodule ElixirSessions.Operations do
     end)
   end
 
-  def session_remainder!(%ST.Choice{choices: choices1}, %ST.Send{label: label} = choice2) do
+  def session_subtraction!(%ST.Choice{choices: choices1}, %ST.Send{label: label} = choice2) do
     case Map.fetch(choices1, label) do
       {:ok, choice1_value} ->
-        session_remainder!(choice1_value, choice2)
+        session_subtraction!(choice1_value, choice2)
 
       :error ->
         throw("Choosing non exisiting choice: #{ST.st_to_string(choice2)}.")
     end
   end
 
-  def session_remainder!(%ST.Branch{branches: branches1} = b1, %ST.Recv{label: label} = branch2) do
+  def session_subtraction!(%ST.Branch{branches: branches1} = b1, %ST.Recv{label: label} = branch2) do
     if map_size(branches1) != 1 do
       throw("Cannot match #{ST.st_to_string(branch2)} with #{ST.st_to_string(b1)}.")
     end
 
     case Map.fetch(branches1, label) do
       {:ok, branch1_value} ->
-        session_remainder!(branch1_value, branch2)
+        session_subtraction!(branch1_value, branch2)
 
       :error ->
         throw("Choosing non exisiting choice: #{ST.st_to_string(branch2)}.")
     end
   end
 
-  def session_remainder!(%ST.Recurse{label: label, body: body1}, %ST.Recurse{
+  def session_subtraction!(%ST.Recurse{label: label, body: body1}, %ST.Recurse{
         label: label,
         body: body2
       }) do
-    session_remainder!(body1, body2)
+    session_subtraction!(body1, body2)
   end
 
-  def session_remainder!(%ST.Call_Recurse{label: label}, %ST.Call_Recurse{label: label}) do
+  def session_subtraction!(%ST.Call_Recurse{label: label}, %ST.Call_Recurse{label: label}) do
     # todo alpha equivalence?
     %ST.Terminate{}
   end
 
-  def session_remainder!(%ST.Call_Session_Type{}, %ST.Call_Session_Type{}) do
-    %ST.Terminate{}
-  end
-
-  def session_remainder!(remaining_session_type, %ST.Terminate{}) do
+  def session_subtraction!(remaining_session_type, %ST.Terminate{}) do
     remaining_session_type
   end
 
-  def session_remainder!(%ST.Terminate{}, remaining_session_type) do
+  def session_subtraction!(%ST.Terminate{}, remaining_session_type) do
     throw(
       "Session type larger than expected. Remaining: #{ST.st_to_string(remaining_session_type)}."
     )
   end
 
-  def session_remainder!(st, %ST.Recurse{body: body}) do
+  def session_subtraction!(st, %ST.Recurse{body: body}) do
     # todo alpha equivalence?
-    session_remainder!(st, body)
+    session_subtraction!(st, body)
   end
 
-  def session_remainder!(session_type, session_type_internal) do
+  def session_subtraction!(session_type, header_session_type) do
     throw(
       "Session type #{ST.st_to_string(session_type)} does not match session type " <>
-        "#{ST.st_to_string(session_type_internal)}."
+        "#{ST.st_to_string(header_session_type)}."
     )
+  end
+
+  # Similar session_subtraction, but session type is subtracted from the end.
+  # !A().!B().!C() -  !B().!C() = !A()
+  # Walks through session_type until the session type matches the session_type_tail.
+  @spec session_tail_subtraction(session_type(), session_type()) ::
+          {:ok, session_type()} | {:error, any()}
+  def session_tail_subtraction(session_type, header_session_type) do
+    try do
+      case session_tail_subtraction!(session_type, header_session_type) do
+        {true, front_session_type} ->
+          {:ok, front_session_type}
+
+        {false, _} ->
+          {:error,
+           "Session type #{ST.st_to_string(header_session_type)} was not found in " <>
+             "the tail of #{ST.st_to_string(session_type)}."}
+      end
+    catch
+      error -> {:error, error}
+    end
+  end
+
+  @spec session_tail_subtraction!(session_type(), session_type()) :: {boolean(), session_type()}
+  defp session_tail_subtraction!(session_type, session_type_tail)
+
+  defp session_tail_subtraction!(%ST.Send{} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      %ST.Send{label: label, types: types, next: next} = st
+      {found, tail} = session_tail_subtraction!(next, st_tail)
+      {found, %ST.Send{label: label, types: types, next: tail}}
+    end
+  end
+
+  defp session_tail_subtraction!(%ST.Recv{} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      %ST.Recv{label: label, types: types, next: next} = st
+      {found, tail} = session_tail_subtraction!(next, st_tail)
+      {found, %ST.Recv{label: label, types: types, next: tail}}
+    end
+  end
+
+  defp session_tail_subtraction!(%ST.Choice{choices: choices} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      {choices, found} =
+        Enum.map_reduce(choices, false, fn {label, choice}, acc ->
+          {found, tail} = session_tail_subtraction!(choice, st_tail)
+          {{label, tail}, acc or found}
+        end)
+
+      # todo Check for empty choices?
+      empty_choices =
+        Enum.reduce(choices, false, fn
+          {_, %ST.Terminate{}}, _acc -> true
+          _, acc -> acc
+        end)
+
+      if empty_choices do
+        throw("Found empty choices")
+      end
+
+      {found,
+       %ST.Choice{
+         choices:
+           choices
+           |> Enum.into(%{})
+       }}
+    end
+  end
+
+  defp session_tail_subtraction!(%ST.Branch{branches: branches} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      {branches, found} =
+        Enum.map(branches, fn {label, branch} ->
+          {found, tail} = session_tail_subtraction!(branch, st_tail)
+          {{label, tail}, found}
+        end)
+        |> Enum.unzip()
+
+      # Check for empty branches - should not happen
+      empty_branches =
+        Enum.reduce(branches, false, fn
+          {_, %ST.Terminate{}}, _acc -> true
+          _, acc -> acc
+        end)
+
+      if empty_branches do
+        throw("Found empty branches")
+      end
+
+      all_same = Enum.reduce(found, fn elem, acc -> elem == acc end)
+
+      if all_same do
+        # Take the first one since all elements are the same
+        found_result = hd(found)
+
+        {found_result,
+         %ST.Branch{
+           branches:
+             branches
+             |> Enum.into(%{})
+         }}
+      else
+        throw("In case of branch, either all or none should match (#{ST.st_to_string(st)}).")
+      end
+    end
+  end
+
+  defp session_tail_subtraction!(%ST.Recurse{body: body} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      session_tail_subtraction!(body, st_tail)
+    end
+  end
+
+  defp session_tail_subtraction!(%ST.Call_Recurse{} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      {false, st}
+    end
+  end
+
+  defp session_tail_subtraction!(%ST.Terminate{} = st, st_tail) do
+    if ST.equal?(st, st_tail) do
+      {true, %ST.Terminate{}}
+    else
+      {false, st}
+    end
   end
 
   # Takes a session type (starting with a recursion, e.g. rec X.(...)) and outputs a single unfold of X
@@ -623,10 +747,6 @@ defmodule ElixirSessions.Operations do
 
   def unfold_current_inside(%ST.Call_Recurse{label: diff_label}, _label, _rec) do
     %ST.Call_Recurse{label: diff_label}
-  end
-
-  def unfold_current_inside(%ST.Call_Session_Type{} = call, _label, _rec) do
-    call
   end
 
   def unfold_current_inside(%ST.Terminate{} = st, _label, _rec) do
@@ -694,18 +814,6 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  def unfold_unknown_inside(%ST.Call_Session_Type{label: label}, recurse_var, bound_var) do
-    # todo currently a hack. remove Call_Session_Type
-    if label in bound_var do
-      %ST.Call_Recurse{label: label}
-    else
-      case Map.fetch(recurse_var, label) do
-        {:ok, found} -> found
-        :error -> throw("Trying to expand Call_Recurse, but #{label} was not found.")
-      end
-    end
-  end
-
   def unfold_unknown_inside(%ST.Terminate{} = st, _recurse_var, _bound_var) do
     st
   end
@@ -716,7 +824,22 @@ defmodule ElixirSessions.Operations do
 
     s2 = "rec Y.(!Hello().Y)"
 
-    equal(ST.string_to_st(s1), ST.string_to_st(s2), %{})
+    equal?(ST.string_to_st(s1), ST.string_to_st(s2), %{})
+
+    s1 = "!A().&{?ASSDD().?B().?C(), ?XX().?B().?C(), ?A().?C().?B().?C()}"
+
+    s2 = "?B().?C()"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        # assert false
+        ST.st_to_string(remaining_st)
+
+      {:error, error} ->
+        # Test should fail
+        # assert true
+        throw(error)
+    end
   end
 end
 
@@ -739,9 +862,6 @@ end
 # end
 
 # def xyz(%ST.Call_Recurse{label: label}) do
-# end
-
-# def xyz(%ST.Call_Session_Type{label: label}) do
 # end
 
 # def xyz(%ST.Terminate{}) do
