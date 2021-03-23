@@ -122,6 +122,7 @@ defmodule ElixirSessions.Operations do
   # throws error in case of branches/choices with same labels, or
   # if the types are not valid
   # @spec convert_to_structs(session_type_tuple(), [label()]) :: session_type()
+  # todo remove validations and put them in validate!
   @spec convert_to_structs(
           # should be { , , [atom], }
           {:send, atom, any, session_type_tuple()}
