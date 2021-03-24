@@ -38,7 +38,7 @@ defmodule ElixirSessions.SessionTypechecking do
         %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
         # expected_session_type = Map.fetch!(function_session_type, {name, arity})
 
-        Enum.map(bodies, fn ast ->
+        _ = Enum.map(bodies, fn ast ->
           session_typecheck_by_function(
             ast,
             expected_session_type,

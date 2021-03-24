@@ -173,7 +173,7 @@ defmodule ElixirSessions.Checking do
       |> IO.inspect()
 
     # @session can only be used with def not defp
-    ensure_def_not_defp!(matching_session_types_functions, all_functions)
+    _ = ensure_def_not_defp!(matching_session_types_functions, all_functions)
 
     %ST.Module{
       functions: all_functions,
