@@ -128,7 +128,7 @@ defmodule ElixirSessions.Checking do
           throw("Error: #{inspect(x)}")
       end
 
-    |> IO.inspect()
+    # |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -152,7 +152,15 @@ defmodule ElixirSessions.Checking do
     |> Enum.map(&elem(&1, 1))
     |> ensure_no_duplicates()
 
-    all_functions = get_all_functions(dbgi_map)
+    all_functions =
+      get_all_functions(dbgi_map)
+      |> IO.inspect()
+
+    # dbgi_map
+    # |> IO.inspect()
+
+    # all_functions
+    # |> Enum.map(fn {name, _body} -> IO.inspect(name) end)
 
     matching_session_types_functions =
       session_types_name_arity
@@ -182,7 +190,8 @@ defmodule ElixirSessions.Checking do
       line: dbgi_map[:line],
       module_name: dbgi_map[:module]
     }
-    |> ElixirSessions.SessionTypechecking.session_typecheck_module()
+
+    # |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
 
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile)
@@ -195,13 +204,13 @@ defmodule ElixirSessions.Checking do
   # Returns a list of all functions that match with the given {function_name, arity}.
   defp all_functions_filter(all_functions, {expected_name}) do
     all_functions
-    |> Enum.filter(fn {{name, _arity}, _func_body} -> name == expected_name end)
+    |> Enum.filter(fn %ST.Function{name: name} -> name == expected_name end)
     |> Enum.map(&elem(&1, 0))
   end
 
   defp all_functions_filter(all_functions, {expected_name, expected_arity}) do
     all_functions
-    |> Enum.filter(fn {{name, arity}, _func_body} ->
+    |> Enum.filter(fn %ST.Function{name: name, arity: arity} ->
       name == expected_name and arity == expected_arity
     end)
     |> Enum.map(&elem(&1, 0))
@@ -228,11 +237,43 @@ defmodule ElixirSessions.Checking do
 
   # Given the debug info chunk from the Beam files,
   # return a list of all functions
+
+  # Structure of [Elixir] functions in Beam
+  # {{name, arity}, :def_or_p, meta, [{meta, parameters, guards, body}, case2, ...]}
+  # E.g.
+  # {{:function1, 1}, :def, [line: 36],
+  #  [
+  #    {[line: 36], [7777],                       [],       {:__block__, [], [...]}}, # Case 1
+  #    {[line: 47], [{:server, [line: 47], nil}], [guards], {...}                  }, # Case 2
+  #    ...
+  #  ]
+  # }
+
   defp get_all_functions(dbgi_map) do
     dbgi_map[:definitions]
     |> Enum.map(fn
-      {func_name_arity, _def_p, _meta, body} -> {func_name_arity, func_body(hd(body))}
-      x -> throw("Unknown parameters for #{inspect(x)}")
+      {func_name_arity, def_p, meta, function_body} ->
+        # Unzipping function_body
+        {metas, parameters, guards, bodies} =
+          Enum.reduce(function_body, {[], [], [], []}, fn {curr_m, curr_p, curr_g, curr_b},
+                                                          {accu_m, accu_p, accu_g, accu_b} ->
+            {[curr_m | accu_m], [curr_p | accu_p], [curr_g | accu_g], [curr_b | accu_b]}
+          end)
+
+        %ST.Function{
+          name: func_name_arity,
+          arity: 0,
+          def_p: def_p,
+          meta: meta,
+          cases: length(bodies),
+          metas: metas,
+          parameters: parameters,
+          guards: guards,
+          bodies: bodies
+        }
+
+      x ->
+        throw("Unknown info for #{inspect(x)}")
     end)
   end
 
@@ -245,6 +286,7 @@ defmodule ElixirSessions.Checking do
   # Given "name/arity" returns {name, arity} where name is an atom and arity is a number
   # Given "name" returns {:name}
   # E.g. :"ping/2" becomes {:ping, 2}
+  #      :"ping"   becomes {:ping}
   defp split_name(name_arity) do
     split = String.split(Atom.to_string(name_arity), "/", parts: 2)
 
@@ -263,6 +305,7 @@ defmodule ElixirSessions.Checking do
     end
   end
 
+  # todo
   # defmacro left ::: right do
   # end
 end

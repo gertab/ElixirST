@@ -40,12 +40,12 @@ defmodule ElixirSessions.SessionTypechecking do
         ast = Map.fetch!(functions, {name, arity})
         expected_session_type = Map.fetch!(session_types, name_arity_st)
 
-        modified_module_context = %ST.Module{
-          module_context
-          | cur_function: %ST.Function{name: name, arity: arity}
-        }
+        # modified_module_context = %ST.Module{
+        #   module_context
+        #   | cur_function: %ST.Function{name: name, arity: arity}
+        # }
 
-        session_typecheck_by_function(ast, expected_session_type, %{}, modified_module_context)
+        session_typecheck_by_function(ast, expected_session_type, %{}, module_context)
         :ok
     end)
   end
@@ -62,22 +62,22 @@ defmodule ElixirSessions.SessionTypechecking do
     # IO.inspect(expected_session_type)
     # IO.inspect(module_context)
 
-    %ST.Module{cur_function: %ST.Function{name: name, arity: arity}} = module_context
+    # %ST.Module{cur_function: %ST.Function{name: name, arity: arity}} = module_context
 
-    IO.puts(
-      "Session type checking #{inspect(name)}/#{arity}: #{ST.st_to_string(expected_session_type)}"
-    )
+    # IO.puts(
+    #   "Session type checking #{inspect(name)}/#{arity}: #{ST.st_to_string(expected_session_type)}"
+    # )
 
-    cur_function = %ST.Function{
-      name: name,
-      arity: arity
-    }
+    # cur_function = %ST.Function{
+    #   name: name,
+    #   arity: arity
+    # }
 
     {_, remaining_session_type} =
-      session_typecheck_ast(ast, expected_session_type, rec_var, %ST.Module{
+      session_typecheck_ast(ast, expected_session_type, rec_var,
         module_context
-        | cur_function: cur_function
-      })
+        # | cur_function: cur_function
+      )
 
     case remaining_session_type do
       %ST.Terminate{} ->
@@ -99,15 +99,15 @@ defmodule ElixirSessions.SessionTypechecking do
   def session_typecheck(fun, arity, body, session_type) do
     IO.puts("Session typechecking of &#{to_string(fun)}/#{arity}")
 
-    function_context = %ST.Function{
-      name: fun,
-      arity: arity
-    }
+    # function_context = %ST.Function{
+    #   name: fun,
+    #   arity: arity
+    # }
 
     IO.puts("Session typechecking: #{ST.st_to_string(session_type)}")
 
     {_, remaining_session_type} =
-      session_typecheck_ast(body, session_type, %{}, %ST.Module{cur_function: function_context})
+      session_typecheck_ast(body, session_type, %{}, %ST.Module{})
 
     case remaining_session_type do
       %ST.Terminate{} ->
@@ -515,11 +515,7 @@ defmodule ElixirSessions.SessionTypechecking do
       functions: functions,
       function_mapped_st: function_mapped_st,
       session_types: session_types,
-      module_name: _module_name,
-      cur_function: %ST.Function{
-        name: function_cxt_name,
-        arity: function_cxt_arity
-      }
+      module_name: _module_name
     } = module_context
 
     line =

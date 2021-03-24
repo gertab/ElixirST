@@ -252,10 +252,39 @@ defmodule ST do
     @moduledoc false
 
     @enforce_keys [:name]
-    defstruct [:name, arity: 0]
+    defstruct [
+      name: nil,
+      arity: 0,
+      def_p: :def,
+      # Function meta
+      meta: [],
+      # Number of different patter-matching cases
+      cases: 0,
+      # List of function cases meta
+      metas: [],
+      # List (of list) of parameters
+      parameters: [],
+      # List (of list) of guards
+      guards: [],
+      # List of bodies from different (pattern-matching) cases
+      bodies: []
+    ]
+
+    # Structure of functions in Beam debug_info
+    # {{name, arity}, :def_or_p, meta, [{meta, parameters, guards, body}, case2, ...]}
 
     @type label() :: ST.label()
-    @type t :: %__MODULE__{name: label(), arity: non_neg_integer()}
+    @type t :: %__MODULE__{
+            name: label(),
+            arity: non_neg_integer(),
+            def_p: :def | :def_p,
+            bodies: [any()],
+            meta: [any()],
+            metas: [any()],
+            parameters: [any()],
+            guards: [any()],
+            bodies: [any()]
+          }
   end
 
   defmodule Module do
@@ -266,13 +295,11 @@ defmodule ST do
               module_name: :"",
               file: "",
               relative_file: "",
-              line: 1,
-              cur_function: %ST.Function{name: nil}
+              line: 1
 
     @type session_type() :: ST.session_type()
     @type label() :: ST.label()
     @type ast() :: ST.ast()
-    @type func :: ST.Function.t()
     @type func_name_arity() :: {label(), non_neg_integer()}
     @type t :: %__MODULE__{
             functions: %{func_name_arity => ast()},
@@ -281,8 +308,7 @@ defmodule ST do
             module_name: atom(),
             file: String.t(),
             relative_file: String.t(),
-            line: integer(),
-            cur_function: func
+            line: integer()
           }
   end
 
@@ -505,8 +531,12 @@ defmodule ST do
     ElixirSessions.Operations.session_subtraction(session_type, session_type_internal_function)
   end
 
-  @spec session_tail_subtraction(session_type(), session_type()) :: {:ok, session_type()} | {:error, any()}
+  @spec session_tail_subtraction(session_type(), session_type()) ::
+          {:ok, session_type()} | {:error, any()}
   def session_tail_subtraction(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.session_tail_subtraction(session_type, session_type_internal_function)
+    ElixirSessions.Operations.session_tail_subtraction(
+      session_type,
+      session_type_internal_function
+    )
   end
 end
