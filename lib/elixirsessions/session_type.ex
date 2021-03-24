@@ -252,23 +252,21 @@ defmodule ST do
     @moduledoc false
 
     @enforce_keys [:name]
-    defstruct [
-      name: nil,
-      arity: 0,
-      def_p: :def,
-      # Function meta
-      meta: [],
-      # Number of different patter-matching cases
-      cases: 0,
-      # List of function cases meta
-      metas: [],
-      # List (of list) of parameters
-      parameters: [],
-      # List (of list) of guards
-      guards: [],
-      # List of bodies from different (pattern-matching) cases
-      bodies: []
-    ]
+    defstruct name: nil,
+              arity: 0,
+              def_p: :def,
+              # Function meta
+              meta: [],
+              # Number of different patter-matching cases
+              cases: 0,
+              # List of function cases meta
+              metas: [],
+              # List (of list) of parameters
+              parameters: [],
+              # List (of list) of guards
+              guards: [],
+              # List of bodies from different (pattern-matching) cases
+              bodies: []
 
     # Structure of functions in Beam debug_info
     # {{name, arity}, :def_or_p, meta, [{meta, parameters, guards, body}, case2, ...]}
@@ -277,7 +275,7 @@ defmodule ST do
     @type t :: %__MODULE__{
             name: label(),
             arity: non_neg_integer(),
-            def_p: :def | :def_p,
+            def_p: :def | :defp,
             bodies: [any()],
             meta: [any()],
             metas: [any()],
@@ -289,9 +287,8 @@ defmodule ST do
 
   defmodule Module do
     @moduledoc false
-    defstruct functions: %{},
-              function_mapped_st: %{},
-              session_types: %{},
+    defstruct functions: [],
+              function_session_type: %{},
               module_name: :"",
               file: "",
               relative_file: "",
@@ -302,9 +299,8 @@ defmodule ST do
     @type ast() :: ST.ast()
     @type func_name_arity() :: {label(), non_neg_integer()}
     @type t :: %__MODULE__{
-            functions: %{func_name_arity => ast()},
-            function_mapped_st: %{func_name_arity() => label()},
-            session_types: %{label() => session_type()},
+            functions: [ST.Function.t()],
+            function_session_type: %{func_name_arity() => session_type()},
             module_name: atom(),
             file: String.t(),
             relative_file: String.t(),

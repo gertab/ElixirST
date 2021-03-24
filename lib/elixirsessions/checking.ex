@@ -10,10 +10,8 @@ defmodule ElixirSessions.Checking do
     quote do
       import ElixirSessions.Checking
 
-      Module.register_attribute(__MODULE__, :session_type_checking,
-        accumulate: true,
-        persist: true
-      )
+      Module.register_attribute(__MODULE__, :session_type_checking, persist: true)
+      @session_type_checking true
 
       Module.register_attribute(__MODULE__, :session, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
@@ -127,8 +125,7 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
-
-    # |> IO.inspect()
+      |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -141,57 +138,51 @@ defmodule ElixirSessions.Checking do
       raw_session_types
       |> Enum.map(&ST.string_to_st_incl_label(&1))
 
-    # Parses session type labels: e.g. ["ping/2": %ST.Terminate{}] becomes [{{:ping, 2}, :"ping/2"}]
+    # |> IO.inspect()
+
+    # Parses session type labels:
+    # e.g. ["ping/2": %ST.Terminate{}] becomes [{{:ping, 2}, %ST.Terminate{}}]
+    #      ["ping": %ST.Terminate{}]   becomes [{{:ping},    %ST.Terminate{}}]
     session_types_name_arity =
       all_session_types
-      |> Keyword.keys()
-      |> Enum.map(fn x -> {split_name(x), x} end)
+      |> Enum.map(fn {key, value} -> {split_name(key), value} end)
+
+    # |> IO.inspect()
 
     # Ensures unique session type names
     session_types_name_arity
     |> Enum.map(&elem(&1, 1))
-    |> ensure_no_duplicates()
+    |> ensure_no_duplicates!()
 
     all_functions =
-      get_all_functions(dbgi_map)
+      get_all_functions!(dbgi_map)
       |> IO.inspect()
 
     # dbgi_map
     # |> IO.inspect()
 
-    # all_functions
-    # |> Enum.map(fn {name, _body} -> IO.inspect(name) end)
-
     matching_session_types_functions =
-      session_types_name_arity
-      |> Enum.map(fn {split_name_arity, name_arity} ->
-        case all_functions_filter(all_functions, split_name_arity) do
-          [] ->
-            nil
-
-          [value] ->
-            {value, name_arity}
-
-          [{name, arity} | _] = values ->
-            throw(
-              "Session type #{inspect(elem(split_name_arity, 0))} matched with multiple functions: " <>
-                "#{inspect(values)}. Specify the arity, e.g. #{name}/#{arity}."
-            )
+      Enum.map(
+        session_types_name_arity,
+        fn
+          {{name, arity}, session_type} -> {{name, arity}, session_type}
+          {{name}, session_type} -> {{name, get_arity!(all_functions, name)}, session_type}
         end
-      end)
-      |> Enum.filter(fn elem -> !is_nil(elem) end)
+      )
+      |> IO.inspect()
+
+    # @session can only be used with def not defp
+    ensure_def_not_defp!(matching_session_types_functions, all_functions)
 
     %ST.Module{
-      functions: to_map(all_functions),
-      function_mapped_st: to_map(matching_session_types_functions),
-      session_types: to_map(all_session_types),
+      functions: all_functions,
+      function_session_type: to_map(matching_session_types_functions),
       file: dbgi_map[:file],
       relative_file: dbgi_map[:relative_file],
       line: dbgi_map[:line],
       module_name: dbgi_map[:module]
     }
-
-    # |> ElixirSessions.SessionTypechecking.session_typecheck_module()
+    |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
 
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile)
@@ -201,22 +192,7 @@ defmodule ElixirSessions.Checking do
     |> Enum.into(%{})
   end
 
-  # Returns a list of all functions that match with the given {function_name, arity}.
-  defp all_functions_filter(all_functions, {expected_name}) do
-    all_functions
-    |> Enum.filter(fn %ST.Function{name: name} -> name == expected_name end)
-    |> Enum.map(&elem(&1, 0))
-  end
-
-  defp all_functions_filter(all_functions, {expected_name, expected_arity}) do
-    all_functions
-    |> Enum.filter(fn %ST.Function{name: name, arity: arity} ->
-      name == expected_name and arity == expected_arity
-    end)
-    |> Enum.map(&elem(&1, 0))
-  end
-
-  defp ensure_no_duplicates(check) do
+  defp ensure_no_duplicates!(check) do
     if has_duplicates?(check) do
       throw("Cannot have session types with same name")
     end
@@ -249,10 +225,10 @@ defmodule ElixirSessions.Checking do
   #  ]
   # }
 
-  defp get_all_functions(dbgi_map) do
+  defp get_all_functions!(dbgi_map) do
     dbgi_map[:definitions]
     |> Enum.map(fn
-      {func_name_arity, def_p, meta, function_body} ->
+      {{name, arity}, def_p, meta, function_body} ->
         # Unzipping function_body
         {metas, parameters, guards, bodies} =
           Enum.reduce(function_body, {[], [], [], []}, fn {curr_m, curr_p, curr_g, curr_b},
@@ -261,8 +237,8 @@ defmodule ElixirSessions.Checking do
           end)
 
         %ST.Function{
-          name: func_name_arity,
-          arity: 0,
+          name: name,
+          arity: arity,
           def_p: def_p,
           meta: meta,
           cases: length(bodies),
@@ -277,10 +253,23 @@ defmodule ElixirSessions.Checking do
     end)
   end
 
-  defp func_body({_, _, _, body}), do: body
+  # Given a function name, returns a matching (& unique) arity
+  defp get_arity!(all_functions, name) do
+    matches =
+      Enum.map(
+        all_functions,
+        fn
+          %ST.Function{name: ^name, arity: arity} -> arity
+          _ -> nil
+        end
+      )
+      |> Enum.filter(fn elem -> !is_nil(elem) end)
 
-  defp func_body(_) do
-    throw("Expected a tuple of size 4")
+    case length(matches) do
+      0 -> throw("Function #{name} was not found.")
+      1 -> hd(matches)
+      _ -> throw("Multiple function with the name #{name} were found with different arity.")
+    end
   end
 
   # Given "name/arity" returns {name, arity} where name is an atom and arity is a number
@@ -302,6 +291,41 @@ defmodule ElixirSessions.Checking do
           |> elem(0)
 
         {name, arity}
+    end
+  end
+
+  defp ensure_def_not_defp!(session_types, all_functions) do
+    Enum.map(session_types, fn {{name, arity}, _session_type} ->
+      %ST.Function{def_p: def_p} = lookup_function!(all_functions, name, arity)
+
+      case def_p do
+        :def ->
+          :ok
+
+        :defp ->
+          throw(
+            "Session types can only be added to def function. " <>
+              "#{name}/#{arity} is defined as defp."
+          )
+      end
+    end)
+  end
+
+  defp lookup_function!(all_functions, name, arity) do
+    matches =
+      Enum.map(
+        all_functions,
+        fn
+          %ST.Function{name: ^name, arity: ^arity} = function -> function
+          _ -> nil
+        end
+      )
+      |> Enum.filter(fn elem -> !is_nil(elem) end)
+
+    case length(matches) do
+      0 -> throw("Function #{name}/#{arity} was not found.")
+      1 -> hd(matches)
+      _ -> throw("Multiple function with the name #{name}/#{arity}.")
     end
   end
 
