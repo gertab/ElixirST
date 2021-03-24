@@ -404,9 +404,10 @@ defmodule ElixirSessions.Operations do
         %ST.Call_Recurse{label: label2},
         recurse_var_mapping
       ) do
-
     case Map.fetch(recurse_var_mapping, label1) do
-      {:ok, ^label2} -> true
+      {:ok, ^label2} ->
+        true
+
       _ ->
         # In case of free var
         label1 == label2
@@ -437,7 +438,7 @@ defmodule ElixirSessions.Operations do
           {:ok, session_type()} | {:error, any()}
   def session_subtraction(session_type, header_session_type) do
     try do
-      remaining_session_type = session_subtraction!(session_type, header_session_type)
+      remaining_session_type = session_subtraction!(session_type, %{}, header_session_type, %{})
 
       {:ok, remaining_session_type}
     catch
@@ -445,31 +446,40 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  @spec session_subtraction!(session_type(), session_type()) :: session_type()
-  def session_subtraction!(session_type, header_session_type)
+  @spec session_subtraction!(session_type(), %{}, session_type(), %{}) :: session_type()
+  def session_subtraction!(session_type, rec_var1, header_session_type, rec_var2)
 
   def session_subtraction!(
         %ST.Send{label: label, types: types, next: next1},
-        %ST.Send{label: label, types: types, next: next2}
+        rec_var1,
+        %ST.Send{label: label, types: types, next: next2},
+        rec_var2
       ) do
-    session_subtraction!(next1, next2)
+    session_subtraction!(next1, rec_var1, next2, rec_var2)
   end
 
   def session_subtraction!(
         %ST.Recv{label: label, types: types, next: next1},
-        %ST.Recv{label: label, types: types, next: next2}
+        rec_var1,
+        %ST.Recv{label: label, types: types, next: next2},
+        rec_var2
       ) do
-    session_subtraction!(next1, next2)
+    session_subtraction!(next1, rec_var1, next2, rec_var2)
   end
 
-  def session_subtraction!(%ST.Choice{choices: choices1}, %ST.Choice{choices: choices2}) do
+  def session_subtraction!(
+        %ST.Choice{choices: choices1},
+        rec_var1,
+        %ST.Choice{choices: choices2},
+        rec_var2
+      ) do
     # Sorting is done (automatically) by the map
     choices2
     |> Enum.map(fn
       {choice2_key, choice2_value} ->
         case Map.fetch(choices1, choice2_key) do
           {:ok, choice1_value} ->
-            session_subtraction!(choice1_value, choice2_value)
+            session_subtraction!(choice1_value, rec_var1, choice2_value, rec_var2)
 
           :error ->
             throw("Choosing non exisiting choice: #{ST.st_to_string(choice2_value)}.")
@@ -488,7 +498,12 @@ defmodule ElixirSessions.Operations do
     end)
   end
 
-  def session_subtraction!(%ST.Branch{branches: branches1}, %ST.Branch{branches: branches2}) do
+  def session_subtraction!(
+        %ST.Branch{branches: branches1},
+        rec_var1,
+        %ST.Branch{branches: branches2},
+        rec_var2
+      ) do
     # Sorting is done (automatically) by the map
 
     if map_size(branches1) != map_size(branches2) do
@@ -501,7 +516,7 @@ defmodule ElixirSessions.Operations do
     Enum.zip(Map.values(branches1), Map.values(branches2))
     |> Enum.map(fn
       {branch1, branch2} ->
-        session_subtraction!(branch1, branch2)
+        session_subtraction!(branch1, rec_var1, branch2, rec_var2)
     end)
     |> Enum.reduce(fn
       remaining_st, acc ->
@@ -516,58 +531,100 @@ defmodule ElixirSessions.Operations do
     end)
   end
 
-  def session_subtraction!(%ST.Choice{choices: choices1}, %ST.Send{label: label} = choice2) do
+  def session_subtraction!(
+        %ST.Choice{choices: choices1},
+        rec_var1,
+        %ST.Send{label: label} = choice2,
+        rec_var2
+      ) do
     case Map.fetch(choices1, label) do
       {:ok, choice1_value} ->
-        session_subtraction!(choice1_value, choice2)
+        session_subtraction!(choice1_value, rec_var1, choice2, rec_var2)
 
       :error ->
         throw("Choosing non exisiting choice: #{ST.st_to_string(choice2)}.")
     end
   end
 
-  def session_subtraction!(%ST.Branch{branches: branches1} = b1, %ST.Recv{label: label} = branch2) do
+  def session_subtraction!(
+        %ST.Branch{branches: branches1} = b1,
+        rec_var1,
+        %ST.Recv{label: label} = branch2,
+        rec_var2
+      ) do
     if map_size(branches1) != 1 do
       throw("Cannot match #{ST.st_to_string(branch2)} with #{ST.st_to_string(b1)}.")
     end
 
     case Map.fetch(branches1, label) do
       {:ok, branch1_value} ->
-        session_subtraction!(branch1_value, branch2)
+        session_subtraction!(branch1_value, rec_var1, branch2, rec_var2)
 
       :error ->
         throw("Choosing non exisiting choice: #{ST.st_to_string(branch2)}.")
     end
   end
 
-  def session_subtraction!(%ST.Recurse{label: label, body: body1}, %ST.Recurse{
-        label: label,
-        body: body2
-      }) do
-    session_subtraction!(body1, body2)
+  def session_subtraction!(
+        %ST.Recurse{label: label1, body: body1} = rec1,
+        rec_var1,
+        %ST.Recurse{label: label2, body: body2} = rec2,
+        rec_var2
+      ) do
+    rec_var1 = Map.put(rec_var1, label1, rec1)
+    rec_var2 = Map.put(rec_var2, label2, rec2)
+
+    session_subtraction!(body1, rec_var1, body2, rec_var2)
   end
 
-  def session_subtraction!(%ST.Call_Recurse{label: label}, %ST.Call_Recurse{label: label}) do
-    # todo alpha equivalence?
-    %ST.Terminate{}
+  def session_subtraction!(
+        %ST.Recurse{label: label1, body: body1} = rec1,
+        rec_var1,
+        %ST.Call_Recurse{label: label2},
+        rec_var2
+      ) do
+
+    rec_var1 = Map.put(rec_var1, label1, rec1)
+
+    case Map.fetch(rec_var2, label2) do
+      {:ok, st} -> session_subtraction!(body1, rec_var1, st, rec_var2)
+      :error -> throw("Trying to unfold #{label2} but not found.")
+    end
   end
 
-  def session_subtraction!(remaining_session_type, %ST.Terminate{}) do
+  def session_subtraction!(
+        %ST.Call_Recurse{label: label1},
+        rec_var1,
+        %ST.Call_Recurse{label: label2},
+        rec_var2
+      ) do
+
+    rec1 = Map.fetch!(rec_var1, label1)
+    rec2 = Map.fetch!(rec_var2, label2)
+
+    if ST.equal?(ST.unfold_unknown(rec1, rec_var1), ST.unfold_unknown(rec2, rec_var2)) do
+      %ST.Terminate{}
+    else
+      throw("Session types #{ST.st_to_string(rec1)} does not correspond to #{ST.st_to_string(rec2)}.")
+    end
+  end
+
+  def session_subtraction!(remaining_session_type, _rec_var1, %ST.Terminate{}, _rec_var2) do
     remaining_session_type
   end
 
-  def session_subtraction!(%ST.Terminate{}, remaining_session_type) do
+  def session_subtraction!(%ST.Terminate{}, _rec_var1, remaining_session_type, _rec_var2) do
     throw(
       "Session type larger than expected. Remaining: #{ST.st_to_string(remaining_session_type)}."
     )
   end
 
-  def session_subtraction!(st, %ST.Recurse{body: body}) do
-    # todo alpha equivalence?
-    session_subtraction!(st, body)
+  def session_subtraction!(st, rec_var1, %ST.Recurse{label: label2, body: body} = rec2, rec_var2) do
+    rec_var2 = Map.put(rec_var2, label2, rec2)
+    session_subtraction!(st, rec_var1, body, rec_var2)
   end
 
-  def session_subtraction!(session_type, header_session_type) do
+  def session_subtraction!(session_type, _rec_var1, header_session_type, _rec_var2) do
     throw(
       "Session type #{ST.st_to_string(session_type)} does not match session type " <>
         "#{ST.st_to_string(header_session_type)}."
@@ -831,11 +888,12 @@ defmodule ElixirSessions.Operations do
 
     equal?(ST.string_to_st(s1), ST.string_to_st(s2), %{})
 
-    s1 = "!A().rec X.(!AA().?B().X)"
+    s1 =
+      "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
 
-    s2 = "?B().X"
+    s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
 
-    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         # assert false
         ST.st_to_string(remaining_st)

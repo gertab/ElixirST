@@ -25,7 +25,8 @@ defmodule ElixirSessions.PingPong do
       {:pong} ->
         IO.puts("Received pong!")
     end
-kkk()
+
+    kkk()
   end
 
   # @session "end"

@@ -518,7 +518,7 @@ defmodule ST do
 
   @spec session_subtraction!(session_type(), session_type()) :: session_type()
   def session_subtraction!(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.session_subtraction!(session_type, session_type_internal_function)
+    ElixirSessions.Operations.session_subtraction!(session_type, %{}, session_type_internal_function, %{})
   end
 
   @spec session_subtraction(session_type(), session_type()) ::

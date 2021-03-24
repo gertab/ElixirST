@@ -166,30 +166,28 @@ defmodule ElixirSessions.SessionTypechecking do
         # confirm that body is the same
         rec_var
       else
-        Map.put(rec_var, label, session_type_body)
-        # Map.put(rec_var, label, recurse)
+        # Map.put(rec_var, label, session_type_body)
+        Map.put(rec_var, label, recurse)
       end
 
     session_typecheck_ast(body, session_type_body, rec_var, function_st_context, module_context)
   end
 
-  # def session_typecheck_ast(body, %ST.Call_Session_Type{} = call, rec_var, function_st_context, module_context) do
-  #   %ST.Call_Session_Type{label: label} = call
+  def session_typecheck_ast(
+        body,
+        %ST.Call_Recurse{label: label},
+        rec_var,
+        function_st_context,
+        module_context
+      ) do
+    session_type_body =
+      case Map.fetch(rec_var, label) do
+        {:ok, session_type} -> session_type
+        :error -> throw("Calling unbound variable: #{label}.")
+      end
 
-  ###### todo unfold
-
-  #   %ST.Module{
-  #     session_types: session_types
-  #   } = module_context
-
-  #   case Map.fetch(session_types, label) do
-  #     {:ok, session_type_call} ->
-  #       session_typecheck_ast(body, session_type_call, rec_var, function_st_context, module_context)
-
-  #     :error ->
-  #       throw("Session type '#{label}' not found.")
-  #   end
-  # end
+    session_typecheck_ast(body, session_type_body, rec_var, function_st_context, module_context)
+  end
 
   # literals
   def session_typecheck_ast(x, session_type, _rec_var, _function_st_context, _module_context)
@@ -326,20 +324,20 @@ defmodule ElixirSessions.SessionTypechecking do
             )
         end
 
-      %ST.Call_Recurse{label: label} ->
-        case Map.fetch(rec_var, label) do
-          {:ok, recurse_type} ->
-            session_typecheck_ast(
-              ast,
-              recurse_type,
-              rec_var,
-              function_st_context,
-              module_context
-            )
+      # %ST.Call_Recurse{label: label} ->
+      #   case Map.fetch(rec_var, label) do
+      #     {:ok, recurse_type} ->
+      #       session_typecheck_ast(
+      #         ast,
+      #         recurse_type,
+      #         rec_var,
+      #         function_st_context,
+      #         module_context
+      #       )
 
-          :error ->
-            throw("#{line} Found send but expected (unknown) recurse variable #{label}.")
-        end
+      #     :error ->
+      #       throw("#{line} Found send but expected (unknown) recurse variable #{label}.")
+      #   end
 
       _ ->
         throw(
@@ -383,17 +381,17 @@ defmodule ElixirSessions.SessionTypechecking do
         %ST.Recv{label: label, types: types, next: next} ->
           %{label => %ST.Recv{label: label, types: types, next: next}}
 
-        %ST.Call_Recurse{label: label} ->
-          case Map.fetch(rec_var, label) do
-            {:ok, %ST.Branch{branches: branches}} ->
-              branches
+        # %ST.Call_Recurse{label: label} ->
+        #   case Map.fetch(rec_var, label) do
+        #     {:ok, %ST.Branch{branches: branches}} ->
+        #       branches
 
-            {:ok, %ST.Recv{label: label, types: types, next: next}} ->
-              %{label => %ST.Recv{label: label, types: types, next: next}}
+        #     {:ok, %ST.Recv{label: label, types: types, next: next}} ->
+        #       %{label => %ST.Recv{label: label, types: types, next: next}}
 
-            :error ->
-              throw("#{line} Found receive but expected (unknown) recurse variable #{label}.")
-          end
+        #     :error ->
+        #       throw("#{line} Found receive but expected (unknown) recurse variable #{label}.")
+        #   end
 
         x ->
           throw("#{line} Found a receive/branch, but expected #{ST.st_to_string(x)}.")
@@ -582,71 +580,38 @@ defmodule ElixirSessions.SessionTypechecking do
         "[Line unknown]"
       end
 
-    # if function_cxt_name == function_name and function_cxt_arity == arity do
-    #   case session_type do
-    #     %ST.Call_Recurse{label: _label} ->
-    #       # todo
-    #       # case Map.fetch(rec_var, label) do
-    #       #   {:ok, _} ->
-    #       #   :error =>
-    #       # end
-
-    #       IO.puts("#{line} Doing recursion for function #{inspect({function_name, arity})}.")
-    #       {false, %ST.Terminate{}}
-
-    #     x ->
-    #       throw(
-    #         "#{line} Doing recursion for function #{inspect({function_name, arity})}. " <>
-    #           "Expected #{ST.st_to_string_current(x)}."
-    #       )
-    #   end
-    # else
     # Call to other function (in same module)
     # Check if a session type already exists for the current function call
     case Map.fetch(function_st_context, {function_name, arity}) do
       {:ok, found_session_type} ->
         IO.puts(
-          "#{line} From function_st_context found mapping from #{
-            inspect({function_name, arity})
-          } " <>
+          "#{line} From function_st_context found mapping from #{inspect({function_name, arity})} " <>
             "to session type #{ST.st_to_string(found_session_type)}."
         )
 
-        case session_type do
-          #   %ST.Call_Session_Type{label: label} ->
-          #     if label == session_type_name do
-          #       # session type matches expected label
+        # case session_type do
+        #   %ST.Call_Recurse{label: _label} ->
+        #     # todo get unfolding
+        #     # todo remove will never be reached (remove in send/receive)
+        #     throw("Todo implement. Recursing on a known function")
+        #     :ok
 
-          #       IO.puts("#{line} Matched call to st: #{ST.st_to_string(session_type)}.")
-          #       {false, %ST.Terminate{}}
-          #     else
-          #       throw(
-          #         "#{line} Expected call to function with session type labelled #{inspect(label)}. " <>
-          #           "Instead found a call to function #{inspect({function_name, arity})} with session type " <>
-          #           "labelled #{session_type_name}."
-          #       )
-          #     end
-
-          %ST.Call_Recurse{label: _label} ->
-            # todo get unfolding
-            throw("Todo implement. Recursing on a known function")
-            :ok
-
-          _ ->
+        #   _ ->
+            unfolded_st = ST.unfold_unknown(session_type, rec_var)
             IO.puts(
               "#{line} Comparing session-typed function #{inspect({function_name, arity})} with session type " <>
                 "#{ST.st_to_string(found_session_type)} to the expected session type: " <>
-                "#{ST.st_to_string(session_type)}."
+                "#{ST.st_to_string(unfolded_st)}."
             )
 
-            case ST.session_subtraction(session_type, found_session_type) do
+            case ST.session_subtraction(unfolded_st, found_session_type) do
               {:ok, remaining_session_type} ->
                 {false, remaining_session_type}
 
               {:error, error} ->
                 throw(error)
             end
-        end
+        # end
 
       :error ->
         # Call to un-(session)-typed function
@@ -666,7 +631,10 @@ defmodule ElixirSessions.SessionTypechecking do
             )
 
             unfolded_session_type = ST.unfold_unknown(session_type, rec_var)
-            function_st_context = Map.put(function_st_context, {function_name, arity}, unfolded_session_type)
+
+            function_st_context =
+              Map.put(function_st_context, {function_name, arity}, unfolded_session_type)
+
             Enum.map(bodies, fn ast ->
               session_typecheck_ast(
                 ast,
@@ -678,6 +646,7 @@ defmodule ElixirSessions.SessionTypechecking do
             end)
             # todo ensure all bodies reach the same results
             |> hd
+            # todo fix session type using tail subtraction
 
           :error ->
             throw(
