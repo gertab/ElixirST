@@ -125,7 +125,7 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
-      |> IO.inspect()
+      # |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
     # erl_syntax:form_list(AC)
@@ -151,12 +151,13 @@ defmodule ElixirSessions.Checking do
 
     # Ensures unique session type names
     session_types_name_arity
-    |> Enum.map(&elem(&1, 1))
+    # [{:a, :b}, {:c, :d}] -> [:a, :c]
+    |> Enum.map(&elem(&1, 0))
     |> ensure_no_duplicates!()
 
     all_functions =
       get_all_functions!(dbgi_map)
-      |> IO.inspect()
+      # |> IO.inspect()
 
     # dbgi_map
     # |> IO.inspect()

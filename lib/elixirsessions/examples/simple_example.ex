@@ -3,9 +3,9 @@ defmodule ElixirSessions.SmallExample do
   @moduledoc false
   # iex -S mix
 
-  # def run() do
-  #   spawn(__MODULE__, :example1, [])
-  # end
+  def run() do
+    spawn(__MODULE__, :example1, [])
+  end
 
 
 
@@ -14,62 +14,65 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  # @session "function1 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y}   )   )"
-  # def function1(pid) do
+  @session "function1 = rec X.(   !ok().rec Y.(  !ok2().&{?option1().X, ?option2().Y}   )   )"
+  def function1(pid) do
+    send(pid, {:ok})
+
+    function2(pid)
+  end
+
+  def function2(pid) do
+
+    send(pid, {:ok2})
+
+    receive do
+      {:option1} -> function1(pid)
+      {:option2} -> function2(pid)
+    end
+  end
+
+
+
+
+
+
+  # send in diff function
+  @session "function3 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y}   )   )"
+  def function3(pid) do
+    function_send(pid)
+    function4(pid)
+  end
+
+  def function_send(pid) do
+    send(pid, {:ok})
+  end
+
+  def function4(pid) do
+    receive do
+      {:option1} -> function3(pid)
+      {:option2} -> function4(pid)
+    end
+  end
+
+
+
+
+
+
+  # @session "function5 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y, ?option3().!finish()}   )   )"
+  # def function5(pid) do
   #   send(pid, {:ok})
 
-  #   function2(pid)
-  # end
-
-  # def function2(pid) do
-  #   receive do
-  #     {:option1} -> function1(pid)
-  #     {:option2} -> function2(pid)
-  #   end
-  # end
-
-
-
-
-
-
-  # # send in diff function
-  # @session "function1 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y}   )   )"
-  # def function1(pid) do
-  #   function_send(pid)
-  #   function2(pid)
-  # end
-
-  # def function_send(pid) do
-  #   send(pid, {:ok})
-  # end
-
-  # def function2(pid) do
-  #   receive do
-  #     {:option1} -> function1(pid)
-  #     {:option2} -> function2(pid)
-  #   end
-  # end
-
-
-
-
-
-
-  # @session "function1 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y, ?option3().!finish()}   )   )"
-  # def function1(pid) do
-  #   send(pid, {:ok})
-
-  #   function2(pid)
+  #   function6(pid)
 
   #   send(pid, {:finish})
   # end
 
-  # def function2(pid) do
+  # def function6(pid) do
   #   receive do
-  #     {:option1} -> function1(pid)
-  #     {:option2} -> function2(pid)
-  #     {:finish} -> nil
+  #     {:option1} -> function5(pid)
+  #     {:option2} -> function6(pid)
+  #     {:option3} -> nil
   #   end
   # end
 

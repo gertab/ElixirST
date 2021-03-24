@@ -871,7 +871,7 @@ defmodule ElixirSessions.Operations do
     else
       case Map.fetch(recurse_var, label) do
         {:ok, found} -> found
-        :error -> throw("Trying to expand Call_Recurse, but #{label} was not found.")
+        :error -> throw("Trying to expand Call_Recurse, but #{label} was not found (#{inspect recurse_var}).")
       end
     end
   end
@@ -888,8 +888,7 @@ defmodule ElixirSessions.Operations do
 
     equal?(ST.string_to_st(s1), ST.string_to_st(s2), %{})
 
-    s1 =
-      "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
+    s1 = "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
 
     s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
 

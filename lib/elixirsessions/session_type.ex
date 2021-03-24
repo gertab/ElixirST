@@ -472,7 +472,16 @@ defmodule ST do
   """
   @spec unfold_unknown(session_type(), %{}) :: session_type()
   def unfold_unknown(session_type, recurse_var_map) do
-    ElixirSessions.Operations.unfold_unknown_inside(session_type, recurse_var_map, [])
+
+    modified = ElixirSessions.Operations.unfold_unknown_inside(session_type, recurse_var_map, [])
+
+    if ST.equal?(session_type, modified) do
+      session_type
+    else
+      # Unfolds for unfolded variable may be needed
+      # E.g. !A().X becomes !A().!B().Y which needs to end up as !A().!B().!C()
+      ElixirSessions.Operations.unfold_unknown_inside(modified, recurse_var_map, [])
+    end
   end
 
   @doc """

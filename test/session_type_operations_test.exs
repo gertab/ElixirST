@@ -410,6 +410,22 @@ defmodule ElixirSessionsOperations do
     end
   end
 
+  test "Comparing session types recursion - but equal" do
+    s1 = "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
+
+    s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
+
+    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st("end")
+        # throw("#{ST.st_to_string(remaining_st)}")
+        assert expected_remaining_st == remaining_st
+
+      {:error, _} ->
+        assert false
+    end
+  end
+
   test "Tail subtract session types simple" do
     s1 = "!Hello2(atom, list).!Hello(atom, list).?H11()"
     s2 = "?H11()"
