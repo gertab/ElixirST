@@ -36,7 +36,7 @@ defmodule ElixirSessions.Retriever do
     map =
       case backend do
         :elixir_erl ->
-          # Erlang extened AST available
+          # Erlang extended AST available
           {:elixir_v1, map, _} = metadata
           map
       end

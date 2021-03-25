@@ -17,11 +17,11 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :test, accumulate: true, persist: true)
 
-      @on_definition ElixirSessions.Checking
+      # @on_definition ElixirSessions.Checking
       # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
       # __after_compile__/2 runs after elixir has compiled the AST into BEAM bytecode
       @after_compile ElixirSessions.Checking
-      @before_compile ElixirSessions.Checking
+      # @before_compile ElixirSessions.Checking
 
       IO.puts("ElixirSession started in #{IO.inspect(__MODULE__)}")
     end
@@ -101,6 +101,8 @@ defmodule ElixirSessions.Checking do
   # end
   def __on_definition__(env, _access, name, args, _guards, body) do
     IO.puts("__on_definition__xz")
+    IO.inspect(env)
+    IO.inspect(__MODULE__)
     Module.put_attribute(env.module, :test, {name, length(args)})
   end
 
@@ -109,7 +111,7 @@ defmodule ElixirSessions.Checking do
   end
 
   def __after_compile__(_env, bytecode) do
-    IO.puts("AFTER COMPILE")
+    # IO.puts("AFTER COMPILE")
     # todo pattern matched functions?????
 
     # Gets debug_info chunk from BEAM file
@@ -119,13 +121,13 @@ defmodule ElixirSessions.Checking do
         {:error, _, error} -> throw("Error: #{inspect(error)}")
       end
 
-    # Gets the (extened) Elixir abstract syntax tree from debug_info chunk
+    # Gets the (extended) Elixir abstract syntax tree from debug_info chunk
     dbgi_map =
       case chunks[:debug_info] do
         {:debug_info_v1, :elixir_erl, metadata} ->
           case metadata do
             {:elixir_v1, map, _} ->
-              # Erlang extened AST available
+              # Erlang extended AST available
               map
 
             {version, _, _} ->
@@ -144,7 +146,7 @@ defmodule ElixirSessions.Checking do
     raw_session_types = Keyword.get_values(dbgi_map[:attributes], :session)
 
     dbgi_map[:attributes]
-    |> IO.inspect
+    # |> IO.inspect
 
     # # Parses session type from string to Elixir data
     # all_session_types =
