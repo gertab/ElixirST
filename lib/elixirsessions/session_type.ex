@@ -131,8 +131,6 @@ defmodule ST do
           | %ST.Call_Recurse{label: label()}
           | %ST.Terminate{}
 
-  @type session_type_incl_label() :: {label(), session_type()}
-
   @typedoc """
   Session types when stored as tuples. Useful for when converting from Erlang records.
   """
@@ -337,7 +335,7 @@ defmodule ST do
       "rec x.(&{?Hello(number), ?Retry().X})"
   """
   # todo should you include '.end'?
-  @spec st_to_string(session_type() | session_type_incl_label()) :: String.t()
+  @spec st_to_string(session_type()) :: String.t()
   def st_to_string(session_type) do
     ElixirSessions.Operations.st_to_string(session_type)
   end
@@ -374,9 +372,9 @@ defmodule ST do
     ElixirSessions.Parser.parse(st_string)
   end
 
-  @spec string_to_st_incl_label(String.t()) :: {label(), session_type()}
-  def string_to_st_incl_label(st_string) do
-    ElixirSessions.Parser.parse_incl_label(st_string)
+  @spec string_to_st_no_validations(String.t()) :: session_type()
+  def string_to_st_no_validations(st_string) do
+    ElixirSessions.Parser.parse_no_validations(st_string)
   end
 
   @doc """

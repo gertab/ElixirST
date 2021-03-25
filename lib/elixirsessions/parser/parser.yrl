@@ -1,14 +1,10 @@
 Nonterminals
-session_type session choice_label_sessions branch_label_sessions types_list sequences sessions. 
+session choice_label_sessions branch_label_sessions types_list sequences sessions. 
 
 Terminals
 send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')' '='.
 
-Rootsymbol session_type.
-
-session_type -> label '='                                  : {nolabel, #terminate{}}.
-session_type -> session                                    : {nolabel, '$1'}.
-session_type -> label '=' session                          : {unwrap('$1'), '$3'}.
+Rootsymbol session.
 
 session -> terminate                                       : #terminate{}.
 session -> send label '(' ')'                              : #send{label=unwrap('$2'), types=[], next=#terminate{}}.
