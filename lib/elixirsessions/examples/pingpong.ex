@@ -11,7 +11,7 @@ defmodule ElixirSessions.PingPong do
   # end
 
   # @session "ping = !ping(any).?pong()"
-  @session "ping = !ping(any).rec X.(?pong().X)"
+  @session "!ping(any).rec X.(?pong().X)"
   def ping(pid) when is_pid(pid) do
     IO.puts("Sending ping to #{inspect(pid)}")
 
@@ -29,7 +29,7 @@ defmodule ElixirSessions.PingPong do
     kkk()
   end
 
-  @session "hello = rec X.(&{?A().X, ?B().!C()})"
+  @session "rec X.(&{?A().X, ?B().!C()})"
   def hello() do
     receive do
       {:A} -> hello()
@@ -58,7 +58,7 @@ defmodule ElixirSessions.PingPong do
   #   end
   # end
 
-  @session "pong/0 = ?ping(any).!pong()"
+  @session "?ping(any).!pong()"
   def pong() do
     receive do
       {:ping, pid} ->
@@ -115,7 +115,7 @@ defmodule ElixirSessions.PingPong do
   #   # ping(self())
   # end
 
-  @session "do_something = !helloooo().!helloooo2()"
+  @session "!helloooo().!helloooo2()"
   def do_something(5555) do
     send(self(), {:helloooo})
     send(self(), {:helloooo2})

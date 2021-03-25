@@ -14,14 +14,14 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  @session "function1 = rec X.(   !ok().rec Y.(  !ok2().&{?option1().X, ?option2().Y}   )   )"
+  @session "rec X.(   !ok().rec Y.(  !ok2().&{?option1().X, ?option2().Y}   )   )"
   def function1(pid) do
     send(pid, {:ok})
 
     function2(pid)
   end
 
-  def function2(pid) do
+  defp function2(pid) do
 
     send(pid, {:ok2})
 
@@ -37,7 +37,7 @@ defmodule ElixirSessions.SmallExample do
 
 
   # send in diff function
-  @session "function3 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y}   )   )"
+  @session "rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y}   )   )"
   def function3(pid) do
     function_send(pid)
     function4(pid)
