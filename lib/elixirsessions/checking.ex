@@ -17,7 +17,7 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :test, accumulate: true, persist: true)
 
-      # @on_definition ElixirSessions.Checking
+      @on_definition ElixirSessions.Checking
       # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
       # __after_compile__/2 runs after elixir has compiled the AST into BEAM bytecode
       @after_compile ElixirSessions.Checking
@@ -99,8 +99,8 @@ defmodule ElixirSessions.Checking do
 
   #   :ok
   # end
-  def __on_definition__(env, _access, name, args, _guards, body) do
-    IO.puts("__on_definition__xz")
+  def __on_definition__(env, _access, name, args, _guards, _body) do
+    IO.puts("__on_definition__x")
     IO.inspect(env)
     IO.inspect(__MODULE__)
     Module.put_attribute(env.module, :test, {name, length(args)})
@@ -146,7 +146,7 @@ defmodule ElixirSessions.Checking do
     raw_session_types = Keyword.get_values(dbgi_map[:attributes], :session)
 
     dbgi_map[:attributes]
-    # |> IO.inspect
+    |> IO.inspect
 
     # # Parses session type from string to Elixir data
     # all_session_types =
