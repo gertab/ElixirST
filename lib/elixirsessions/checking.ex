@@ -15,11 +15,13 @@ defmodule ElixirSessions.Checking do
 
       Module.register_attribute(__MODULE__, :session, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :infer_session, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :test, accumulate: true, persist: true)
 
-      # @on_definition ElixirSessions.Checking
+      @on_definition ElixirSessions.Checking
       # todo checkout @before_compile, @after_compile [Elixir fires the before compile hook after expansion but before compilation.]
       # __after_compile__/2 runs after elixir has compiled the AST into BEAM bytecode
       @after_compile ElixirSessions.Checking
+      @before_compile ElixirSessions.Checking
 
       IO.puts("ElixirSession started in #{IO.inspect(__MODULE__)}")
     end
@@ -97,6 +99,14 @@ defmodule ElixirSessions.Checking do
 
   #   :ok
   # end
+  def __on_definition__(env, _access, name, args, _guards, body) do
+    IO.puts("__on_definition__xz")
+    Module.put_attribute(env.module, :test, {name, length(args)})
+  end
+
+  def __before_compile__(_env) do
+    IO.puts("BEFORE COMPILE")
+  end
 
   def __after_compile__(_env, bytecode) do
     IO.puts("AFTER COMPILE")
@@ -133,57 +143,60 @@ defmodule ElixirSessions.Checking do
     # Gets the list of session types, which were stored as attributes in the module
     raw_session_types = Keyword.get_values(dbgi_map[:attributes], :session)
 
-    # Parses session type from string to Elixir data
-    all_session_types =
-      raw_session_types
-      |> Enum.map(&ST.string_to_st_incl_label(&1))
+    dbgi_map[:attributes]
+    |> IO.inspect
 
-    # |> IO.inspect()
+    # # Parses session type from string to Elixir data
+    # all_session_types =
+    #   raw_session_types
+    #   |> Enum.map(&ST.string_to_st_incl_label(&1))
 
-    # Parses session type labels:
-    # e.g. ["ping/2": %ST.Terminate{}] becomes [{{:ping, 2}, %ST.Terminate{}}]
-    #      ["ping": %ST.Terminate{}]   becomes [{{:ping},    %ST.Terminate{}}]
-    session_types_name_arity =
-      all_session_types
-      |> Enum.map(fn {key, value} -> {split_name(key), value} end)
+    # # |> IO.inspect()
 
-    # |> IO.inspect()
+    # # Parses session type labels:
+    # # e.g. ["ping/2": %ST.Terminate{}] becomes [{{:ping, 2}, %ST.Terminate{}}]
+    # #      ["ping": %ST.Terminate{}]   becomes [{{:ping},    %ST.Terminate{}}]
+    # session_types_name_arity =
+    #   all_session_types
+    #   |> Enum.map(fn {key, value} -> {split_name(key), value} end)
 
-    # Ensures unique session type names
-    session_types_name_arity
-    # [{:a, :b}, {:c, :d}] -> [:a, :c]
-    |> Enum.map(&elem(&1, 0))
-    |> ensure_no_duplicates!()
+    # # |> IO.inspect()
 
-    all_functions =
-      get_all_functions!(dbgi_map)
-      # |> IO.inspect()
+    # # Ensures unique session type names
+    # session_types_name_arity
+    # # [{:a, :b}, {:c, :d}] -> [:a, :c]
+    # |> Enum.map(&elem(&1, 0))
+    # |> ensure_no_duplicates!()
 
-    # dbgi_map
-    # |> IO.inspect()
+    # all_functions =
+    #   get_all_functions!(dbgi_map)
+    #   # |> IO.inspect()
 
-    matching_session_types_functions =
-      Enum.map(
-        session_types_name_arity,
-        fn
-          {{name, arity}, session_type} -> {{name, arity}, session_type}
-          {{name}, session_type} -> {{name, get_arity!(all_functions, name)}, session_type}
-        end
-      )
-      |> IO.inspect()
+    # # dbgi_map
+    # # |> IO.inspect()
 
-    # @session can only be used with def not defp
-    _ = ensure_def_not_defp!(matching_session_types_functions, all_functions)
+    # matching_session_types_functions =
+    #   Enum.map(
+    #     session_types_name_arity,
+    #     fn
+    #       {{name, arity}, session_type} -> {{name, arity}, session_type}
+    #       {{name}, session_type} -> {{name, get_arity!(all_functions, name)}, session_type}
+    #     end
+    #   )
+    #   |> IO.inspect()
 
-    %ST.Module{
-      functions: all_functions,
-      function_session_type: to_map(matching_session_types_functions),
-      file: dbgi_map[:file],
-      relative_file: dbgi_map[:relative_file],
-      line: dbgi_map[:line],
-      module_name: dbgi_map[:module]
-    }
-    |> ElixirSessions.SessionTypechecking.session_typecheck_module()
+    # # @session can only be used with def not defp
+    # _ = ensure_def_not_defp!(matching_session_types_functions, all_functions)
+
+    # %ST.Module{
+    #   functions: all_functions,
+    #   function_session_type: to_map(matching_session_types_functions),
+    #   file: dbgi_map[:file],
+    #   relative_file: dbgi_map[:relative_file],
+    #   line: dbgi_map[:line],
+    #   module_name: dbgi_map[:module]
+    # }
+    # |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
 
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile)

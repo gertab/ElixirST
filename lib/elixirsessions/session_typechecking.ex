@@ -88,14 +88,13 @@ defmodule ElixirSessions.SessionTypechecking do
     #   arity: arity
     # }
 
-    {rec_var, function_st_context, remaining_session_type} =
+    {_rec_var, _function_st_context, remaining_session_type} =
       session_typecheck_ast(
         ast,
         expected_session_type,
         rec_var,
         function_st_context,
         module_context
-        # | cur_function: cur_function
       )
 
     case remaining_session_type do
@@ -117,11 +116,6 @@ defmodule ElixirSessions.SessionTypechecking do
   @spec session_typecheck(atom(), arity(), ast(), session_type()) :: :ok
   def session_typecheck(fun, arity, body, session_type) do
     IO.puts("Session typechecking of &#{to_string(fun)}/#{arity}")
-
-    # function_context = %ST.Function{
-    #   name: fun,
-    #   arity: arity
-    # }
 
     IO.puts("Session typechecking: #{ST.st_to_string(session_type)}")
 

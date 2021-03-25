@@ -29,6 +29,15 @@ defmodule ElixirSessions.PingPong do
     kkk()
   end
 
+  @session "hello = rec X.(&{?A().X, ?B().!C()})"
+  def hello() do
+    receive do
+      {:A} -> hello()
+      {:B} -> nil
+      send(self(), {:C})
+    end
+  end
+
   # @session "end"
   # defp ppp() do
   #   if 2 + 3 < 2 do
