@@ -15,6 +15,9 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
       @session_typing true
       @compile :debug_info
+      @session ""
+      Module.delete_attribute(__MODULE__, :session)
+
 
       @on_definition ElixirSessions.Checking
       @after_compile ElixirSessions.Checking

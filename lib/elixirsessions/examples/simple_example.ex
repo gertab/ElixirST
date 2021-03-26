@@ -7,13 +7,6 @@ defmodule ElixirSessions.SmallExample do
     spawn(__MODULE__, :example1, [])
   end
 
-
-
-
-
-
-
-
   @session "rec X.(   !ok().rec Y.(  !ok2().&{?option1().X, ?option2().Y}   )   )"
   def function1(pid) do
     send(pid, {:ok})
@@ -22,7 +15,6 @@ defmodule ElixirSessions.SmallExample do
   end
 
   defp function2(pid) do
-
     send(pid, {:ok2})
 
     receive do
@@ -30,11 +22,6 @@ defmodule ElixirSessions.SmallExample do
       {:option2} -> function2(pid)
     end
   end
-
-
-
-
-
 
   # send in diff function
   @session "rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y}   )   )"
@@ -54,11 +41,6 @@ defmodule ElixirSessions.SmallExample do
     end
   end
 
-
-
-
-
-
   # @session "rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y, ?option3().!finish()}   )   )"
   # def function5(pid) do
   #   send(pid, {:ok})
@@ -76,26 +58,28 @@ defmodule ElixirSessions.SmallExample do
   #   end
   # end
 
-
   @session """
-          rec X.(
-                  &{
-                       ?A().rec Z.(  !C().Z  ),
-                       ?B().rec Y.(  +{!D(), !E().Y, !F().X}  ),
-                       ?C()
-                    }
-                )
-          """
+  rec X.(
+          &{
+               ?A().rec Z.(  !C().Z  ),
+               ?B().rec Y.(  +{!D(), !E().Y, !F().X}  ),
+               ?C()
+            }
+        )
+  """
   def dooo() do
     pid = self()
+
     receive do
       {:A} ->
         firstRec(pid)
+
       {:B} ->
         secondRec(pid, 5)
-      {:C} -> :ok
-    end
 
+      {:C} ->
+        :ok
+    end
   end
 
   def firstRec(pid) do

@@ -24,7 +24,7 @@ be found at [https://hexdocs.pm/elixirsessions](https://hexdocs.pm/elixirsession
 ## Session Types in Elixir
 
 Session types are used to ensure correct communication between concurrent programs. 
-Some session type definitions: `!` refers to a send action, `?` refers to a receive action, `&` refers to a branch (external choice), and `+` refers to (internal) choice.
+Some session type definitions: `!` refers to a send action, `?` refers to a receive action, `&` refers to a branch (external choice), and `+` refers to an (internal) choice.
 
 Session types accept the following grammar:
 
@@ -128,13 +128,86 @@ If it receives <code>{:Retry}</code> it recurses back to the beginning.
 
 ----------
 
-### ElixirSessions Features
+## Using ElixirSessions
+
+To session type check a module, insert this line:
+```elixir
+use ElixirSessions.Checking
+```
+
+Insert any checks using the `@session` attribute followed by a function that should be session type checked, such as:
+```elixir
+@session "!Ping().?Pong()"
+def function(), do: ...
+```
+
+In the case of multiple function definitions with the name name and arity (for pattern matching), define only one session type for all functions.
+
+## Example
+
+In the following example, `Module1` contains two functions that will be type checked. The first function is type checked with `@session "!Hello().end"` - it expects a single send action containing `{:Hello}`. The second function is type checked with `@session "rec X.(&{...})"` which expects a branching using the receive and a recursive call.
+
+```elixir
+defmodule Module1 do
+  use ElixirSessions.Checking
+
+  @session "!Hello().end"
+  def do_something(pid) do
+    send(pid, {:Hello})
+  end
+
+  @session """
+              rec X.(&{
+                        ?Option1(string),
+                        ?Option2().X,
+                        ?Option3()
+                      })
+           """
+  def do_something_else() do
+    receive do
+      {:Option1, value} ->
+        IO.puts(value)
+
+      {:Option2} ->
+        do_something_else()
+
+      {:Option3} ->
+        :ok
+    end
+  end
+end
+```
+
+In the next example, session type checking fails because the session type `!Hello()` expected to find a send action with `{:Hello}` but found `{:Yo}`:
+```elixir
+defmodule Module2 do
+  use ElixirSessions.Checking
+
+  @session "!Hello()"
+  def do_something(pid) do
+    send(pid, {:Yo})
+  end
+end
+```
+
+Output:
+```
+$ mix compile
+...
+== Compilation error in file example.ex ==
+** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
+    ...
+```
+
+Other examples can be found in the [`lib/elixirsessions/examples`](/lib/elixirsessions/examples) folder.
+
+### Features
 
 ElixirSessions implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
  - string parsing ([`lib/elixirsessions/parser.ex`](/lib/elixirsessions/parser.ex)),
- - code synthesizer from session types ([`lib/elixirsessions/generator.ex`](/lib/elixirsessions/generator.ex)),
- - session type inference from code ([`lib/elixirsessions/inference.ex`](/lib/elixirsessions/inference.ex)),
+ - ~~code synthesizer from session types ([`lib/elixirsessions/generator.ex`](/lib/elixirsessions/generator.ex)),~~
+ - ~~session type inference from code ([`lib/elixirsessions/inference.ex`](/lib/elixirsessions/inference.ex)),~~
  - session type comparison (e.g. equality) and manipulation (e.g. duality).
 
 #### Parsing
@@ -149,7 +222,7 @@ iex> s  = "!Hello(Integer)"
 %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:integer]}
 ```
 
-#### Generator
+#### Generator (not updated)
 
 To synthesize (or generate) Elixir code from a session type use the functions `generate_quoted/1` or `generate_to_string/1`. 
 These automatically generate the quoted (i.e. AST) or stringified Elixir code respectively. 
@@ -186,16 +259,11 @@ Example:
 iex> st_string = "!Ping(Integer).?Pong(String)"
 ...> st = ST.string_to_st(st_string)
 ...> st_dual = ST.dual(st)
-%ST.Recv{
-  label: :Ping,
-  next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: [:string]},
-  types: [:integer]
-}
 ...> ST.st_to_string(st_dual)
 "?Ping(integer).!Pong(string)"
 ```
 
-#### Inference
+#### Inference (Depreciated)
 
 Given quoted Elixir code, _ElixirSessions_ can infer the equivalent session type. To do so, use the function `ElixirSessions.Inference.infer_session_type/2`.
 
