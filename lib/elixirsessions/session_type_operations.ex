@@ -645,15 +645,15 @@ defmodule ElixirSessions.Operations do
   # Walks through session_type until the session type matches the session_type_tail.
   @spec session_tail_subtraction(session_type(), session_type()) ::
           {:ok, session_type()} | {:error, any()}
-  def session_tail_subtraction(session_type, header_session_type) do
+  def session_tail_subtraction(session_type, tail_session_type) do
     try do
-      case session_tail_subtraction!(session_type, header_session_type) do
+      case session_tail_subtraction!(session_type, tail_session_type) do
         {true, front_session_type} ->
           {:ok, front_session_type}
 
         {false, _} ->
           {:error,
-           "Session type #{ST.st_to_string(header_session_type)} was not found in " <>
+           "Session type #{ST.st_to_string(tail_session_type)} was not found in " <>
              "the tail of #{ST.st_to_string(session_type)}."}
       end
     catch
@@ -663,6 +663,12 @@ defmodule ElixirSessions.Operations do
 
   @spec session_tail_subtraction!(session_type(), session_type()) :: {boolean(), session_type()}
   defp session_tail_subtraction!(session_type, session_type_tail)
+
+  # Subtracting from '?pong().rec X.(?pong().X)', the session type 'end', should return 'end'
+  # Hacky fix
+  defp session_tail_subtraction!(_st, %ST.Terminate{}) do
+    {true, %ST.Terminate{}}
+  end
 
   defp session_tail_subtraction!(%ST.Send{} = st, st_tail) do
     if ST.equal?(st, st_tail) do

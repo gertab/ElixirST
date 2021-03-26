@@ -38,15 +38,16 @@ defmodule ElixirSessions.SessionTypechecking do
         %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
         # expected_session_type = Map.fetch!(function_session_type, {name, arity})
 
-        _ = Enum.map(bodies, fn ast ->
-          session_typecheck_by_function(
-            ast,
-            expected_session_type,
-            %{},
-            function_session_type,
-            module_context
-          )
-        end)
+        _ =
+          Enum.map(bodies, fn ast ->
+            session_typecheck_by_function(
+              ast,
+              expected_session_type,
+              %{},
+              function_session_type,
+              module_context
+            )
+          end)
 
         # |> hd()
 
@@ -154,14 +155,14 @@ defmodule ElixirSessions.SessionTypechecking do
       ) do
     %ST.Recurse{label: label, body: session_type_body} = recurse
 
-    # todo fix
-    rec_var =
       if Map.has_key?(rec_var, label) do
-        # confirm that body is the same
-        rec_var
-      else
-        Map.put(rec_var, label, recurse)
+        if not ST.equal?(recurse, Map.get(rec_var, label, %ST.Terminate{})) do
+          IO.puts("Replacing the recursive variable #{label} with new " <>
+          "session type #{ST.st_to_string(Map.get(rec_var, label, %ST.Terminate{}))}")
+        end
       end
+    rec_var =
+      Map.put(rec_var, label, recurse)
 
     session_typecheck_ast(body, session_type_body, rec_var, function_st_context, module_context)
   end
@@ -600,20 +601,49 @@ defmodule ElixirSessions.SessionTypechecking do
             function_st_context =
               Map.put(function_st_context, {function_name, arity}, unfolded_session_type)
 
-            Enum.map(bodies, fn ast ->
-              session_typecheck_ast(
-                ast,
-                unfolded_session_type,
-                # rec_var set to empty
-                %{},
-                function_st_context,
-                module_context
-              )
-            end)
-            # todo ensure all bodies reach the same results
-            |> hd
+            {rec_var, function_st_context, remaining_session_type} =
+              Enum.map(bodies, fn ast ->
+                session_typecheck_ast(
+                  ast,
+                  unfolded_session_type,
+                  # rec_var set to empty
+                  %{},
+                  function_st_context,
+                  module_context
+                )
+              end)
+              # todo ensure all bodies reach the same results
+              |> hd
 
-          # todo fix session type using tail subtraction
+            unfolded_remaining_session_type = ST.unfold_unknown(remaining_session_type, rec_var)
+
+            IO.puts(
+              "Subtracting #{ST.st_to_string(unfolded_remaining_session_type)} from #{
+                ST.st_to_string(unfolded_session_type)
+              }"
+            )
+
+            case ST.session_tail_subtraction(
+                   unfolded_session_type,
+                   unfolded_remaining_session_type
+                 ) do
+              {:ok, fixed_session_type} ->
+                IO.puts(
+                  "#{line} session_tail_subtraction for #{function_name}/#{arity} = #{
+                    ST.st_to_string(fixed_session_type)
+                  }"
+                )
+
+                function_st_context_updated =
+                  Map.put(function_st_context, {function_name, arity}, fixed_session_type)
+
+                {rec_var, function_st_context_updated, remaining_session_type}
+
+              # {rec_var, function_st_context_updated, unfolded_remaining_session_type}
+
+              {:error, error} ->
+                throw("#{line} #{inspect(error)}")
+            end
 
           :error ->
             throw(

@@ -547,4 +547,19 @@ defmodule ElixirSessionsOperations do
         assert true
     end
   end
+
+  test "Tail subtract session types - prolematic - tail is empty" do
+    s1 = "?pong().rec X.(?pong().X)"
+    s2 = "end"
+
+    case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+      {:ok, remaining_st} ->
+        expected_remaining_st = ST.string_to_st("end")
+        # throw("#{ST.st_to_string(remaining_st)}")
+        assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
+
+      {:error, _} ->
+        assert false
+    end
+  end
 end
