@@ -100,7 +100,7 @@ defmodule ElixirSessions.Inference do
       |> fix_structure_no_joins()
       |> ST.convert_to_structs()
 
-    ST.validate!(res_structured)
+    ElixirSessions.Operations.validate!(res_structured)
 
     IO.puts("Inferred session type for &#{fun}:\n#{ST.st_to_string(res_structured)}\n")
 

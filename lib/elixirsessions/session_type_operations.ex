@@ -217,7 +217,7 @@ defmodule ElixirSessions.Operations do
     %ST.Recurse{label: label, body: convert_to_structs(body, [label | recurse_var])}
   end
 
-  def convert_to_structs({:call, label}, recurse_var) do
+  def convert_to_structs({:call, label}, _recurse_var) do
     %ST.Call_Recurse{label: label}
   end
 

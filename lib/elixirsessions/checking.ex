@@ -15,9 +15,6 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
       @session_typing true
       @compile :debug_info
-      @session ""
-      Module.delete_attribute(__MODULE__, :session)
-
 
       @on_definition ElixirSessions.Checking
       @after_compile ElixirSessions.Checking
@@ -52,6 +49,9 @@ defmodule ElixirSessions.Checking do
             "#{name}/#{arity} is defined as defp."
         )
       end
+
+      # Ensure that the session type is valid
+      :ok = ST.validate!(session)
 
       Module.put_attribute(env.module, :session_marked, {{name, arity}, session})
       Module.delete_attribute(env.module, :session)

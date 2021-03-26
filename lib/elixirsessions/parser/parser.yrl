@@ -2,7 +2,7 @@ Nonterminals
 session choice_label_sessions branch_label_sessions types_list sequences sessions. 
 
 Terminals
-send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')' '='.
+send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')'.
 
 Rootsymbol session.
 

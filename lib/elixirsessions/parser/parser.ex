@@ -41,7 +41,7 @@ defmodule ElixirSessions.Parser do
   @spec parse(bitstring() | charlist()) :: session_type()
   def parse(string) do
     st = parse_no_validations(string)
-    ST.validate!(st)
+    ElixirSessions.Operations.validate!(st)
     st
   end
 

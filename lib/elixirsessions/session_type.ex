@@ -389,14 +389,19 @@ defmodule ST do
   # todo (confirm before implement) branches need more than one branch
   # todo confirm if sorted
   # todo maybe defp (no external use?)
-  @spec validate!(session_type()) :: boolean()
-  def validate!(session_type) do
-    ElixirSessions.Operations.validate!(session_type)
+  @spec validate!(String.t()) :: :ok
+  def validate!(session_type_string) do
+    _ = ST.string_to_st(session_type_string)
+    :ok
   end
 
-  @spec validate(session_type()) :: :ok | {:error, any()}
-  def validate(session_type) do
-    ElixirSessions.Operations.validate(session_type)
+  @spec validate(String.t()) :: :ok | {:error, any()}
+  def validate(session_type_string) do
+    try do
+      validate!(session_type_string)
+    catch
+      x -> {:error, x}
+    end
   end
 
   @doc """
