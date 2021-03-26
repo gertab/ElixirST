@@ -29,3 +29,8 @@ notes*.txt
 /lib/elixirsessions/parser/*.erl
 
 /lib/elixirsessions/snippets/
+
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
+
+workspace.code-workspace

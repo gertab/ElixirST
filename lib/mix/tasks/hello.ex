@@ -1,4 +1,5 @@
 defmodule Mix.Tasks.Hello do
+  @dialyzer {:nowarn_function}
   use Mix.Task
 
   @moduledoc false
