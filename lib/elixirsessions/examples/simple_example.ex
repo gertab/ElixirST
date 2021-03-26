@@ -59,7 +59,7 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  # @session "function5 = rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y, ?option3().!finish()}   )   )"
+  # @session "rec X.(   !ok().rec Y.(   &{?option1().X, ?option2().Y, ?option3().!finish()}   )   )"
   # def function5(pid) do
   #   send(pid, {:ok})
 
@@ -77,87 +77,93 @@ defmodule ElixirSessions.SmallExample do
   # end
 
 
-  # @session "dooo = rec X.(&{?A().rec Z.(!C().Z),   ?B().rec Y.(+{!D(), !E().Y, !F().X}),   ?C() })"
-  # def dooo() do
-  #   pid = self()
-  #   receive do
-  #     {:A} ->
-  #       firstRec(pid)
-  #     {:B} ->
-  #       secondRec(pid)
-  #     {:C} -> :ok
-  #   end
+  @session """
+          rec X.(
+                  &{
+                       ?A().rec Z.(  !C().Z  ),
+                       ?B().rec Y.(  +{!D(), !E().Y, !F().X}  ),
+                       ?C()
+                    }
+                )
+          """
+  def dooo() do
+    pid = self()
+    receive do
+      {:A} ->
+        firstRec(pid)
+      {:B} ->
+        secondRec(pid, 5)
+      {:C} -> :ok
+    end
 
-  # end
+  end
 
-  # # @session "firstRec = rec Y.(!C().Y)"
-  # def firstRec(pid) do
-  #   send(pid, {:C})
+  def firstRec(pid) do
+    send(pid, {:C})
 
-  #   firstRec(pid)
-  # end
+    firstRec(pid)
+  end
 
-  # @session "secondRec = rec Y.(+{!D(), !E().Y, !F()})"
-  # def secondRec(pid) do
-  #   case true do
-  #     false ->
-  #       send(pid, {:D})
+  def secondRec(pid, a) do
+    case a do
+      a when a < 2 ->
+        send(pid, {:D})
 
-  #     2 ->
-  #       send(pid, {:E})
-  #       secondRec(pid)
+      a when is_number(a) ->
+        send(pid, {:E})
+        secondRec(pid, a)
 
-  #     true ->
-  #       send(pid, {:F})
-  #       dooo()
-  #   end
-  # end
+      _ ->
+        send(pid, {:F})
+        dooo()
+    end
+  end
 
-  # @session "example1 = rec X.(!okkkkk().?something(any).X)"
-  # def example1() do
-  #   send(self(), {:okkkkk})
+  @session "rec X.(!okkkkk().?something(any).X)"
+  def example1() do
+    send(self(), {:okkkkk})
 
-  #   receive do
-  #     {:something, _} ->
-  #       :ok
-  #   end
+    receive do
+      {:something, _} ->
+        :ok
+    end
 
-  #   example1()
-  # end
+    example1()
+  end
 
-  # @session "example2 = !ok().?something(any)"
-  # def example2() do
-  #   send_call()
+  @session "!ok().?something(any)"
+  def example2() do
+    send_call()
 
-  #   receive do
-  #     {:something, _} ->
-  #       :ok
-  #   end
-  # end
+    receive do
+      {:something, _} ->
+        :ok
+    end
+  end
 
-  # @session "send_call = !ok()"
-  # def send_call() do
-  #   send(self(), {:ok})
-  # end
+  @session "!ok()"
+  def send_call() do
+    send(self(), {:ok})
+  end
 
-  # @session "example3 = !ok1().!ok2().!ok3().!ok4()"
-  # def example3() do
-  #   pid = self()
+  @session "!ok1().!ok2().!ok3().!ok4()"
+  def example3() do
+    pid = self()
 
-  #   send(pid, {:ok1})
-  #   send(pid, {:ok2})
-  #   send(pid, {:ok3})
-  #   send(pid, {:ok4})
-  # end
+    send(pid, {:ok1})
+    send(pid, {:ok2})
+    send(pid, {:ok3})
+    send(pid, {:ok4})
+  end
 
-  # @session "problem = ?label(any).!num(any)"
-  # def problem() do
-  #   # a = 5
-  #   receive do
-  #     {:label, _value} ->
-  #       :ok
-  #   end
+  @session "?label(any).!num(any)"
+  def problem() do
+    # a = 5
+    receive do
+      {:label, _value} ->
+        :ok
+    end
 
-  #   send(self(), {:num, 55})
-  # end
+    send(self(), {:num, 55})
+  end
 end

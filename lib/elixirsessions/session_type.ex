@@ -349,7 +349,6 @@ defmodule ST do
       ...> ST.st_to_string_current(st)
       "?Hello(number)"
   """
-  # todo should you include '.end'?
   @spec st_to_string_current(session_type()) :: String.t()
   def st_to_string_current(session_type) do
     ElixirSessions.Operations.st_to_string_current(session_type)
@@ -395,14 +394,9 @@ defmodule ST do
     ElixirSessions.Operations.validate!(session_type)
   end
 
-  @spec validate(session_type()) :: {:ok} | {:error, any()}
+  @spec validate(session_type()) :: :ok | {:error, any()}
   def validate(session_type) do
-    try do
-      ElixirSessions.Operations.validate!(session_type)
-      {:ok}
-    catch
-      x -> {:error, x}
-    end
+    ElixirSessions.Operations.validate(session_type)
   end
 
   @doc """
@@ -470,7 +464,6 @@ defmodule ST do
   """
   @spec unfold_unknown(session_type(), %{}) :: session_type()
   def unfold_unknown(session_type, recurse_var_map) do
-
     modified = ElixirSessions.Operations.unfold_unknown_inside(session_type, recurse_var_map, [])
 
     if ST.equal?(session_type, modified) do
@@ -525,7 +518,12 @@ defmodule ST do
 
   @spec session_subtraction!(session_type(), session_type()) :: session_type()
   def session_subtraction!(session_type, session_type_internal_function) do
-    ElixirSessions.Operations.session_subtraction!(session_type, %{}, session_type_internal_function, %{})
+    ElixirSessions.Operations.session_subtraction!(
+      session_type,
+      %{},
+      session_type_internal_function,
+      %{}
+    )
   end
 
   @spec session_subtraction(session_type(), session_type()) ::

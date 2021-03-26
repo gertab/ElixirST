@@ -8,6 +8,16 @@ defmodule ElixirSessions.Operations do
 
   # todo make all methods that throw errors contain '!'. Add equivalent non '!' methods
   # Performs validations on the session type.
+  @spec validate(session_type()) :: :ok | {:error, any()}
+  def validate(session_type) do
+    try do
+      ElixirSessions.Operations.validate!(session_type)
+      :ok
+    catch
+      x -> {:error, x}
+    end
+  end
+
   @spec validate!(session_type()) :: boolean()
   def validate!(session_type)
 
@@ -223,16 +233,20 @@ defmodule ElixirSessions.Operations do
     throw("After a branch/choice, a send or receive statement is required.")
   end
 
-  #  Converts s session type to a string
-  # todo in the case of 'end'
+  # Converts s session type to a string
   # replace name to to_string
   @spec st_to_string(session_type()) :: String.t()
-  def st_to_string(session_type)
+  def st_to_string(%ST.Terminate{}), do: "end"
 
-  def st_to_string(%ST.Send{label: label, types: types, next: next}) do
+  def st_to_string(session_type) do
+    st_to_string_internal(session_type)
+  end
+
+  @spec st_to_string_internal(session_type()) :: String.t()
+  defp st_to_string_internal(%ST.Send{label: label, types: types, next: next}) do
     types_string = types |> Enum.join(", ")
 
-    following_st = st_to_string(next)
+    following_st = st_to_string_internal(next)
 
     if following_st != "" do
       "!#{label}(#{types_string}).#{following_st}"
@@ -241,10 +255,10 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  def st_to_string(%ST.Recv{label: label, types: types, next: next}) do
+  defp st_to_string_internal(%ST.Recv{label: label, types: types, next: next}) do
     types_string = types |> Enum.join(", ")
 
-    following_st = st_to_string(next)
+    following_st = st_to_string_internal(next)
 
     if following_st != "" do
       "?#{label}(#{types_string}).#{following_st}"
@@ -253,78 +267,84 @@ defmodule ElixirSessions.Operations do
     end
   end
 
-  def st_to_string(%ST.Choice{choices: choices}) do
+  defp st_to_string_internal(%ST.Choice{choices: choices}) do
     v =
-      Enum.map(choices, fn {_label, x} -> st_to_string(x) end)
+      Enum.map(choices, fn {_label, x} -> st_to_string_internal(x) end)
       |> Enum.join(", ")
 
     "+{#{v}}"
   end
 
-  def st_to_string(%ST.Branch{branches: branches}) do
+  defp st_to_string_internal(%ST.Branch{branches: branches}) do
     v =
-      Enum.map(branches, fn {_label, x} -> st_to_string(x) end)
+      Enum.map(branches, fn {_label, x} -> st_to_string_internal(x) end)
       |> Enum.join(", ")
 
     "&{#{v}}"
   end
 
-  def st_to_string(%ST.Recurse{label: label, body: body}) do
-    "rec #{label}.(#{st_to_string(body)})"
+  defp st_to_string_internal(%ST.Recurse{label: label, body: body}) do
+    "rec #{label}.(#{st_to_string_internal(body)})"
   end
 
-  def st_to_string(%ST.Call_Recurse{label: label}) do
+  defp st_to_string_internal(%ST.Call_Recurse{label: label}) do
     "#{label}"
   end
 
-  def st_to_string(%ST.Terminate{}) do
+  defp st_to_string_internal(%ST.Terminate{}) do
     ""
-    # "end"
   end
 
   #  Converts one item in a session type to a string. E.g. ?Hello().!hi() would return ?Hello() only.
   @spec st_to_string_current(session_type()) :: String.t()
-  def st_to_string_current(session_type)
+  def st_to_string_current(%ST.Terminate{}), do: "end"
 
-  def st_to_string_current(%ST.Send{label: label, types: types}) do
+  def st_to_string_current(session_type) do
+    st_to_string_current_internal(session_type)
+  end
+
+  @spec st_to_string_current_internal(session_type()) :: String.t()
+  defp st_to_string_current_internal(session_type)
+
+  defp st_to_string_current_internal(%ST.Send{label: label, types: types}) do
     types_string = types |> Enum.join(", ")
 
     "!#{label}(#{types_string})"
   end
 
-  def st_to_string_current(%ST.Recv{label: label, types: types}) do
+  defp st_to_string_current_internal(%ST.Recv{label: label, types: types}) do
     types_string = types |> Enum.join(", ")
 
     "?#{label}(#{types_string})"
   end
 
-  def st_to_string_current(%ST.Choice{choices: choices}) do
+  defp st_to_string_current_internal(%ST.Choice{choices: choices}) do
     v =
-      Enum.map(choices, fn {_, x} -> st_to_string_current(x) end)
+      Enum.map(choices, fn {_, x} -> st_to_string_current_internal(x) end)
       |> Enum.map(fn x -> x <> "..." end)
       |> Enum.join(", ")
 
     "+{#{v}}"
   end
 
-  def st_to_string_current(%ST.Branch{branches: branches}) do
+  defp st_to_string_current_internal(%ST.Branch{branches: branches}) do
     v =
-      Enum.map(branches, fn {_, x} -> st_to_string_current(x) end)
+      Enum.map(branches, fn {_, x} -> st_to_string_current_internal(x) end)
       |> Enum.map(fn x -> x <> "..." end)
       |> Enum.join(", ")
 
     "&{#{v}}"
   end
 
-  def st_to_string_current(%ST.Recurse{label: label, body: body}) do
-    "rec #{label}.(#{st_to_string_current(body)})"
+  defp st_to_string_current_internal(%ST.Recurse{label: label, body: body}) do
+    "rec #{label}.(#{st_to_string_current_internal(body)})"
   end
 
-  def st_to_string_current(%ST.Call_Recurse{label: label}) do
+  defp st_to_string_current_internal(%ST.Call_Recurse{label: label}) do
     "#{label}"
   end
 
-  def st_to_string_current(%ST.Terminate{}) do
+  defp st_to_string_current_internal(%ST.Terminate{}) do
     ""
   end
 
@@ -572,7 +592,6 @@ defmodule ElixirSessions.Operations do
         %ST.Call_Recurse{label: label2},
         rec_var2
       ) do
-
     rec_var1 = Map.put(rec_var1, label1, rec1)
 
     case Map.fetch(rec_var2, label2) do
@@ -587,14 +606,15 @@ defmodule ElixirSessions.Operations do
         %ST.Call_Recurse{label: label2},
         rec_var2
       ) do
-
     rec1 = Map.fetch!(rec_var1, label1)
     rec2 = Map.fetch!(rec_var2, label2)
 
     if ST.equal?(ST.unfold_unknown(rec1, rec_var1), ST.unfold_unknown(rec2, rec_var2)) do
       %ST.Terminate{}
     else
-      throw("Session types #{ST.st_to_string(rec1)} does not correspond to #{ST.st_to_string(rec2)}.")
+      throw(
+        "Session types #{ST.st_to_string(rec1)} does not correspond to #{ST.st_to_string(rec2)}."
+      )
     end
   end
 
@@ -859,8 +879,13 @@ defmodule ElixirSessions.Operations do
       %ST.Call_Recurse{label: label}
     else
       case Map.fetch(recurse_var, label) do
-        {:ok, found} -> found
-        :error -> throw("Trying to expand Call_Recurse, but #{label} was not found (#{inspect recurse_var}).")
+        {:ok, found} ->
+          found
+
+        :error ->
+          throw(
+            "Trying to expand Call_Recurse, but #{label} was not found (#{inspect(recurse_var)})."
+          )
       end
     end
   end
@@ -877,7 +902,8 @@ defmodule ElixirSessions.Operations do
 
     equal?(ST.string_to_st(s1), ST.string_to_st(s2), %{})
 
-    s1 = "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
+    s1 =
+      "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
 
     s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
 

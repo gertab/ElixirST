@@ -298,6 +298,15 @@ defmodule ElixirSessionsOperations do
     expected = s1
 
     assert actual == expected
+
+    s1 = ""
+    expected = "end"
+    session1 = ST.string_to_st(s1)
+
+    actual = ElixirSessions.Operations.st_to_string(session1)
+    assert actual == expected
+    actual = ElixirSessions.Operations.st_to_string_current(session1)
+    assert actual == expected
   end
 
   test "convert to structs semi complex" do

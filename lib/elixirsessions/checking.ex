@@ -101,10 +101,6 @@ defmodule ElixirSessions.Checking do
     # dbgi_map
     # |> IO.inspect()
 
-    # @session can only be used with def not defp
-    # todo check in on definition
-    # _ = ensure_def_not_defp!(session_types, all_functions)
-
     %ST.Module{
       functions: all_functions,
       function_session_type: to_map(session_types_parsed),

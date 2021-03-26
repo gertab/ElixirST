@@ -6,105 +6,62 @@ defmodule DualityTest do
 
   test "send dual" do
     s = "!Hello(any)"
+    expected = "?Hello(any)"
 
-    session = Parser.parse(s)
-    actual = %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:any]}
+    session = ST.string_to_st(s)
 
-    assert Duality.dual(session) == actual
+    dual = Duality.dual(session)
+    assert ST.st_to_string(dual) == expected
   end
 
   test "receive dual" do
     s = "?Hello(any)"
+    expected = "!Hello(any)"
 
-    session = Parser.parse(s)
-    actual = %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:any]}
+    session = ST.string_to_st(s)
 
-    assert Duality.dual(session) == actual
+    dual = Duality.dual(session)
+    assert ST.st_to_string(dual) == expected
   end
 
   test "sequence dual" do
     s = "?Hello(any).?Hello2(any).!Hello3(any)"
+    expected = "!Hello(any).!Hello2(any).?Hello3(any)"
 
-    session = Parser.parse(s)
+    session = ST.string_to_st(s)
 
-    actual = %ST.Send{
-      label: :Hello,
-      next: %ST.Send{
-        label: :Hello2,
-        next: %ST.Recv{label: :Hello3, next: %ST.Terminate{}, types: [:any]},
-        types: [:any]
-      },
-      types: [:any]
-    }
-
-    assert Duality.dual(session) == actual
+    dual = Duality.dual(session)
+    assert ST.st_to_string(dual) == expected
   end
 
   test "branching choice dual" do
     s = "&{?Neg(number, pid).?Hello(number)}"
+    expected = "+{!Neg(number, pid).!Hello(number)}"
 
-    session = Parser.parse(s)
+    session = ST.string_to_st(s)
 
-    actual = %ST.Choice{
-      choices: %{
-        Neg: %ST.Send{
-          label: :Neg,
-          next: %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:number]},
-          types: [:number, :pid]
-        }
-      }
-    }
-
-    assert Duality.dual(session) == actual
+    dual = Duality.dual(session)
+    assert ST.st_to_string(dual) == expected
   end
 
   test "sequence and branching choice dual = all need to match (incorrect) dual" do
     s = "!Hello().+{!Neg(number, pid).!Hello(number)}"
+    expected = "?Hello().&{?Neg(number, pid).?Hello(number)}"
 
-    session = Parser.parse(s)
+    session = ST.string_to_st(s)
 
-    actual = %ST.Recv{
-      label: :Hello,
-      types: [],
-      next: %ST.Branch{
-        branches: %{
-          Neg: %ST.Recv{
-            label: :Neg,
-            next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
-            types: [:number, :pid]
-          }
-        }
-      }
-    }
-
-    assert Duality.dual(session) == actual
+    dual = Duality.dual(session)
+    assert ST.st_to_string(dual) == expected
   end
 
   test "sequence and branching choice dual = all need to match (correct) dual" do
     s = "!Hello().&{?Neg(number, pid).!Hello(number), ?Neg2(number, pid).!Hello(number)}"
+    expected = "?Hello().+{!Neg(number, pid).?Hello(number), !Neg2(number, pid).?Hello(number)}"
 
-    session = Parser.parse(s)
+    session = ST.string_to_st(s)
 
-    actual = %ST.Recv{
-      label: :Hello,
-      types: [],
-      next: %ST.Choice{
-        choices: %{
-          Neg: %ST.Send{
-            next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
-            types: [:number, :pid],
-            label: :Neg
-          },
-          Neg2: %ST.Send{
-            label: :Neg2,
-            next: %ST.Recv{label: :Hello, next: %ST.Terminate{}, types: [:number]},
-            types: [:number, :pid]
-          }
-        }
-      }
-    }
-
-    assert Duality.dual(session) == actual
+    dual = Duality.dual(session)
+    assert ST.st_to_string(dual) == expected
   end
 
   test "dual?" do
