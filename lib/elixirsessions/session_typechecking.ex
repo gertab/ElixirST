@@ -25,19 +25,10 @@ defmodule ElixirSessions.SessionTypechecking do
 
     IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
-    # IO.inspect(functions)
-    # IO.inspect(session_types)
+    for {{name, arity}, expected_session_type} <- function_session_type do
+      %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
 
-    function_session_type
-    # |> Enum.to_list()
-    # |> hd()
-    # |> (fn x -> [x] end).()
-    # Session type check all (matched) functions
-    |> Enum.each(fn
-      {{name, arity}, expected_session_type} ->
-        %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
-        # expected_session_type = Map.fetch!(function_session_type, {name, arity})
-
+        # todo pass forward the updated function_session_type
         _ =
           Enum.map(bodies, fn ast ->
             session_typecheck_by_function(
@@ -50,13 +41,8 @@ defmodule ElixirSessions.SessionTypechecking do
           end)
 
         # |> hd()
-
-        # modified_module_context = %ST.Module{
-        #   module_context
-        #   | cur_function: %ST.Function{name: name, arity: arity}
-        # }
         :ok
-    end)
+    end
   end
 
   @spec session_typecheck_by_function(

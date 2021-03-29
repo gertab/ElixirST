@@ -7,6 +7,19 @@ defmodule ElixirSessions.SmallExample do
     spawn(__MODULE__, :example1, [])
   end
 
+
+  @session "rec X.(&{?option1().X, ?option2()})"
+  # @session "rec X.(&{?option1().X, ?option2().!ok()})"
+  def f1() do
+    receive do
+      {:option1} -> f1()
+      {:option2} -> :ok
+    end
+    # send(self(), {:ok})
+  end
+
+
+
   @session "!ok().!ok2().!ok2().!ok111() "
   def function1(pid) do
     send(pid, {:ok})
@@ -19,6 +32,7 @@ defmodule ElixirSessions.SmallExample do
   defp function2(pid) do
     send(pid, {:ok2})
   end
+
   # @session "rec X.(   !ok().rec Y.(  !ok2().&{?option1().X, ?option2().Y}   )   )"
   # def function1(pid) do
   #   send(pid, {:ok})

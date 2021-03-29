@@ -123,12 +123,12 @@ defmodule ElixirSessions.PingPong do
     # abc()
   end
 
-  def do_something(number) do
-    send(self(), {:helloooo})
-    send(self(), {:helloooo2})
+  # def do_something(number) do
+  #   send(self(), {:helloooo})
+  #   send(self(), {:helloooo2})
 
-    # abc()
-  end
+  #   # abc()
+  # end
 
   # @session "loop = rec X.(!hello().X)"
   # def loop() do

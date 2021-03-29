@@ -23,9 +23,10 @@ defmodule ElixirSessions.Checking do
     end
   end
 
-  def __on_definition__(env, kind, name, args, _guards, _body) do
+  def __on_definition__(env, kind, _name, _args, _guards, _body) do
     session = Module.get_attribute(env.module, :session)
-    arity = length(args)
+    # IO.inspect env
+    {name, arity} = env.function
 
     if not is_nil(session) do
       # @session_marked contains a list of functions with session types
@@ -33,13 +34,12 @@ defmodule ElixirSessions.Checking do
       # Ensure that only one session type is set for each function (in case of multiple cases)
       duplicate_session_types =
         Module.get_attribute(env.module, :session_marked)
-        |> Enum.filter(fn
-          {{^name, ^arity}, _} -> :ok
-          _ -> nil
+        |> Enum.find(nil, fn
+          {{^name, ^arity}, _} -> true
+          _ -> false
         end)
-        |> Enum.filter(fn elem -> !is_nil(elem) end)
 
-      if length(duplicate_session_types) > 0 do
+      if not is_nil(duplicate_session_types) do
         throw("Cannot set multiple session types for the same function #{name}/#{arity}.")
       end
 
@@ -82,6 +82,7 @@ defmodule ElixirSessions.Checking do
         x ->
           throw("Error: #{inspect(x)}")
       end
+
     # |> IO.inspect()
 
     # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
