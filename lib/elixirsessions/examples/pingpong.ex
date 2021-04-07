@@ -58,7 +58,9 @@ defmodule ElixirSessions.PingPong do
   #   end
   # end
 
-  @session "?ping(any).!pong()"
+
+
+  @session "?ping(number).!pong()"
   def pong() do
     receive do
       {:ping, pid} ->
@@ -70,6 +72,9 @@ defmodule ElixirSessions.PingPong do
         send(pid, {:pong})
     end
   end
+
+
+
 
   # def pong(hello) do
   # end
