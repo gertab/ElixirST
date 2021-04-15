@@ -12,6 +12,7 @@ defmodule ElixirSessions.Checking do
 
       Module.register_attribute(__MODULE__, :session_typing, accumulate: false, persist: true)
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
+      Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
       @session_typing true
       @compile :debug_info
@@ -25,7 +26,7 @@ defmodule ElixirSessions.Checking do
 
   def __on_definition__(env, kind, _name, _args, _guards, _body) do
     session = Module.get_attribute(env.module, :session)
-    # IO.inspect env
+    dual = Module.get_attribute(env.module, :dual)
     {name, arity} = env.function
 
     if not is_nil(session) do
@@ -55,6 +56,40 @@ defmodule ElixirSessions.Checking do
 
       Module.put_attribute(env.module, :session_marked, {{name, arity}, session})
       Module.delete_attribute(env.module, :session)
+    end
+
+    if not is_nil(dual) do
+      if not is_function(dual) do
+        throw("Expected function name but found #{inspect(dual)}.")
+      end
+
+      function = Function.info(dual)
+
+      # dual_module = function[:module] # todo should be the same as current module
+      dual_name = function[:name]
+      dual_arity = function[:arity]
+      # dual_type = function[:type] # should be :external (not :local = anon)
+
+      dual_session =
+        Module.get_attribute(env.module, :session_marked)
+        |> Enum.find(nil, fn
+          {{^dual_name, ^dual_arity}, _} -> true
+          _ -> false
+        end)
+
+      if is_nil(dual_session) do
+        throw("No dual match found for #{inspect dual}.")
+      end
+
+      {_name_arity, dual_session} = dual_session
+
+      expected_dual_session =
+        ST.string_to_st(dual_session)
+        |> ST.dual()
+        |> ST.st_to_string()
+
+      Module.put_attribute(env.module, :session_marked, {{name, arity}, expected_dual_session})
+      Module.delete_attribute(env.module, :dual)
     end
   end
 
@@ -99,8 +134,8 @@ defmodule ElixirSessions.Checking do
 
     all_functions = get_all_functions!(dbgi_map)
 
-    dbgi_map[:attributes]
-    |> IO.inspect()
+    # dbgi_map[:attributes]
+    # |> IO.inspect()
 
     # dbgi_map
     # |> IO.inspect()
