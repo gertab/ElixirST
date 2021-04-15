@@ -17,16 +17,16 @@ defmodule ElixirSessions.PingPong do
 
     send(pid, {:ping, self()})
 
-    kkk()
+    kk()
   end
 
-  def kkk() do
+  def kk() do
     receive do
       {:pong} ->
         IO.puts("Received pong!")
     end
 
-    kkk()
+    kk()
   end
 
   @session "rec X.(&{?A().X, ?B().!C()})"
