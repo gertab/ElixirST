@@ -28,6 +28,10 @@ defmodule ElixirSessions.Checking do
     session = Module.get_attribute(env.module, :session)
     dual = Module.get_attribute(env.module, :dual)
     {name, arity} = env.function
+    # spec = Module.get_attribute(env.module, :spec)
+    # if not is_nil(spec) do
+    #   IO.warn("Found spec: " <> inspect(spec))
+    # end
 
     if not is_nil(session) do
       # @session_marked contains a list of functions with session types

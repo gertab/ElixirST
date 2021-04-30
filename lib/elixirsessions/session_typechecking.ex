@@ -23,7 +23,7 @@ defmodule ElixirSessions.SessionTypechecking do
       module_name: _module_name
     } = module_context
 
-    IO.puts("Starting session type checking #{inspect(function_session_type)}")
+    # IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
       %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
@@ -86,7 +86,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
     case remaining_session_type do
       %ST.Terminate{} ->
-        IO.puts("Session type checking was successful.")
+        # IO.puts("Session type checking was successful.")
         :ok
 
       # todo what if call_recursive
@@ -537,20 +537,20 @@ defmodule ElixirSessions.SessionTypechecking do
     # Check if a session type already exists for the current function call
     case Map.fetch(function_st_context, {function_name, arity}) do
       {:ok, found_session_type} ->
-        IO.puts(
-          "#{line} From function_st_context found mapping from #{inspect({function_name, arity})} " <>
-            "to session type #{ST.st_to_string(found_session_type)}."
-        )
+        # IO.puts(
+        #   "#{line} From function_st_context found mapping from #{inspect({function_name, arity})} " <>
+        #     "to session type #{ST.st_to_string(found_session_type)}."
+        # )
 
-        IO.puts("#{line} Expanding #{ST.st_to_string(session_type)} #{inspect(rec_var)}.")
+        # IO.puts("#{line} Expanding #{ST.st_to_string(session_type)} #{inspect(rec_var)}.")
 
         unfolded_st = ST.unfold_unknown(session_type, rec_var)
 
-        IO.puts(
-          "#{line} Comparing session-typed function #{inspect({function_name, arity})} with session type " <>
-            "#{ST.st_to_string(found_session_type)} to the expected session type: " <>
-            "#{ST.st_to_string(unfolded_st)}."
-        )
+        # IO.puts(
+        #   "#{line} Comparing session-typed function #{inspect({function_name, arity})} with session type " <>
+        #     "#{ST.st_to_string(found_session_type)} to the expected session type: " <>
+        #     "#{ST.st_to_string(unfolded_st)}."
+        # )
 
         case ST.session_subtraction(unfolded_st, found_session_type) do
           {:ok, remaining_session_type} ->
@@ -564,25 +564,25 @@ defmodule ElixirSessions.SessionTypechecking do
         # Call to un-(session)-typed function
         # Session type check the ast of this function
 
-        IO.puts(
-          "#{line} Call to un-(session)-typed function. Comparing function " <>
-            "#{inspect({function_name, arity})} with session type " <>
-            "#{ST.st_to_string(session_type)}."
-        )
+        # IO.puts(
+        #   "#{line} Call to un-(session)-typed function. Comparing function " <>
+        #     "#{inspect({function_name, arity})} with session type " <>
+        #     "#{ST.st_to_string(session_type)}."
+        # )
 
         case lookup_function(functions, function_name, arity) do
           {:ok, %ST.Function{bodies: bodies}} ->
-            IO.puts(
-              "#{line} Comparing #{ST.st_to_string(session_type)} to " <>
-                "#{inspect({function_name, arity})}"
-            )
+            # IO.puts(
+            #   "#{line} Comparing #{ST.st_to_string(session_type)} to " <>
+            #     "#{inspect({function_name, arity})}"
+            # )
 
             unfolded_session_type = ST.unfold_unknown(session_type, rec_var)
 
-            IO.puts(
-              "#{line} Unfolded #{ST.st_to_string(session_type)} to " <>
-                "#{ST.st_to_string(unfolded_session_type)}"
-            )
+            # IO.puts(
+            #   "#{line} Unfolded #{ST.st_to_string(session_type)} to " <>
+            #     "#{ST.st_to_string(unfolded_session_type)}"
+            # )
 
             function_st_context =
               Map.put(function_st_context, {function_name, arity}, unfolded_session_type)
@@ -603,22 +603,22 @@ defmodule ElixirSessions.SessionTypechecking do
 
             unfolded_remaining_session_type = ST.unfold_unknown(remaining_session_type, rec_var)
 
-            IO.puts(
-              "Subtracting #{ST.st_to_string(unfolded_remaining_session_type)} from #{
-                ST.st_to_string(unfolded_session_type)
-              }"
-            )
+            # IO.puts(
+            #   "Subtracting #{ST.st_to_string(unfolded_remaining_session_type)} from #{
+            #     ST.st_to_string(unfolded_session_type)
+            #   }"
+            # )
 
             case ST.session_tail_subtraction(
                    unfolded_session_type,
                    unfolded_remaining_session_type
                  ) do
               {:ok, fixed_session_type} ->
-                IO.puts(
-                  "#{line} session_tail_subtraction for #{function_name}/#{arity} = #{
-                    ST.st_to_string(fixed_session_type)
-                  }"
-                )
+                # IO.puts(
+                #   "#{line} session_tail_subtraction for #{function_name}/#{arity} = #{
+                #     ST.st_to_string(fixed_session_type)
+                #   }"
+                # )
 
                 function_st_context_updated =
                   Map.put(function_st_context, {function_name, arity}, fixed_session_type)
