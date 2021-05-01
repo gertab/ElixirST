@@ -431,6 +431,20 @@ defmodule ElixirSessions.Operations do
     false
   end
 
+  @spec subtype?(session_type(), session_type()) :: boolean()
+  def subtype?(session_type1, session_type2) do
+    case session_subtraction(session_type1, session_type2) do
+      {:ok, remaining} ->
+        remaining == %ST.Terminate{}
+
+      {:error, _} ->
+        case session_subtraction(session_type2, session_type1) do
+          {:ok, remaining} -> remaining == %ST.Terminate{}
+          {:error, _} -> false
+        end
+    end
+  end
+
   # Walks through session_type by header_session_type and returns the remaining session type.
   # !A().!B().!C() - !A() = !B().!C()
 
@@ -902,27 +916,29 @@ defmodule ElixirSessions.Operations do
 
   # recompile && ElixirSessions.Operations.run
   def run() do
-    s1 = "rec X.(!Hello().X)"
-
-    s2 = "rec Y.(!Hello().Y)"
-
-    equal?(ST.string_to_st(s1), ST.string_to_st(s2), %{})
-
     s1 =
-      "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
+      "rec X.(!A().X)"
 
-    s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
+      s2 =
+        "!A().!A().!A().!A().!A().rec Y.(!A().Y)"
 
-    case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
-      {:ok, remaining_st} ->
-        # assert false
-        ST.st_to_string(remaining_st)
+    subtype?(ST.string_to_st(s1), ST.string_to_st(s2))
 
-      {:error, error} ->
-        # Test should fail
-        # assert true
-        throw(error)
-    end
+    # s1 =
+    #   "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
+
+    # s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
+
+    # case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
+    #   {:ok, remaining_st} ->
+    #     # assert false
+    #     ST.st_to_string(remaining_st)
+
+    #   {:error, error} ->
+    #     # Test should fail
+    #     # assert true
+    #     throw(error)
+    # end
   end
 end
 

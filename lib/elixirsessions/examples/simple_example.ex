@@ -8,30 +8,40 @@ defmodule ElixirSessions.SmallExample do
   end
 
 
-  @session "rec X.(&{?option1().X, ?option2()})"
-  # @session "rec X.(&{?option1().X, ?option2().!ok()})"
-  def f1() do
-    receive do
-      {:option1} -> f1()
-      {:option2} -> :ok
-    end
-    # send(self(), {:ok})
+  @session "rec X.(!A().X)"
+  @spec example(pid) :: no_return
+  def example(pid) do
+    # @session "!A().rec X.(!A().X)"
+    send(pid, {:A})
+    # @session "rec X.(!A().X)"
+    # @session "!A().rec X.(!A().X)"
+    example(pid)
   end
 
+  # @session "rec X.(&{?option1().X, ?option2()})"
+  # # @session "rec X.(&{?option1().X, ?option2().!ok()})"
+  # def f1() do
+  #   receive do
+  #     {:option1} -> f1()
+  #     {:option2} -> :ok
+  #   end
+  #   # send(self(), {:ok})
+  # end
 
 
-  @session "!ok().!ok2().!ok2().!ok111() "
-  def function1(pid) do
-    send(pid, {:ok})
 
-    function2(pid)
-    function2(pid)
-    send(pid, {:ok111})
-  end
+  # @session "!ok().!ok2().!ok2().!ok111() "
+  # def function1(pid) when is_pid(pid) do
+  #   send(pid, {:ok})
 
-  defp function2(pid) do
-    send(pid, {:ok2})
-  end
+  #   function2(pid)
+  #   function2(pid)
+  #   send(pid, {:ok111})
+  # end
+
+  # defp function2(pid) do
+  #   send(pid, {:ok2})
+  # end
 
   # @session "rec X.(   !ok().rec Y.(  !ok2().&{?option1().X, ?option2().Y}   )   )"
   # def function1(pid) do

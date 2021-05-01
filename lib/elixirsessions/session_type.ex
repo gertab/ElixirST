@@ -435,6 +435,12 @@ defmodule ST do
     ElixirSessions.Operations.equal?(session_type1, session_type2, %{})
   end
 
+  # Subtype
+  @spec subtype?(session_type(), session_type()) :: boolean()
+  def subtype?(session_type1, session_type2) do
+    ElixirSessions.Operations.subtype?(session_type1, session_type2)
+  end
+
   @doc """
   Takes a session type (starting with a recursion, e.g. rec X.(...)) and outputs a single unfold of X.
 
