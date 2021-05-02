@@ -7,7 +7,6 @@ defmodule ElixirSessions.SmallExample do
     spawn(__MODULE__, :example1, [])
   end
 
-
   @session "rec X.(!A().X)"
   @spec example(pid) :: no_return
   def example(pid) do
@@ -16,6 +15,46 @@ defmodule ElixirSessions.SmallExample do
     # @session "rec X.(!A().X)"
     # @session "!A().rec X.(!A().X)"
     example(pid)
+  end
+
+  @session "rec X.(!A().!sum(integer).!hello(string).X)"
+  @spec example2(pid) :: no_return
+  def example2(pid) do
+    send(pid, {:A})
+
+    IO.puts("Adding numbers")
+    numbers = [1, 4, 5, 7, 882]
+    sum = Enum.reduce(numbers, &+/2)
+    send(pid, {:sum, sum})
+
+    IO.puts("Sending hello")
+    string = get_hello()
+    send(pid, {:hello, string})
+
+    example2(pid)
+  end
+
+  defp get_hello() do
+    "hello"
+  end
+
+  @session "rec X.(!A().!sum(integer).!hello(string).X)"
+  @spec example3(pid) :: no_return
+  def example3(pid) do
+    send(pid, {:A})
+
+    # IO.puts("Adding numbers")
+    # numbers = [1, 4, 5, 7, 882]
+    # sum = Enum.reduce(numbers, &+/2)
+    sum = 5
+    send(pid, {:sum, sum})
+
+    # IO.puts("Sending hello")
+    # string = get_hello()
+    string = "hello"
+    send(pid, {:hello, string})
+
+    example3(pid)
   end
 
   # @session "rec X.(&{?option1().X, ?option2()})"
@@ -27,8 +66,6 @@ defmodule ElixirSessions.SmallExample do
   #   end
   #   # send(self(), {:ok})
   # end
-
-
 
   # @session "!ok().!ok2().!ok2().!ok111() "
   # def function1(pid) when is_pid(pid) do
