@@ -144,12 +144,12 @@ defmodule ElixirSessions.Checking do
     # dbgi_map
     # |> IO.inspect()
 
-    %ST.Module{
+    %{
       functions: all_functions,
       function_session_type: to_map(session_types_parsed),
       file: dbgi_map[:file],
       relative_file: dbgi_map[:relative_file],
-      line: dbgi_map[:line],
+      line: dbgi_map[:line], #todo remove
       module_name: dbgi_map[:module]
     }
     |> ElixirSessions.SessionTypechecking.session_typecheck_module()

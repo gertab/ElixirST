@@ -8,40 +8,38 @@ defmodule ElixirSessions.SessionTypechecking do
   @type ast :: ST.ast()
   @typedoc false
   @type session_type :: ST.session_type()
-  @typep module_context :: ST.Module.t()
-  @type st_module :: ST.Module.t()
 
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
-  @spec session_typecheck_module(st_module) :: any
-  def session_typecheck_module(%ST.Module{} = module_context) do
-    %ST.Module{
-      functions: functions,
-      function_session_type: function_session_type,
-      file: _file,
-      relative_file: _relative_file,
-      line: _line,
-      module_name: _module_name
-    } = module_context
+  @spec session_typecheck_module(%{}) :: any
+  def session_typecheck_module(%{
+    functions: functions,
+    function_session_type: function_session_type,
+    file: _file,
+    relative_file: _relative_file,
+    line: _line,
+    module_name: _module_name
+  } = module_context) do
+
 
     # IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
       %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
 
-        # todo pass forward the updated function_session_type
-        _ =
-          Enum.map(bodies, fn ast ->
-            session_typecheck_by_function(
-              ast,
-              expected_session_type,
-              %{},
-              function_session_type,
-              module_context
-            )
-          end)
+      # todo pass forward the updated function_session_type
+      _ =
+        Enum.map(bodies, fn ast ->
+          session_typecheck_by_function(
+            ast,
+            expected_session_type,
+            %{},
+            function_session_type,
+            module_context
+          )
+        end)
 
-        # |> hd()
-        :ok
+      # |> hd()
+      :ok
     end
   end
 
@@ -50,7 +48,7 @@ defmodule ElixirSessions.SessionTypechecking do
           session_type(),
           %{},
           %{},
-          module_context()
+          %{}
         ) ::
           :ok
   def session_typecheck_by_function(
@@ -64,8 +62,6 @@ defmodule ElixirSessions.SessionTypechecking do
     # IO.inspect(expected_session_type)
     # IO.inspect(module_context)
 
-    # %ST.Module{cur_function: %ST.Function{name: name, arity: arity}} = module_context
-
     # IO.puts(
     #   "Session type checking #{inspect(name)}/#{arity}: #{ST.st_to_string(expected_session_type)}"
     # )
@@ -75,24 +71,39 @@ defmodule ElixirSessions.SessionTypechecking do
     #   arity: arity
     # }
 
-    {_rec_var, _function_st_context, remaining_session_type} =
-      session_typecheck_ast(
-        ast,
-        expected_session_type,
-        rec_var,
-        function_st_context,
-        module_context
-      )
+    Macro.prewalk(ast, 0, &walk_ast/2)
+    |> IO.inspect()
 
-    case remaining_session_type do
-      %ST.Terminate{} ->
-        # IO.puts("Session type checking was successful.")
-        :ok
+    # {_rec_var, _function_st_context, remaining_session_type} =
+    #   session_typecheck_ast(
+    #     ast,
+    #     expected_session_type,
+    #     rec_var,
+    #     function_st_context,
+    #     module_context
+    #   )
 
-      # todo what if call_recursive
-      _ ->
-        throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
-    end
+    # case remaining_session_type do
+    #   %ST.Terminate{} ->
+    #     # IO.puts("Session type checking was successful.")
+    #     :ok
+
+    #   # todo what if call_recursive
+    #   _ ->
+    #     throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
+    # end
+  end
+
+  defp walk_ast(a, acc) when is_number(a) do
+    {312345688898, acc + 1}
+  end
+
+  defp walk_ast({{:., [], [:erlang, :+]}, _meta, args}, acc) do
+    {{{:., [], [:erlang, :+]}, [], [40000000000, 5]}, acc + 1}
+  end
+
+  defp walk_ast(other, acc) do
+    {other, acc + 1}
   end
 
   @doc """
@@ -107,7 +118,7 @@ defmodule ElixirSessions.SessionTypechecking do
     IO.puts("Session typechecking: #{ST.st_to_string(session_type)}")
 
     {_, _, remaining_session_type} =
-      session_typecheck_ast(body, session_type, %{}, %{}, %ST.Module{})
+      session_typecheck_ast(body, session_type, %{}, %{}, %{})
 
     case remaining_session_type do
       %ST.Terminate{} ->
@@ -128,7 +139,7 @@ defmodule ElixirSessions.SessionTypechecking do
   @doc """
   Traverses the given Elixir `ast` and session-typechecks it with respect to the `session_type`.
   """
-  @spec session_typecheck_ast(ast(), session_type(), %{}, %{}, module_context()) ::
+  @spec session_typecheck_ast(ast(), session_type(), %{}, %{}, %{}) ::
           {%{}, %{}, session_type()}
   def session_typecheck_ast(body, session_type, rec_var, function_st_context, module_context)
 
@@ -141,14 +152,16 @@ defmodule ElixirSessions.SessionTypechecking do
       ) do
     %ST.Recurse{label: label, body: session_type_body} = recurse
 
-      if Map.has_key?(rec_var, label) do
-        if not ST.equal?(recurse, Map.get(rec_var, label, %ST.Terminate{})) do
-          IO.puts("Replacing the recursive variable #{label} with new " <>
-          "session type #{ST.st_to_string(Map.get(rec_var, label, %ST.Terminate{}))}")
-        end
+    if Map.has_key?(rec_var, label) do
+      if not ST.equal?(recurse, Map.get(rec_var, label, %ST.Terminate{})) do
+        IO.puts(
+          "Replacing the recursive variable #{label} with new " <>
+            "session type #{ST.st_to_string(Map.get(rec_var, label, %ST.Terminate{}))}"
+        )
       end
-    rec_var =
-      Map.put(rec_var, label, recurse)
+    end
+
+    rec_var = Map.put(rec_var, label, recurse)
 
     session_typecheck_ast(body, session_type_body, rec_var, function_st_context, module_context)
   end
@@ -521,8 +534,12 @@ defmodule ElixirSessions.SessionTypechecking do
       when is_list(parameters) do
     arity = length(parameters)
 
-    %ST.Module{
+    %{
       functions: functions,
+      function_session_type: _function_session_type,
+      file: _file,
+      relative_file: _relative_file,
+      line: _line,
       module_name: _module_name
     } = module_context
 

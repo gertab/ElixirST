@@ -14,48 +14,58 @@ defmodule ElixirSessions.SmallExample do
     send(pid, {:A})
     # @session "rec X.(!A().X)"
     # @session "!A().rec X.(!A().X)"
+    aaa = 11111 + 2222 * 33333 + 44444 + 55555
+    _ = aaa * 7
     example(pid)
   end
 
-  @session "rec X.(!A().!sum(integer).!hello(string).X)"
-  @spec example2(pid) :: no_return
-  def example2(pid) do
-    send(pid, {:A})
 
-    IO.puts("Adding numbers")
-    numbers = [1, 4, 5, 7, 882]
-    sum = Enum.reduce(numbers, &+/2)
-    send(pid, {:sum, sum})
 
-    IO.puts("Sending hello")
-    string = get_hello()
-    send(pid, {:hello, string})
 
-    example2(pid)
-  end
+  # @session "rec X.(!A().!sum(integer).!hello(string).X)"
+  # # @spec example2(pid) :: no_return
+  # def example2(pid) do
+  #   send(pid, {:A})
 
-  defp get_hello() do
-    "hello"
-  end
+  #   IO.puts("Adding numbers")
+  #   numbers = [1, 4, 5, 7, 882]
+  #   sum = Enum.reduce(numbers, &+/2)
+  #   send(pid, {:sum, sum})
 
-  @session "rec X.(!A().!sum(integer).!hello(string).X)"
-  @spec example3(pid) :: no_return
-  def example3(pid) do
-    send(pid, {:A})
+  #   IO.puts("Sending hello")
+  #   string = get_hello()
+  #   send(pid, {:hello, string})
 
-    # IO.puts("Adding numbers")
-    # numbers = [1, 4, 5, 7, 882]
-    # sum = Enum.reduce(numbers, &+/2)
-    sum = 5
-    send(pid, {:sum, sum})
+  #   example2(pid)
+  # end
 
-    # IO.puts("Sending hello")
-    # string = get_hello()
-    string = "hello"
-    send(pid, {:hello, string})
+  # defp get_hello() do
+  #   "hello"
+  # end
 
-    example3(pid)
-  end
+
+
+
+  # @session "rec X.(!A().!sum(integer).!hello(string).X)"
+  # @spec example3(pid) :: no_return
+  # def example3(pid) do
+  #   send(pid, {:A})
+
+  #   # IO.puts("Adding numbers")
+  #   # numbers = [1, 4, 5, 7, 882]
+  #   # sum = Enum.reduce(numbers, &+/2)
+  #   sum = 5
+  #   send(pid, {:sum, sum})
+
+  #   # IO.puts("Sending hello")
+  #   # string = get_hello()
+  #   string = "hello"
+  #   send(pid, {:hello, string})
+
+  #   example3(pid)
+  # end
+
+
 
   # @session "rec X.(&{?option1().X, ?option2()})"
   # # @session "rec X.(&{?option1().X, ?option2().!ok()})"
