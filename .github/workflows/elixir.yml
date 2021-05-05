@@ -2,9 +2,9 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, expression_typing ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, expression_typing ]
 
 jobs:
   build:
