@@ -222,7 +222,7 @@ iex> s  = "!Hello(Integer)"
 %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:integer]}
 ```
 
-#### Generator (not updated)
+<!-- #### Generator (not updated)
 
 To synthesize (or generate) Elixir code from a session type use the functions `generate_quoted/1` or `generate_to_string/1`. 
 These automatically generate the quoted (i.e. AST) or stringified Elixir code respectively. 
@@ -233,7 +233,7 @@ Example:
 iex> s         = "!hello(number).?hello_ret(number)"
 ...> st        = ST.string_to_st(s)
 ...> st_string = ST.generate_to_string(st)
-```
+``` -->
 
 Generates the following automatically:
 

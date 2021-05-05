@@ -80,25 +80,25 @@ defmodule ST do
         }
       }
 
-  ### Generator
-  Given a session type, `generate_quoted/1` generates the quoted Elixir code (or AST) automatically.
+  # ### Generator
+  # Given a session type, `generate_quoted/1` generates the quoted Elixir code (or AST) automatically.
 
-  For example, setting the session type to `!hello(number).?hello_ret(number)`, `generate_to_string/1` automatically synthesizes the
-  equivalent Elixir code, as shown below.
+  # For example, setting the session type to `!hello(number).?hello_ret(number)`, `generate_to_string/1` automatically synthesizes the
+  # equivalent Elixir code, as shown below.
 
-  #### Synthesizer usage
-      s = "!hello(number).?hello_ret(number)"
-      st = ST.string_to_st(s)
-      ST.generate_to_string(st)
+  # #### Synthesizer usage
+  # s = "!hello(number).?hello_ret(number)"
+  # st = ST.string_to_st(s)
+  # ST.generate_to_string(st)
 
-  #### Synthesizer output
-      def func() do
-        send(self(), {:hello})
-        receive do
-          {:hello_ret, var1} when is_number(var1) ->
-            :ok
-        end
-      end
+  # #### Synthesizer output
+  # def func() do
+  #   send(self(), {:hello})
+  #   receive do
+  #     {:hello_ret, var1} when is_number(var1) ->
+  #       :ok
+  #   end
+  # end
 
   ### Duality
 
@@ -486,46 +486,46 @@ defmodule ST do
     end
   end
 
-  @doc """
-    Given a session type, generates the corresponding Elixir code, formatted as a string.
+  # @doc """
+  #   Given a session type, generates the corresponding Elixir code, formatted as a string.
 
-    E.g.
-          st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
-          ElixirSessions.Generator.generate_to_string(st)
-          def func() do
-            send(self(), {:Ping})
-            receive do
-              {:Pong, var1} when is_binary(var1) ->
-                :ok
-              end
-            end
-          end
-  """
-  # @spec generate_to_string(session_type()) :: String.t()
-  def generate_to_string(session_type) do
-    ElixirSessions.Generator.generate_to_string(session_type)
-  end
+  #   E.g.
+  #         st = ElixirSessions.Parser.parse("!Ping(Integer).?Pong(String)")
+  #         ElixirSessions.Generator.generate_to_string(st)
+  #         def func() do
+  #           send(self(), {:Ping})
+  #           receive do
+  #             {:Pong, var1} when is_binary(var1) ->
+  #               :ok
+  #             end
+  #           end
+  #         end
+  # """
+  # # @spec generate_to_string(session_type()) :: String.t()
+  # def generate_to_string(session_type) do
+  #   ElixirSessions.Generator.generate_to_string(session_type)
+  # end
 
-  @doc """
-  Given a session type, computes the equivalent (skeleton) code in Elixir. The output is in AST/quoted format.
+  # @doc """
+  # Given a session type, computes the equivalent (skeleton) code in Elixir. The output is in AST/quoted format.
 
-  ## Examples
-      iex> session_type = %ST.Send{label: :hello, types: [], next: %ST.Terminate{}}
-      ...> ST.generate_quoted(session_type)
-      {:def, [context: ElixirSessions.Generator, import: Kernel],
-      [
-        {:func, [context: ElixirSessions.Generator], []},
-        [
-          do:
-            {:send, [context: ElixirSessions.Generator, import: Kernel],
-              [{:self, [context: ElixirSessions.Generator, import: Kernel], []}, {:{}, [], [:hello]}]}
-        ]
-      ]}
-  """
-  @spec generate_quoted(session_type()) :: ast()
-  def generate_quoted(session_type) do
-    ElixirSessions.Generator.generate_quoted(session_type)
-  end
+  # ## Examples
+  #     iex> session_type = %ST.Send{label: :hello, types: [], next: %ST.Terminate{}}
+  #     ...> ST.generate_quoted(session_type)
+  #     {:def, [context: ElixirSessions.Generator, import: Kernel],
+  #     [
+  #       {:func, [context: ElixirSessions.Generator], []},
+  #       [
+  #         do:
+  #           {:send, [context: ElixirSessions.Generator, import: Kernel],
+  #             [{:self, [context: ElixirSessions.Generator, import: Kernel], []}, {:{}, [], [:hello]}]}
+  #       ]
+  #     ]}
+  # """
+  # @spec generate_quoted(session_type()) :: ast()
+  # def generate_quoted(session_type) do
+  #   ElixirSessions.Generator.generate_quoted(session_type)
+  # end
 
   @spec session_subtraction!(session_type(), session_type()) :: session_type()
   def session_subtraction!(session_type, session_type_internal_function) do
