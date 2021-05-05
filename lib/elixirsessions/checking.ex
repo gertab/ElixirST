@@ -84,7 +84,7 @@ defmodule ElixirSessions.Checking do
         end)
 
       if is_nil(dual_session) do
-        throw("No dual match found for #{inspect dual}.")
+        throw("No dual match found for #{inspect(dual)}.")
       end
 
       {_name_arity, dual_session} = dual_session
@@ -98,38 +98,51 @@ defmodule ElixirSessions.Checking do
       Module.delete_attribute(env.module, :dual)
     end
 
+    # Get function return and argument types from @spec directive
+    spec = Module.get_attribute(env.module, :spec)
 
+    if not is_nil(spec) and length(spec) > 0 do
+      {:spec, {:"::", _, [{spec_name, _, args_types}, return_type]}, _module} = hd(spec)
 
-# Get function return and argument types from @spec directive
-  spec = Module.get_attribute(env.module, :spec)
+      args_types_converted = ElixirSessions.TypeOperations.spec_get_type(args_types)
+      return_type_converted = ElixirSessions.TypeOperations.spec_get_type(return_type)
 
-  if not is_nil(spec) and length(spec) > 0 do
-    {:spec, {:"::", _, [{spec_name, _, args_types}, return_type]}, _module} = hd(spec)
-
-    IO.warn(
-      "Found @spec: name " <>
-        inspect(name) <>
-        ", args_types " <>
-        inspect(args_types) <>
-        ", return_type " <> inspect(return_type)
-    )
-
-    types = {spec_name, length(args_types)}
-
-    case types do
-      {^name, ^arity} ->
-        # Spec describes the current function
-        Module.put_attribute(
-          env.module,
-          :type_specs,
-          {{name, arity}, {args_types, return_type}}
+      if args_types_converted == :error or return_type_converted == :error do
+        throw(
+          "Problem with @spec for #{spec_name}/#{length(args_types)}" <>
+            inspect(args_types) <> " " <> inspect(return_type)
         )
+      end
 
-      _ ->
-        # No spec match
-        :ok
+      IO.warn(
+        "Checking: Found @spec: name " <>
+          inspect(spec_name) <>
+          ", args_types " <>
+          # inspect(args_types) <>
+          # " => " <>
+          inspect(args_types_converted) <>
+          ", return_type " <>
+          # inspect(return_type) <>
+          # " => " <>
+          inspect(return_type_converted)
+      )
+
+      types = {spec_name, length(args_types)}
+
+      case types do
+        {^name, ^arity} ->
+          # Spec describes the current function
+          Module.put_attribute(
+            env.module,
+            :type_specs,
+            {{name, arity}, {args_types, return_type}}
+          )
+
+        _ ->
+          # No spec match
+          :ok
+      end
     end
-  end
   end
 
   def __after_compile__(_env, bytecode) do
@@ -184,7 +197,8 @@ defmodule ElixirSessions.Checking do
       function_session_type: to_map(session_types_parsed),
       file: dbgi_map[:file],
       relative_file: dbgi_map[:relative_file],
-      line: dbgi_map[:line], #todo remove
+      # todo remove
+      line: dbgi_map[:line],
       module_name: dbgi_map[:module]
     }
     |> ElixirSessions.SessionTypechecking.session_typecheck_module()

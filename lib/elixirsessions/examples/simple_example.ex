@@ -19,8 +19,10 @@ defmodule ElixirSessions.SmallExample do
     example(pid)
   end
 
-
-
+  @spec djkdskj(55) :: any
+  def djkdskj(ds) do
+    ds
+  end
 
   # @session "rec X.(!A().!sum(integer).!hello(string).X)"
   # # @spec example2(pid) :: no_return
