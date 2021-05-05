@@ -14,6 +14,8 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
+      # todo change to option
       @session_typing true
       @compile :debug_info
 
@@ -95,6 +97,39 @@ defmodule ElixirSessions.Checking do
       Module.put_attribute(env.module, :session_marked, {{name, arity}, expected_dual_session})
       Module.delete_attribute(env.module, :dual)
     end
+
+
+
+# Get function return and argument types from @spec directive
+  spec = Module.get_attribute(env.module, :spec)
+
+  if not is_nil(spec) and length(spec) > 0 do
+    {:spec, {:"::", _, [{spec_name, _, args_types}, return_type]}, _module} = hd(spec)
+
+    IO.warn(
+      "Found @spec: name " <>
+        inspect(name) <>
+        ", args_types " <>
+        inspect(args_types) <>
+        ", return_type " <> inspect(return_type)
+    )
+
+    types = {spec_name, length(args_types)}
+
+    case types do
+      {^name, ^arity} ->
+        # Spec describes the current function
+        Module.put_attribute(
+          env.module,
+          :type_specs,
+          {{name, arity}, {args_types, return_type}}
+        )
+
+      _ ->
+        # No spec match
+        :ok
+    end
+  end
   end
 
   def __after_compile__(_env, bytecode) do
