@@ -29,12 +29,23 @@ defmodule ElixirSessions.Checking do
   def __on_definition__(env, kind, _name, _args, _guards, _body) do
     session = Module.get_attribute(env.module, :session)
     dual = Module.get_attribute(env.module, :dual)
+    spec = Module.get_attribute(env.module, :spec)
     {name, arity} = env.function
-    # spec = Module.get_attribute(env.module, :spec)
-    # if not is_nil(spec) do
-    #   IO.warn("Found spec: " <> inspect(spec))
-    # end
 
+    # Parse temporary attributes into persistent attributes:
+    #      @session, @dual -> @session_marked
+    #      @spec           -> @type_specs
+    session_attribute(session, name, arity, kind, env)
+    dual_attribute(dual, name, arity, env)
+    spec_attribute(spec, name, arity, env)
+  end
+
+  def __after_compile__(_env, bytecode) do
+    ElixirSessions.Retriever.process(bytecode)
+  end
+
+  # Processes @session attribute - gets the function and session type details
+  defp session_attribute(session, name, arity, kind, env) do
     if not is_nil(session) do
       # @session_marked contains a list of functions with session types
       # E.g. [{{:pong, 0}, "?ping()"}, ...]
@@ -63,7 +74,10 @@ defmodule ElixirSessions.Checking do
       Module.put_attribute(env.module, :session_marked, {{name, arity}, session})
       Module.delete_attribute(env.module, :session)
     end
+  end
 
+  # Processes @dual attribute, which takes a function reference, e.g. @dual &function/1.
+  defp dual_attribute(dual, name, arity, env) do
     if not is_nil(dual) do
       if not is_function(dual) do
         throw("Expected function name but found #{inspect(dual)}.")
@@ -97,10 +111,11 @@ defmodule ElixirSessions.Checking do
       Module.put_attribute(env.module, :session_marked, {{name, arity}, expected_dual_session})
       Module.delete_attribute(env.module, :dual)
     end
+  end
 
+  # Processes @spec details for public and private functions
+  defp spec_attribute(spec, name, arity, env) do
     # Get function return and argument types from @spec directive
-    spec = Module.get_attribute(env.module, :spec)
-
     if not is_nil(spec) and length(spec) > 0 do
       {:spec, {:"::", _, [{spec_name, _, args_types}, return_type]}, _module} = hd(spec)
 
@@ -114,18 +129,18 @@ defmodule ElixirSessions.Checking do
         )
       end
 
-      IO.warn(
-        "Checking: Found @spec: name " <>
-          inspect(spec_name) <>
-          ", args_types " <>
-          # inspect(args_types) <>
-          # " => " <>
-          inspect(args_types_converted) <>
-          ", return_type " <>
-          # inspect(return_type) <>
-          # " => " <>
-          inspect(return_type_converted)
-      )
+      # IO.warn(
+      #   "Checking: Found @spec: name " <>
+      #     inspect(spec_name) <>
+      #     ", args_types " <>
+      #     # inspect(args_types) <>
+      #     # " => " <>
+      #     inspect(args_types_converted) <>
+      #     ", return_type " <>
+      #     # inspect(return_type) <>
+      #     # " => " <>
+      #     inspect(return_type_converted)
+      # )
 
       types = {spec_name, length(args_types)}
 
@@ -143,9 +158,5 @@ defmodule ElixirSessions.Checking do
           :ok
       end
     end
-  end
-
-  def __after_compile__(_env, bytecode) do
-    ElixirSessions.Retriever.process(bytecode)
   end
 end
