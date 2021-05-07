@@ -4,24 +4,33 @@ defmodule ElixirSessions.SessionTypechecking do
   @moduledoc """
   Given a session type and Elixir code, the Elixir code is typechecked against the session type.
   """
+
   @typedoc false
   @type ast :: ST.ast()
   @typedoc false
   @type session_type :: ST.session_type()
+  @typedoc false
+  @type accepted_types :: any()
 
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
-  @spec session_typecheck_module(%{
-          functions: [ST.Function.t()],
-          function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
-          module_name: atom(),
-        }, list) :: list
-  def session_typecheck_module(%{
-    functions: functions,
-    function_session_type: function_session_type,
-    module_name: _module_name
-  } = module_context, _options \\ []) do
-
-
+  @spec session_typecheck_module(
+          %{
+            functions: [ST.Function.t()],
+            function_types: %{{ST.label(), non_neg_integer()} => {accepted_types(), accepted_types()}},
+            function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
+            module_name: atom()
+          },
+          list
+        ) :: list
+  def session_typecheck_module(
+        %{
+          functions: functions,
+          function_types: _function_types,
+          function_session_type: function_session_type,
+          module_name: _module_name
+        } = module_context,
+        _options \\ []
+      ) do
     # IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
@@ -33,8 +42,6 @@ defmodule ElixirSessions.SessionTypechecking do
           session_typecheck_by_function(
             ast,
             expected_session_type,
-            %{},
-            function_session_type,
             module_context
           )
         end)
@@ -47,21 +54,18 @@ defmodule ElixirSessions.SessionTypechecking do
   @spec session_typecheck_by_function(
           ast(),
           session_type(),
-          %{},
-          %{},
           %{
             functions: [ST.Function.t()],
+            function_types: %{{ST.label(), non_neg_integer()} => {accepted_types(), accepted_types()}},
             function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
-            module_name: atom(),
+            module_name: atom()
           }
         ) ::
           :ok
   def session_typecheck_by_function(
         ast,
-        _expected_session_type,
-        _rec_var,
-        _function_st_context,
-        _module_context
+        expected_session_type,
+        module_context
       ) do
     # IO.inspect(ast)
     # IO.inspect(expected_session_type)
@@ -76,8 +80,21 @@ defmodule ElixirSessions.SessionTypechecking do
     #   arity: arity
     # }
 
-    Macro.prewalk(ast, 0, &walk_ast/2)
+    env = %{
+      # :x => :atom
+      :variable_ctx => %{},
+      # rec X.(!A().X)
+      :session_type => expected_session_type,
+      # {name, arity} => %ST.Function
+      :functions => module_context[:functions],
+      # {name, arity} => {[:atom, :number], :atom}
+      :function_ctx => module_context[:function_types],
+      # {name, arity} => rec X.(!A().X)
+      :function_session_type__ctx => module_context[:function_session_type]
+    }
     |> IO.inspect()
+
+    Macro.prewalk(ast, env, &typecheck/2)
 
     # {_rec_var, _function_st_context, remaining_session_type} =
     #   session_typecheck_ast(
@@ -100,16 +117,16 @@ defmodule ElixirSessions.SessionTypechecking do
     :ok
   end
 
-  defp walk_ast(a, acc) when is_number(a) do
-    {312345688898, acc + 1}
+  defp typecheck(a, env) when is_number(a) do
+    {312_345_688_898, env}
   end
 
-  defp walk_ast({{:., [], [:erlang, :+]}, _meta, _args}, acc) do
-    {{{:., [], [:erlang, :+]}, [], [40000000000, 5]}, acc + 1}
+  defp typecheck({{:., [], [:erlang, :+]}, _meta, _args}, env) do
+    {{{:., [], [:erlang, :+]}, [], [40_000_000_000, 5]}, env}
   end
 
-  defp walk_ast(other, acc) do
-    {other, acc + 1}
+  defp typecheck(other, env) do
+    {other, env}
   end
 
   # @doc """

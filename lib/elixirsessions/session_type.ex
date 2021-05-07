@@ -286,7 +286,7 @@ defmodule ST do
   defmodule Module do
     @moduledoc false
     defstruct functions: [],
-              function_session_type: %{},
+              function_st_context: %{},
               module_name: :"",
               file: "",
               relative_file: "",
@@ -298,7 +298,7 @@ defmodule ST do
     @type func_name_arity() :: {label(), non_neg_integer()}
     @type t :: %__MODULE__{
             functions: [ST.Function.t()],
-            function_session_type: %{func_name_arity() => session_type()},
+            function_st_context: %{func_name_arity() => session_type()},
             module_name: atom(),
             file: String.t(),
             relative_file: String.t(),

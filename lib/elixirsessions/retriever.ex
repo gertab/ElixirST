@@ -51,8 +51,12 @@ defmodule ElixirSessions.Retriever do
     # dbgi_map
     # |> IO.inspect()
 
+    function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
+
+
     %{
       functions: all_functions,
+      function_types: to_map(function_types),
       function_session_type: to_map(session_types_parsed),
       module_name: dbgi_map[:module]
     }
