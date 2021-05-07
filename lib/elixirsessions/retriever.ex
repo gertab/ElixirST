@@ -45,18 +45,18 @@ defmodule ElixirSessions.Retriever do
 
     all_functions = get_all_functions!(dbgi_map)
 
-    dbgi_map[:attributes]
-    |> IO.inspect()
+    # dbgi_map[:attributes]
+    # |> IO.inspect()
 
     # dbgi_map
     # |> IO.inspect()
 
     function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
+    all_functions = add_types_to_functions(all_functions, to_map(function_types))
 
     %{
       functions: all_functions,
-      function_types: to_map(function_types),
       function_session_type: to_map(session_types_parsed),
       module_name: dbgi_map[:module]
     }
@@ -94,25 +94,48 @@ defmodule ElixirSessions.Retriever do
             {[curr_m | accu_m], [curr_p | accu_p], [curr_g | accu_g], [curr_b | accu_b]}
           end)
 
-          kkk = parameters
-
-          _ = kkk
-        %ST.Function{
+          {{name, arity}, %ST.Function{
           name: name,
           arity: arity,
           def_p: def_p,
           meta: meta,
           cases: length(bodies),
           case_metas: metas,
-          parameters: parameters,
+          parameters: process_parameters(parameters),
           guards: guards,
           bodies: bodies
-        }
+        }}
 
       x ->
         throw("Unknown info for #{inspect(x)}")
     end)
+    |> to_map()
   end
+
+  defp add_types_to_functions(all_functions, function_types) do
+
+    for {{name, arity}, function} <- all_functions do
+      types = Map.get(function_types, {name, arity}, nil)
+      if not is_nil(types) do
+        {param, ret} = types
+        {{name, arity}, %{function | return_type: ret, param_types: param}}
+      else
+        {{name, arity}, function}
+      end
+    end
+
+    |> to_map()
+  end
+
+  # Given a list of lists, returns the names of the variables. If no variable is present, nil is used
+  def process_parameters(parameters) do
+    for parameter <- parameters do
+      for variable <- parameter do
+        ElixirSessions.TypeOperations.get_var(variable)
+      end
+    end
+  end
+
 # To edit get a module, edit it, recompile it and reload it
   # def run do
     # module = ElixirSessions.PingPong

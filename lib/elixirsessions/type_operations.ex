@@ -84,6 +84,14 @@ defmodule ElixirSessions.TypeOperations do
   def spec_get_type(type) when is_pid(type), do: :pid
   def spec_get_type(_), do: :error
 
+  @spec get_var(any) :: any
+  def get_var({var, _, _}) do
+    var
+  end
+  def get_var(_) do
+    nil
+  end
+
   @spec type_to_guard(binary) :: :error | binary
   def type_to_guard(type) when is_binary(type) do
     case type do

@@ -15,8 +15,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
   @spec session_typecheck_module(
           %{
-            functions: [ST.Function.t()],
-            function_types: %{{ST.label(), non_neg_integer()} => {accepted_types(), accepted_types()}},
+            functions: %{{ST.label(), non_neg_integer()} => ST.Function.t()},
             function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
             module_name: atom()
           },
@@ -25,7 +24,6 @@ defmodule ElixirSessions.SessionTypechecking do
   def session_typecheck_module(
         %{
           functions: functions,
-          function_types: _function_types,
           function_session_type: function_session_type,
           module_name: _module_name
         } = module_context,
@@ -36,27 +34,30 @@ defmodule ElixirSessions.SessionTypechecking do
     for {{name, arity}, expected_session_type} <- function_session_type do
       %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
 
-      # todo pass forward the updated function_session_type
-      _ =
-        Enum.map(bodies, fn ast ->
-          session_typecheck_by_function(
-            ast,
-            expected_session_type,
-            module_context
-          )
-        end)
+      # for bod <-  do
 
-      # |> hd()
-      :ok
+      # end
+      # todo pass forward the updated function_session_type
+      Enum.each(bodies, fn ast ->
+        session_typecheck_by_function(
+          ast,
+          {name, arity},
+          expected_session_type,
+          module_context
+        )
+      end)
     end
   end
 
   @spec session_typecheck_by_function(
           ast(),
+          {ST.label(), non_neg_integer()},
           session_type(),
           %{
             functions: [ST.Function.t()],
-            function_types: %{{ST.label(), non_neg_integer()} => {accepted_types(), accepted_types()}},
+            function_types: %{
+              {ST.label(), non_neg_integer()} => {accepted_types(), accepted_types()}
+            },
             function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
             module_name: atom()
           }
@@ -64,6 +65,7 @@ defmodule ElixirSessions.SessionTypechecking do
           :ok
   def session_typecheck_by_function(
         ast,
+        name_arity,
         expected_session_type,
         module_context
       ) do
@@ -81,17 +83,28 @@ defmodule ElixirSessions.SessionTypechecking do
     # }
 
     env = %{
+      # :ok or :error or :warning
+      :condition => :ok,
+      # error message
+      :error => nil,
       # :x => :atom
       :variable_ctx => %{},
+      # Expected session type
       # rec X.(!A().X)
       :session_type => expected_session_type,
+      # Expected type
+      # todo fix
+      :type => module_context[:functions],
       # {name, arity} => %ST.Function
       :functions => module_context[:functions],
+      # Function types (parameter and return types)
       # {name, arity} => {[:atom, :number], :atom}
       :function_ctx => module_context[:function_types],
       # {name, arity} => rec X.(!A().X)
       :function_session_type__ctx => module_context[:function_session_type]
     }
+
+    env[:type]
     |> IO.inspect()
 
     Macro.prewalk(ast, env, &typecheck/2)
@@ -744,21 +757,29 @@ defmodule ElixirSessions.SessionTypechecking do
   # end
 
   defp lookup_function!(all_functions, name, arity) do
-    matches =
-      Enum.map(
-        all_functions,
-        fn
-          %ST.Function{name: ^name, arity: ^arity} = function -> function
-          _ -> nil
-        end
-      )
-      |> Enum.filter(fn elem -> !is_nil(elem) end)
+    res = Map.get(all_functions, {name, arity}, nil)
 
-    case length(matches) do
-      0 -> throw("Function #{name}/#{arity} was not found.")
-      1 -> hd(matches)
-      _ -> throw("Multiple function with the name #{name}/#{arity}.")
+    if is_nil(res) do
+      throw("Function #{name}/#{arity} was not found.")
     end
+
+    res
+
+    # matches =
+    #   Enum.map(
+    #     all_functions,
+    #     fn
+    #       %ST.Function{name: ^name, arity: ^arity} = function -> function
+    #       _ -> nil
+    #     end
+    #   )
+    #   |> Enum.filter(fn elem -> !is_nil(elem) end)
+
+    # case length(matches) do
+    #   0 -> throw("Function #{name}/#{arity} was not found.")
+    #   1 -> hd(matches)
+    #   _ -> throw("Multiple function with the name #{name}/#{arity}.")
+    # end
   end
 
   # recompile && ElixirSessions.SessionTypechecking.run

@@ -35,8 +35,8 @@ defmodule ElixirSessions.SmallExample do
     example(pid)
   end
 
-  @spec djkdskj(55) :: any
-  def djkdskj(ds) do
+  @spec djkdskj(55, number()) :: any
+  def djkdskj(ds, 553) do
     ds
   end
 

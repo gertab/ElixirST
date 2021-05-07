@@ -264,7 +264,9 @@ defmodule ST do
               # List (of list) of guards
               guards: [],
               # List of bodies from different (pattern-matching) cases
-              bodies: []
+              bodies: [],
+              return_type: :any,
+              param_types: []
 
     # Structure of functions in Beam debug_info
     # {{name, arity}, :def_or_p, meta, [{meta, parameters, guards, body}, case2, ...]}
@@ -279,7 +281,9 @@ defmodule ST do
             case_metas: [any()],
             parameters: [any()],
             guards: [any()],
-            bodies: [any()]
+            bodies: [any()],
+            return_type: any(),
+            param_types: [any()]
           }
   end
 
