@@ -150,7 +150,7 @@ defmodule ElixirSessions.Checking do
           Module.put_attribute(
             env.module,
             :type_specs,
-            {{name, arity}, {args_types, return_type}}
+            {{name, arity}, {args_types_converted, return_type_converted}}
           )
 
         _ ->

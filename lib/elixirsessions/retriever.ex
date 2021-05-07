@@ -7,8 +7,9 @@ defmodule ElixirSessions.Retriever do
   Input as bytecode from a BEAM file, takes the Elixir AST from the debug_info
   and forwards it to the typechecker/s.
   """
-  @spec process(binary) :: list
-  def process(bytecode, _options \\ []) do
+  # todo fix: if called using mix session_check SmallExample, then process/2 is reached twice (in task and after_compile)
+  @spec process(binary, list) :: list
+  def process(bytecode, options \\ []) do
     # Gets debug_info chunk from BEAM file
     chunks =
       case :beam_lib.chunks(bytecode, [:debug_info]) do
@@ -44,8 +45,8 @@ defmodule ElixirSessions.Retriever do
 
     all_functions = get_all_functions!(dbgi_map)
 
-    # dbgi_map[:attributes]
-    # |> IO.inspect()
+    dbgi_map[:attributes]
+    |> IO.inspect()
 
     # dbgi_map
     # |> IO.inspect()
@@ -55,7 +56,7 @@ defmodule ElixirSessions.Retriever do
       function_session_type: to_map(session_types_parsed),
       module_name: dbgi_map[:module]
     }
-    |> ElixirSessions.SessionTypechecking.session_typecheck_module()
+    |> ElixirSessions.SessionTypechecking.session_typecheck_module(options)
   end
 
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile), e.g. kinda similar to ExUnit

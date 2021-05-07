@@ -2,8 +2,8 @@ defmodule ElixirSessions.TypeOperations do
   @moduledoc """
   Operations related to expression typing
   """
-  # List of accepted types
-  # todo maybe add maps
+  # List of accepted types in session types
+  # todo maybe add maps, list
   @types [
     :any,
     :atom,
@@ -64,6 +64,11 @@ defmodule ElixirSessions.TypeOperations do
   end
 
   def spec_get_type({:{}, _, types}), do: {:tuple, Enum.map(types, &spec_get_type/1)}
+
+  def spec_get_type({type, _, _}) when type not in @types do
+    :error
+  end
+
   def spec_get_type(type) when is_list(type), do: {:list, Enum.map(type, &spec_get_type/1)}
 
   def spec_get_type(type) when is_tuple(type),

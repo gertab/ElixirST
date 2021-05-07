@@ -14,12 +14,12 @@ defmodule ElixirSessions.SessionTypechecking do
           functions: [ST.Function.t()],
           function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
           module_name: atom(),
-        }) :: list
+        }, list) :: list
   def session_typecheck_module(%{
     functions: functions,
     function_session_type: function_session_type,
     module_name: _module_name
-  } = module_context) do
+  } = module_context, _options \\ []) do
 
 
     # IO.puts("Starting session type checking #{inspect(function_session_type)}")
@@ -53,9 +53,6 @@ defmodule ElixirSessions.SessionTypechecking do
             functions: [ST.Function.t()],
             function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
             module_name: atom(),
-            file: String.t(),
-            relative_file: String.t(),
-            line: integer()
           }
         ) ::
           :ok
