@@ -14,6 +14,14 @@
         },
         {
             "type": "mix_task",
+            "request": "launch",
+            "name": "mix session_check",
+            "task": "session_check",
+            "taskArgs": [],
+            "projectDir": "${workspaceRoot}"
+        },
+        {
+            "type": "mix_task",
             "name": "mix (Default task)",
             "request": "launch",
             "projectDir": "${workspaceRoot}"

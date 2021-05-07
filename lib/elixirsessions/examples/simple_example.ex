@@ -7,7 +7,7 @@ defmodule ElixirSessions.SmallExample do
     spawn(__MODULE__, :example1, [])
   end
 
-  @session "rec X.(!A().X)"
+  @session "rec X.(!A().!B().X)"
   @spec example(pid) :: no_return
   def example(pid) do
     # @session "!A().rec X.(!A().X)"
