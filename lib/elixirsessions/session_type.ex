@@ -258,7 +258,7 @@ defmodule ST do
               # Number of different patter-matching cases
               cases: 0,
               # List of function cases meta
-              metas: [],
+              case_metas: [],
               # List (of list) of parameters
               parameters: [],
               # List (of list) of guards
@@ -276,7 +276,7 @@ defmodule ST do
             def_p: :def | :defp,
             bodies: [any()],
             meta: [any()],
-            metas: [any()],
+            case_metas: [any()],
             parameters: [any()],
             guards: [any()],
             bodies: [any()]

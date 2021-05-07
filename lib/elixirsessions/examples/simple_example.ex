@@ -3,9 +3,25 @@ defmodule ElixirSessions.SmallExample do
   @moduledoc false
   # iex -S mix
 
-  def run() do
-    spawn(__MODULE__, :example1, [])
-  end
+  # def adddddd(1111, 443434) do
+  #   48343893
+  # end
+
+  # def adddddd(5555, num) do
+  #   num
+  # end
+
+  # def adddddd(num, 443434) do
+  #   num
+  # end
+
+  # def adddddd(num1, num2) do
+  #   num1 + num2
+  #   |> IO.inspect()
+  # end
+  # def run() do
+    #   spawn(__MODULE__, :example1, [])
+  # end
 
   @session "rec X.(!A().!B().X)"
   @spec example(pid) :: no_return

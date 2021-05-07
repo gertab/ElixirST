@@ -98,7 +98,7 @@ defmodule ElixirSessions.Retriever do
           def_p: def_p,
           meta: meta,
           cases: length(bodies),
-          metas: metas,
+          case_metas: metas,
           parameters: parameters,
           guards: guards,
           bodies: bodies

@@ -105,28 +105,6 @@ defmodule ElixirSessions.Operations do
     false
   end
 
-  @correct_types [
-    :any,
-    :atom,
-    :binary,
-    :bitstring,
-    :boolean,
-    :exception,
-    :float,
-    :function,
-    :integer,
-    :list,
-    :map,
-    nil,
-    :number,
-    :pid,
-    :port,
-    :reference,
-    :struct,
-    :tuple,
-    :string
-  ]
-
   # Convert session types from Erlang records (tuples) to Elixir Structs.
   # throws error in case of branches/choices with same labels, or
   # if the types are not valid
@@ -150,7 +128,9 @@ defmodule ElixirSessions.Operations do
   end
 
   def convert_to_structs({:send, label, types, next}, recurse_var) do
-    invalid_type = Enum.filter(types, fn t -> t not in @correct_types end)
+    accepted_types = ElixirSessions.TypeOperations.accepted_types()
+
+    invalid_type = Enum.filter(types, fn t -> t not in accepted_types end)
 
     if length(invalid_type) > 0 do
       throw("Invalid type/s: #{inspect(invalid_type)}")
@@ -160,7 +140,9 @@ defmodule ElixirSessions.Operations do
   end
 
   def convert_to_structs({:recv, label, types, next}, recurse_var) do
-    invalid_type = Enum.filter(types, fn t -> t not in @correct_types end)
+    accepted_types = ElixirSessions.TypeOperations.accepted_types()
+
+    invalid_type = Enum.filter(types, fn t -> t not in accepted_types end)
 
     if length(invalid_type) > 0 do
       throw("Invalid type/s: #{inspect(invalid_type)}")
