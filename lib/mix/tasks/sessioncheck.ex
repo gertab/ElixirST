@@ -3,7 +3,6 @@ defmodule Mix.Tasks.SessionCheck do
   use Mix.Task
 
   @moduledoc false
-  # @shortdoc "Simply calls the ElixirSessions.Inference.run/0 function."
   def run(_args) do
     load_paths = Mix.Project.compile_path()
     paths = Path.wildcard(load_paths <> "/Elixir.*.beam")

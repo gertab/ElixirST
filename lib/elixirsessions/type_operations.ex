@@ -1,4 +1,7 @@
 defmodule ElixirSessions.TypeOperations do
+  @moduledoc """
+  Operations related to expression typing
+  """
   # @spec types :: [
   #         :atom
   #         | :binary
@@ -69,7 +72,7 @@ defmodule ElixirSessions.TypeOperations do
   # ]
 
 
-  @typedoc """
+  @doc """
     Give types in @spec format, returns usable types.
     Accepts: any, atom, binary, boolean, float, integer, nil, number, pid, string, no_return, [] and {}
     todo maybe add maps

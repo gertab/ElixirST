@@ -206,8 +206,8 @@ Other examples can be found in the [`lib/elixirsessions/examples`](/lib/elixirse
 ElixirSessions implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
  - string parsing ([`lib/elixirsessions/parser.ex`](/lib/elixirsessions/parser.ex)),
- - ~~code synthesizer from session types ([`lib/elixirsessions/generator.ex`](/lib/elixirsessions/generator.ex)),~~
- - ~~session type inference from code ([`lib/elixirsessions/inference.ex`](/lib/elixirsessions/inference.ex)),~~
+ <!-- - ~~code synthesizer from session types ([`lib/elixirsessions/generator.ex`](/lib/elixirsessions/generator.ex)),~~
+ - ~~session type inference from code ([`lib/elixirsessions/inference.ex`](/lib/elixirsessions/inference.ex)),~~ -->
  - session type comparison (e.g. equality) and manipulation (e.g. duality).
 
 #### Parsing
@@ -263,7 +263,7 @@ iex> st_string = "!Ping(Integer).?Pong(String)"
 "?Ping(integer).!Pong(string)"
 ```
 
-#### Inference (Depreciated)
+<!-- #### Inference (Depreciated)
 
 Given quoted Elixir code, _ElixirSessions_ can infer the equivalent session type. To do so, use the function `ElixirSessions.Inference.infer_session_type/2`.
 
@@ -295,7 +295,7 @@ iex> ast = quote do
           !other_branch()
         }
    }"
-```
+``` -->
 
 #### Session type-checking
 

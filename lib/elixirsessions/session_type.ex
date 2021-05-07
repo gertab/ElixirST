@@ -414,7 +414,7 @@ defmodule ST do
   ## Examples
       iex> st_string = "!Ping(Integer).?Pong(String)"
       ...> st = ElixirSessions.Parser.parse(st_string)
-      ...> st_dual = ElixirSessions.Duality.dual(st)
+      ...> st_dual = ST.dual(st)
       %ST.Recv{
         label: :Ping,
         next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: [:string]},
@@ -426,7 +426,12 @@ defmodule ST do
   """
   @spec dual(session_type()) :: session_type()
   def dual(session_type) do
-    ElixirSessions.Duality.dual(session_type)
+    ElixirSessions.Operations.dual(session_type)
+  end
+
+  @spec dual?(session_type(), session_type()) :: boolean()
+  def dual?(session_type1, session_type2) do
+    ElixirSessions.Operations.dual?(session_type1, session_type2)
   end
 
   # Equality, takes into consideration that recursions with a different variable name are equal
