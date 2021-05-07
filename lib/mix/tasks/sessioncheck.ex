@@ -1,11 +1,26 @@
 defmodule Mix.Tasks.SessionCheck do
-  @dialyzer {:nowarn_function}
+  # @dialyzer {:nowarn_function}
   use Mix.Task
 
-  @moduledoc false
-  def run(_args) do
+  # @moduledoc false
+  @spec run([binary]) :: list
+  def run(args) do
+    {opts, argv} = OptionParser.parse!(args, switches: [expression_typing: :boolean])
+    expression_typing = Keyword.get(opts, :expression_typing, true)
+
     load_paths = Mix.Project.compile_path()
-    paths = Path.wildcard(load_paths <> "/Elixir.*.beam")
+    paths =
+      if length(argv) > 0 do
+        Enum.map(argv, fn path -> Path.wildcard(load_paths <> "/Elixir*." <> path <> ".beam") end)
+        |> List.flatten()
+      else
+        # or Path.wildcard("projects/*/ebin/**/*.beam")
+        Path.wildcard(load_paths <> "/Elixir.*.beam")
+      end
+
+    if length(paths) == 0 do
+      throw("No paths found for module: #{Enum.join(argv, ", ")}")
+    end
 
     files =
       for path <- paths do
@@ -15,6 +30,8 @@ defmodule Mix.Tasks.SessionCheck do
           end
       end
 
-    Enum.each(files, &ElixirSessions.Retriever.process/1)
+    for file <- files do
+      ElixirSessions.Retriever.process(file, [expression_typing: expression_typing])
+    end
   end
 end

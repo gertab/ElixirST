@@ -1,5 +1,4 @@
 defmodule ElixirSessions.Retriever do
-  # @moduledoc false
   @moduledoc """
   Retrieves bytecode and (session) typechecks it
   """
@@ -8,7 +7,8 @@ defmodule ElixirSessions.Retriever do
   Input as bytecode from a BEAM file, takes the Elixir AST from the debug_info
   and forwards it to the typechecker/s.
   """
-  def process(bytecode) do
+  @spec process(binary) :: list
+  def process(bytecode, _options \\ []) do
     # Gets debug_info chunk from BEAM file
     chunks =
       case :beam_lib.chunks(bytecode, [:debug_info]) do
@@ -32,11 +32,6 @@ defmodule ElixirSessions.Retriever do
         x ->
           throw("Error: #{inspect(x)}")
       end
-
-    # |> IO.inspect()
-
-    # {:ok,{_,[{:abstract_code,{_, ac}}]}} = :beam_lib.chunks(Beam,[abstract_code]).
-    # erl_syntax:form_list(AC)
 
     # Gets the list of session types, which were stored as attributes in the module
     session_types = Keyword.get_values(dbgi_map[:attributes], :session_marked)
@@ -63,7 +58,7 @@ defmodule ElixirSessions.Retriever do
     |> ElixirSessions.SessionTypechecking.session_typecheck_module()
   end
 
-  # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile)
+  # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile), e.g. kinda similar to ExUnit
 
   defp to_map(list) do
     list
@@ -94,6 +89,9 @@ defmodule ElixirSessions.Retriever do
             {[curr_m | accu_m], [curr_p | accu_p], [curr_g | accu_g], [curr_b | accu_b]}
           end)
 
+          kkk = parameters
+
+          _ = kkk
         %ST.Function{
           name: name,
           arity: arity,
