@@ -32,82 +32,71 @@ defmodule ElixirSessions.SessionTypechecking do
     # IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
-      %ST.Function{bodies: bodies} = lookup_function!(functions, name, arity)
+      function = lookup_function!(functions, name, arity)
 
       # for bod <-  do
 
       # end
       # todo pass forward the updated function_session_type
-      Enum.each(bodies, fn ast ->
-        session_typecheck_by_function(
-          ast,
-          {name, arity},
-          expected_session_type,
-          module_context
-        )
-      end)
+      # Enum.each(bodies, fn ast ->
+      session_typecheck_by_function(
+        function,
+        expected_session_type,
+        module_context
+      )
+
+      # end)
     end
   end
 
-  @spec session_typecheck_by_function(
-          ast(),
-          {ST.label(), non_neg_integer()},
-          session_type(),
-          %{
-            functions: [ST.Function.t()],
-            function_types: %{
-              {ST.label(), non_neg_integer()} => {accepted_types(), accepted_types()}
-            },
-            function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
-            module_name: atom()
-          }
-        ) ::
-          :ok
+  @spec session_typecheck_by_function(ST.Function.t(), session_type(), %{
+          functions: [ST.Function.t()],
+          function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
+          module_name: atom()
+        }) :: :ok
   def session_typecheck_by_function(
-        ast,
-        name_arity,
+        %ST.Function{
+          bodies: bodies,
+          return_type: return_type,
+          parameters: parameters,
+          param_types: {:list, param_types}
+        },
         expected_session_type,
         module_context
       ) do
-    # IO.inspect(ast)
-    # IO.inspect(expected_session_type)
-    # IO.inspect(module_context)
+    for {ast, parameters} <- List.zip([bodies, parameters]) do
+      # Initialize the variable context with the parameters and their types
+      variable_ctx =
+        Enum.zip(parameters, param_types)
+        # Remove any nils
+        |> Enum.filter(fn
+          {nil, _} -> false
+          _ -> true
+        end)
+        |> Enum.into(%{})
 
-    # IO.puts(
-    #   "Session type checking #{inspect(name)}/#{arity}: #{ST.st_to_string(expected_session_type)}"
-    # )
+        # IO.warn(inspect(variable_ctx))
 
-    # cur_function = %ST.Function{
-    #   name: name,
-    #   arity: arity
-    # }
+      env = %{
+        # :ok or :error or :warning
+        :condition => :ok,
+        # error message
+        :error => nil,
+        # :x => :atom
+        :variable_ctx => variable_ctx,
+        # Expected session type
+        # rec X.(!A().X)
+        :session_type => expected_session_type,
+        # Expected type
+        :type => return_type,
+        # {name, arity} => %ST.Function
+        :functions => module_context[:functions],
+        # {name, arity} => rec X.(!A().X)
+        :function_session_type__ctx => module_context[:function_session_type]
+      }
 
-    env = %{
-      # :ok or :error or :warning
-      :condition => :ok,
-      # error message
-      :error => nil,
-      # :x => :atom
-      :variable_ctx => %{},
-      # Expected session type
-      # rec X.(!A().X)
-      :session_type => expected_session_type,
-      # Expected type
-      # todo fix
-      :type => module_context[:functions],
-      # {name, arity} => %ST.Function
-      :functions => module_context[:functions],
-      # Function types (parameter and return types)
-      # {name, arity} => {[:atom, :number], :atom}
-      :function_ctx => module_context[:function_types],
-      # {name, arity} => rec X.(!A().X)
-      :function_session_type__ctx => module_context[:function_session_type]
-    }
-
-    env[:type]
-    |> IO.inspect()
-
-    Macro.prewalk(ast, env, &typecheck/2)
+      Macro.prewalk(ast, env, &typecheck/2)
+    end
 
     # {_rec_var, _function_st_context, remaining_session_type} =
     #   session_typecheck_ast(

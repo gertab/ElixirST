@@ -35,8 +35,15 @@ defmodule ElixirSessions.SmallExample do
     example(pid)
   end
 
-  @spec djkdskj(55, number()) :: any
-  def djkdskj(ds, 553) do
+  @session ""
+  @spec abccccccc(55, number()) :: any
+  def abccccccc(ds, 553) do
+    ds
+  end
+  def abccccccc(ds, _abc) when is_list(ds) do
+    ds
+  end
+  def abccccccc(ds, _) do
     ds
   end
 

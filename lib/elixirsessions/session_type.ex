@@ -253,6 +253,8 @@ defmodule ST do
     defstruct name: nil,
               arity: 0,
               def_p: :def,
+              # List of bodies from different (pattern-matching) cases
+              bodies: [],
               # Function meta
               meta: [],
               # Number of different patter-matching cases
@@ -263,10 +265,9 @@ defmodule ST do
               parameters: [],
               # List (of list) of guards
               guards: [],
-              # List of bodies from different (pattern-matching) cases
-              bodies: [],
+              types_known?: false,
               return_type: :any,
-              param_types: []
+              param_types: {:list, []}
 
     # Structure of functions in Beam debug_info
     # {{name, arity}, :def_or_p, meta, [{meta, parameters, guards, body}, case2, ...]}
@@ -281,9 +282,9 @@ defmodule ST do
             case_metas: [any()],
             parameters: [any()],
             guards: [any()],
-            bodies: [any()],
+            types_known?: boolean(),
             return_type: any(),
-            param_types: [any()]
+            param_types: {:list, [any()]}
           }
   end
 

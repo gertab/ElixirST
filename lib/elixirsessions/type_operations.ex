@@ -84,9 +84,19 @@ defmodule ElixirSessions.TypeOperations do
   def spec_get_type(type) when is_pid(type), do: :pid
   def spec_get_type(_), do: :error
 
+
+  @doc """
+  Returns the name of the quoted variable or nil in case of an underscore at the beginning.
+  """
   @spec get_var(any) :: any
-  def get_var({var, _, _}) do
-    var
+  def get_var({var, _, _}) when is_atom(var) do
+    name = Atom.to_string(var)
+    init = String.at(name, 0)
+    if init == "_" do
+      nil
+    else
+      var
+    end
   end
   def get_var(_) do
     nil

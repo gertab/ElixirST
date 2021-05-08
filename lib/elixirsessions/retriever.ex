@@ -117,8 +117,10 @@ defmodule ElixirSessions.Retriever do
     for {{name, arity}, function} <- all_functions do
       types = Map.get(function_types, {name, arity}, nil)
       if not is_nil(types) do
-        {param, ret} = types
-        {{name, arity}, %{function | return_type: ret, param_types: param}}
+        {param_types, return_type} = types
+        # IO.warn("param_types " <> inspect(param_types))
+        # IO.warn("return_type " <> inspect(return_type))
+        {{name, arity}, %{function | types_known?: true, return_type: return_type, param_types: param_types}}
       else
         {{name, arity}, function}
       end
@@ -131,6 +133,7 @@ defmodule ElixirSessions.Retriever do
   def process_parameters(parameters) do
     for parameter <- parameters do
       for variable <- parameter do
+        # Change any variables starting with _ to nils
         ElixirSessions.TypeOperations.get_var(variable)
       end
     end
