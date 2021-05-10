@@ -84,7 +84,6 @@ defmodule ElixirSessions.TypeOperations do
   def spec_get_type(type) when is_pid(type), do: :pid
   def spec_get_type(_), do: :error
 
-
   @doc """
   Returns the name of the quoted variable or nil in case of an underscore at the beginning.
   """
@@ -92,12 +91,14 @@ defmodule ElixirSessions.TypeOperations do
   def get_var({var, _, _}) when is_atom(var) do
     name = Atom.to_string(var)
     init = String.at(name, 0)
+
     if init == "_" do
       nil
     else
       var
     end
   end
+
   def get_var(_) do
     nil
   end
@@ -112,20 +113,60 @@ defmodule ElixirSessions.TypeOperations do
   def typeof(value) when is_pid(value), do: :pid
   def typeof(_), do: :error
 
-  # Is type1 a subtype of type2
-  def subtype?(type, type), do: true
-  def subtype?(type1, :atom) when is_atom(type1), do: true
-  def subtype?(:integer, :number), do: true
-  def subtype?(:integer, :float), do: true
-  def subtype?(:float, :number), do: true
-  def subtype?(type1, type2) when is_tuple(type1) and is_tuple(type2) do
-    Enum.zip(Tuple.to_list(type1), Tuple.to_list(type2))
-    |> Enum.reduce(fn {left, right}, acc -> acc and subtype?(left, right) end)
+  # Is type1 a subtype of type2, type1 <: type2?
+  def subtype?(type1, type2) do
+    case greatest_lower_bound(type1, type2) do
+      :error -> false
+      _ -> true
+    end
   end
-  def subtype?([type1], [type2]), do: subtype?(type1, type2)
-  def subtype?(_, _), do: false
 
+  def greatest_lower_bound(type1, type2)
+  def greatest_lower_bound(type, type), do: type
+  def greatest_lower_bound(type1, :atom) when is_atom(type1) and type1 not in @types, do: :atom
+  # def greatest_lower_bound(type1, :atom) when is_atom(type1), do: true # todo not sure
+  def greatest_lower_bound(:integer, :number), do: :number
+  def greatest_lower_bound(:integer, :float), do: :float
+  def greatest_lower_bound(:float, :number), do: :number
 
+  def greatest_lower_bound({:tuple, type1}, {:tuple, type2})
+      when is_list(type1) and is_list(type2) do
+    case greatest_lower_bound(type1, type2) do
+      :error ->
+        :error
+
+      inner ->
+        {:tuple, inner}
+    end
+  end
+
+  def greatest_lower_bound({:list, type1}, {:list, type2})
+      when is_list(type1) and is_list(type2) do
+    # todo: either t or [t]; [t1, t2] is not a valid type
+    case greatest_lower_bound(type1, type2) do
+      :error ->
+        :error
+
+      inner ->
+        {:list, inner}
+    end
+  end
+
+  def greatest_lower_bound(type1, type2) when is_list(type1) and is_list(type2) do
+    result =
+      Enum.zip(type1, type2)
+      |> Enum.map(fn {left, right} -> greatest_lower_bound(left, right) end)
+
+    case Enum.find(result, nil, fn
+           :error -> true
+           _ -> false
+         end) do
+      :error -> :error
+      _ -> result
+    end
+  end
+
+  def greatest_lower_bound(_, _), do: :error
 
   @spec type_to_guard(binary) :: :error | binary
   def type_to_guard(type) when is_binary(type) do

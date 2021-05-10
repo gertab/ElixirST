@@ -120,4 +120,81 @@ defmodule TypeOperationsTest do
     assert return_type == :number
   end
 
+
+  test "subtype? atom 1" do
+    type1 = :atom
+    type2 = :atom
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
+  end
+
+  test "subtype? atom 2" do
+    type1 = :abc
+    type2 = :atom
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? atom 3" do
+    type1 = :abc
+    type2 = :def
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === false
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? atom 4" do
+    type1 = :atom
+    type2 = :abc
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === false
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
+  end
+
+  test "subtype? number 1" do
+    type1 = :integer
+    type2 = :number
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? number 2" do
+    type1 = :integer
+    type2 = :float
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? number 3" do
+    type1 = :float
+    type2 = :number
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? tuple" do
+    type1 = {:tuple, [:atom, :integer, :abc]}
+    type2 = {:tuple, [:atom, :integer, :atom]}
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+
+  test "subtype? list" do
+    type1 = {:list, [:abc]}
+    type2 = {:list, [:atom]}
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? list - maybe todo remove" do
+    type1 = {:list, [:atom, :integer, :abc]}
+    type2 = {:list, [:atom, :integer, :atom]}
+    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+  end
+
+  test "subtype? bad" do
+    assert ElixirSessions.TypeOperations.subtype?(:abc, :number) === false
+    assert ElixirSessions.TypeOperations.subtype?({:tuple, [:atom]}, {:list, [:abc]}) === false
+    assert ElixirSessions.TypeOperations.subtype?(:float, :atom) === false
+  end
 end
