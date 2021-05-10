@@ -75,7 +75,7 @@ defmodule ElixirSessions.SessionTypechecking do
         end)
         |> Enum.into(%{})
 
-        # IO.warn(inspect(variable_ctx))
+      # IO.warn(inspect(variable_ctx))
 
       env = %{
         # :ok or :error or :warning
@@ -119,8 +119,34 @@ defmodule ElixirSessions.SessionTypechecking do
     :ok
   end
 
-  defp typecheck(a, env) when is_number(a) do
-    {312_345_688_898, env}
+  defp typecheck(
+         node,
+         %{
+           state: :error,
+           condition: _,
+           error: _,
+           variable_ctx: _,
+           session_type: _,
+           type: _,
+           functions: _,
+           function_session_type__ctx: _
+         } = env
+       ) do
+    IO.warn("Error!")
+    {node, env}
+  end
+
+  # Literals
+  defp typecheck(a, env) when is_number(a) or is_atom(a) do
+    {a, %{env | type: ElixirSessions.TypeOperations.typeof(a)}}
+  end
+
+  defp typecheck(a, env) when is_list(a) do
+    {a, env}
+  end
+
+  defp typecheck({:__block__, meta, args}, env) do
+    {{:__block__, meta, args}, env}
   end
 
   defp typecheck({{:., [], [:erlang, :+]}, _meta, _args}, env) do
@@ -446,7 +472,7 @@ defmodule ElixirSessions.SessionTypechecking do
   #       end
   #     end
   #   )
-  #   # Ensure that all element in remaining_branches_session_types are the same, and return the last one
+  #   # Ensure that allnodet in remaining_branches_session_types are the same, and return the last one
   #   |> Enum.reduce(fn full_st, full_acc ->
   #     {rec_var, function_st_context, st} = full_st
   #     {_, _, acc} = full_acc

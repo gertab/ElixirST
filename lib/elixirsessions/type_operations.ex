@@ -102,6 +102,31 @@ defmodule ElixirSessions.TypeOperations do
     nil
   end
 
+  def typeof(value) when is_number(value), do: :number
+  def typeof(value) when is_atom(value), do: value
+  def typeof(value) when is_binary(value), do: :binary
+  def typeof(value) when is_boolean(value), do: :boolean
+  def typeof(value) when is_float(value), do: :float
+  def typeof(value) when is_integer(value), do: :integer
+  def typeof(value) when is_nil(value), do: nil
+  def typeof(value) when is_pid(value), do: :pid
+  def typeof(_), do: :error
+
+  # Is type1 a subtype of type2
+  def subtype?(type, type), do: true
+  def subtype?(type1, :atom) when is_atom(type1), do: true
+  def subtype?(:integer, :number), do: true
+  def subtype?(:integer, :float), do: true
+  def subtype?(:float, :number), do: true
+  def subtype?(type1, type2) when is_tuple(type1) and is_tuple(type2) do
+    Enum.zip(Tuple.to_list(type1), Tuple.to_list(type2))
+    |> Enum.reduce(fn {left, right}, acc -> acc and subtype?(left, right) end)
+  end
+  def subtype?([type1], [type2]), do: subtype?(type1, type2)
+  def subtype?(_, _), do: false
+
+
+
   @spec type_to_guard(binary) :: :error | binary
   def type_to_guard(type) when is_binary(type) do
     case type do

@@ -51,4 +51,43 @@ defmodule ElixirSessions.Helper do
       |> IO.inspect()
     end
   end
+
+  def ast() do
+    quote do
+      x = 3
+
+      if x == 4 do
+        IO.puts(abc)
+      end
+    end
+  end
+
+  # recompile && ElixirSessions.Helper.quoted
+  def quoted() do
+    ast()
+    |> Macro.to_string()
+    |> Code.format_string!()
+    |> IO.puts()
+  end
+
+  # recompile && ElixirSessions.Helper.quoted_prettify
+  def quoted_prettify() do
+    quoted()
+    |> Macro.to_string()
+    |> Code.format_string!()
+    |> IO.puts()
+  end
+
+  # recompile && ElixirSessions.Helper.expanded_quoted
+  def expanded_quoted() do
+    Macro.prewalk(ast(), &Macro.expand(&1, __ENV__))
+  end
+
+  # recompile && ElixirSessions.Helper.expanded_quoted_prettify
+  def expanded_quoted_prettify() do
+    expanded_quoted()
+    |> Macro.to_string()
+    |> Code.format_string!()
+    |> IO.puts()
+  end
 end

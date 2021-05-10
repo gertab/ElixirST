@@ -26,6 +26,8 @@ defmodule ElixirSessions.SmallExample do
   @session "rec X.(!A().!B().X)"
   @spec example(pid) :: no_return
   def example(pid) do
+    xxx = 76
+    _ = xxx and false
     # @session "!A().rec X.(!A().X)"
     send(pid, {:A})
     # @session "rec X.(!A().X)"
@@ -35,17 +37,17 @@ defmodule ElixirSessions.SmallExample do
     example(pid)
   end
 
-  @session ""
-  @spec abccccccc(55, number()) :: any
-  def abccccccc(ds, 553) do
-    ds
-  end
-  def abccccccc(ds, _abc) when is_list(ds) do
-    ds
-  end
-  def abccccccc(ds, _) do
-    ds
-  end
+  # @session ""
+  # @spec abccccccc(55, number()) :: any
+  # def abccccccc(ds, 553) do
+  #   ds
+  # end
+  # def abccccccc(ds, _abc) when is_list(ds) do
+  #   ds
+  # end
+  # def abccccccc(ds, _) do
+  #   ds
+  # end
 
   # @session "rec X.(!A().!sum(integer).!hello(string).X)"
   # # @spec example2(pid) :: no_return
