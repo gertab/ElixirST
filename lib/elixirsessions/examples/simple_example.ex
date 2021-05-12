@@ -20,21 +20,25 @@ defmodule ElixirSessions.SmallExample do
   #   |> IO.inspect()
   # end
   # def run() do
-    #   spawn(__MODULE__, :example1, [])
+  #   spawn(__MODULE__, :example1, [])
   # end
 
-  @session "rec X.(!A().!B().X)"
+  # @session "rec X.(!A().!B().X)"
+  @session ""
   @spec example(pid) :: no_return
   def example(pid) do
-    # xxx = 76
-    # _ = xxx and false
-    # @session "!A().rec X.(!A().X)"
-    send(pid, {:A})
-    # @session "rec X.(!A().X)"
-    # @session "!A().rec X.(!A().X)"
-    aaa = 11111 + 2222 * 33333 + 44444 + 55555
-    _ = aaa * 7
-    example(pid)
+    ab = 77_777_777_777 + 55
+    _abbb = ab + 55
+    _ = pid
+    # # xxx = 76
+    # # _ = xxx and false
+    # # @session "!A().rec X.(!A().X)"
+    # send(pid, {:A})
+    # # @session "rec X.(!A().X)"
+    # # @session "!A().rec X.(!A().X)"
+    # aaa = 11111 + 2222 * 33333 + 44444 + 55555
+    # _ = aaa * 7
+    # example(pid)
   end
 
   # @session ""
@@ -70,9 +74,6 @@ defmodule ElixirSessions.SmallExample do
   #   "hello"
   # end
 
-
-
-
   # @session "rec X.(!A().!sum(integer).!hello(string).X)"
   # @spec example3(pid) :: no_return
   # def example3(pid) do
@@ -91,8 +92,6 @@ defmodule ElixirSessions.SmallExample do
 
   #   example3(pid)
   # end
-
-
 
   # @session "rec X.(&{?option1().X, ?option2()})"
   # # @session "rec X.(&{?option1().X, ?option2().!ok()})"

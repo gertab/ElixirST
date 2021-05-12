@@ -89,6 +89,7 @@ defmodule ElixirSessions.SessionTypechecking do
       }
 
       Macro.prewalk(ast, env, &typecheck/2)
+      |> IO.inspect()
     end
 
     # {_rec_var, _function_st_context, remaining_session_type} =
@@ -126,28 +127,78 @@ defmodule ElixirSessions.SessionTypechecking do
          } = env
        ) do
     IO.warn("Error!")
+    throw("ERROR")
     {node, env}
   end
 
-  # Literals
-  defp typecheck(a, env) when is_number(a) or is_atom(a) do
-    {a, %{env | type: ElixirSessions.TypeOperations.typeof(a)}}
-  end
-
-  defp typecheck(a, env) when is_list(a) do
-    {a, env}
-  end
-
+  # Block
   defp typecheck({:__block__, meta, args}, env) do
-    {{:__block__, meta, args}, env}
+    IO.puts("# Block")
+    {{:__block__, [checked: :block] ++ meta, args}, env}
   end
 
-  defp typecheck({{:., [], [:erlang, :+]}, _meta, _args}, env) do
-    {{{:., [], [:erlang, :+]}, [], [40_000_000_000, 5]}, env}
+  # Literals
+  defp typecheck(node, env)
+       when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
+              is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
+    IO.puts("# Literal: #{ElixirSessions.TypeOperations.typeof(node)}")
+    {node, %{env | type: ElixirSessions.TypeOperations.typeof(node)}}
+  end
+
+  defp typecheck(node, env) when is_list(node) do
+    IO.puts("# List}")
+
+    {node, env}
+  end
+
+  defp typecheck({{:., _meta1, [:erlang, :+]}, _meta2, _args}, env) do
+    IO.puts("# erlang +")
+
+    {nil, env}
+    # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
+    #  env}
+  end
+
+  defp typecheck({{:., [], [:erlang, erlang_function]}, _meta, args}, env) do
+    IO.puts("# erlang others #{erlang_function}")
+
+    # {nil, env}
+    {{{:., [], [:erlang, erlang_function]}, [], args}, env}
   end
 
   defp typecheck(other, env) do
+    IO.puts("# other #{inspect(other)}")
+
     {other, env}
+  end
+
+  # recompile && ElixirSessions.SessionTypechecking.run
+  def run() do
+    ast =
+      quote do
+        ab = 77_777_777_777 + 55
+        abbbbb = ab + 55
+        # send(self(), {:aaaaaaaaa})
+        # :bbbbbb
+      end
+
+    env = %{
+      :condition => :ok,
+      :error => nil,
+      :variable_ctx => %{},
+      :session_type => %ST.Terminate{},
+      :type => :any,
+      :functions => %{},
+      :function_session_type__ctx => %{}
+    }
+
+    # :elixir_module.compile(Module, ast, [], __ENV__)
+    # Macro.prewalk(ast, &Macro.expand(&1, __ENV__))
+    # |>
+    {ast, %Macro.Env{}} = :elixir_expand.expand(ast, __ENV__)
+
+    Macro.prewalk(ast, &typecheck(&1, env))
+    |> elem(0)
   end
 
   # @doc """
@@ -791,56 +842,56 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   # recompile && ElixirSessions.SessionTypechecking.run
-  def run() do
-    # fun = :ping
+  # def run() do
+  #   # fun = :ping
 
-    # body =
-    #   quote do
-    #     pid =
-    #       receive do
-    #         {:address, pid} ->
-    #           pid
-    #       end
+  #   # body =
+  #   #   quote do
+  #   #     pid =
+  #   #       receive do
+  #   #         {:address, pid} ->
+  #   #           pid
+  #   #       end
 
-    #     send(pid, {:a111})
+  #   #     send(pid, {:a111})
 
-    #     ping()
+  #   #     ping()
 
-    #     # receive do
-    #     #   {:option1} ->
-    #     #     a = 1
-    #     #     send(pid, {:A, a})
-    #     #     send(pid, {:B, a + 1})
+  #   #     # receive do
+  #   #     #   {:option1} ->
+  #   #     #     a = 1
+  #   #     #     send(pid, {:A, a})
+  #   #     #     send(pid, {:B, a + 1})
 
-    #     #   {:option2} ->
-    #     #     _b = 2
-    #     #     send(pid, {:X})
+  #   #     #   {:option2} ->
+  #   #     #     _b = 2
+  #   #     #     send(pid, {:X})
 
-    #     #   {:option3, value} ->
-    #     #     b = 3
-    #     #     send(pid, {:Y, b})
-    #     #     case value do
-    #     #       true -> send(pid, {:hello})
-    #     #       false -> send(pid, {:hello2})
-    #     #       _ -> send(pid, {:not_hello, 3})
-    #     #     end
-    #     # end
-    #   end
+  #   #     #   {:option3, value} ->
+  #   #     #     b = 3
+  #   #     #     send(pid, {:Y, b})
+  #   #     #     case value do
+  #   #     #       true -> send(pid, {:hello})
+  #   #     #       false -> send(pid, {:hello2})
+  #   #     #       _ -> send(pid, {:not_hello, 3})
+  #   #     #     end
+  #   #     # end
+  #   #   end
 
-    # st = "rec X.(?address(any).!a111().X)"
-    # &{?option1().!A(any).!B(any),
-    #   ?option2().!X(),
-    #   ?option3(any).!Y(any).
-    #         +{!hello(),
-    #           !hello2(),
-    #           !not_hello(any)
-    #         }
-    #   }"
+  #   # st = "rec X.(?address(any).!a111().X)"
+  #   # &{?option1().!A(any).!B(any),
+  #   #   ?option2().!X(),
+  #   #   ?option3(any).!Y(any).
+  #   #         +{!hello(),
+  #   #           !hello2(),
+  #   #           !not_hello(any)
+  #   #         }
+  #   #   }"
 
-    # session_type = ST.string_to_st(st)
+  #   # session_type = ST.string_to_st(st)
 
-    # session_typecheck(fun, 0, body, session_type)
+  #   # session_typecheck(fun, 0, body, session_type)
 
-    :ok
-  end
+  #   :ok
+  # end
 end
