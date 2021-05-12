@@ -8,7 +8,7 @@ defmodule TypeOperationsTest do
         @spec function(integer, integer()) :: number
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
@@ -35,7 +35,7 @@ defmodule TypeOperationsTest do
               ) :: :any
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
@@ -50,7 +50,7 @@ defmodule TypeOperationsTest do
         @spec function(integer, [integer]) :: {number}
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
@@ -65,7 +65,7 @@ defmodule TypeOperationsTest do
         @spec function(78, nil, :abc, "hello") :: :ok
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
@@ -80,7 +80,7 @@ defmodule TypeOperationsTest do
         @spec function(7676.4, true, :false, 78, nil, pid, "hello") :: :ok
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
@@ -96,7 +96,7 @@ defmodule TypeOperationsTest do
         @spec function({number, integer, :ok}) :: :ok
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
@@ -111,7 +111,7 @@ defmodule TypeOperationsTest do
         @spec function(abc) :: number
       end
 
-    {:spec, _, [{:"::", _, [{spec_name, _, args_types}, return_type]}]} = spec
+    {:spec, _, [{:"::", _, [{__spec_name, _, args_types}, return_type]}]} = spec
 
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)

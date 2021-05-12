@@ -78,14 +78,25 @@ defmodule ElixirSessions.Helper do
     |> IO.puts()
   end
 
+  # Expands fully the quoted AST (including macros and erlang function calls)
   # recompile && ElixirSessions.Helper.expanded_quoted
   def expanded_quoted() do
-    Macro.prewalk(ast(), &Macro.expand(&1, __ENV__))
+    expanded_quoted(ast())
+  end
+
+  def expanded_quoted(ast) do
+    {ast, %Macro.Env{}} = :elixir_expand.expand(ast, __ENV__)
+
+    ast
   end
 
   # recompile && ElixirSessions.Helper.expanded_quoted_prettify
   def expanded_quoted_prettify() do
-    expanded_quoted()
+    expanded_quoted_prettify(ast())
+  end
+
+  def expanded_quoted_prettify(ast) do
+    expanded_quoted(ast)
     |> Macro.to_string()
     |> Code.format_string!()
     |> IO.puts()

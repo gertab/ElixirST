@@ -236,7 +236,7 @@ defmodule ElixirSessionsOperations do
     result = "!A().rec X.(!A().X)"
 
     session1 = ST.string_to_st(s1)
-    session_result = ST.string_to_st(result)
+    _session_result = ST.string_to_st(result)
 
     try do
       ST.unfold_current(session1)
@@ -394,7 +394,7 @@ defmodule ElixirSessionsOperations do
     s2 = "!Hello2(atom, number).?Hello(atom, number)"
 
     case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
-      {:ok, remaining_st} ->
+      {:ok, _remaining_st} ->
         assert false
 
       {:error, _} ->
@@ -464,7 +464,7 @@ defmodule ElixirSessionsOperations do
         # throw("#{ST.st_to_string(remaining_st)}")
         assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
 
-      {:error, x} ->
+      {:error, _x} ->
         assert false
     end
 
@@ -499,7 +499,7 @@ defmodule ElixirSessionsOperations do
         expected_remaining_st = ST.string_to_st(expected)
         assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
 
-      {:error, x} ->
+      {:error, _x} ->
         assert false
     end
   end
@@ -510,7 +510,7 @@ defmodule ElixirSessionsOperations do
     s2 = "?AAA()"
 
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
-      {:ok, remaining_st} ->
+      {:ok, _remaining_st} ->
         assert false
 
       {:error, _} ->
@@ -539,7 +539,7 @@ defmodule ElixirSessionsOperations do
     s2 = "?B().?C()"
 
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
-      {:ok, remaining_st} ->
+      {:ok, _remaining_st} ->
         assert false
 
       {:error, _} ->

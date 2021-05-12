@@ -1,3 +1,36 @@
+defmodule SessionTypecheckingTest do
+  use ExUnit.Case
+  doctest ElixirSessions.SessionTypechecking
+  alias ElixirSessions.SessionTypechecking, as: TC
+
+  def env do
+    %{
+      :condition => :ok,
+      :error => nil,
+      :variable_ctx => %{},
+      :session_type => %ST.Terminate{},
+      :type => :any,
+      :functions => %{},
+      :function_session_type__ctx => %{}
+    }
+  end
+
+  test "literal - atom" do
+    ast =
+      quote do
+        :hello1
+        :hello2
+        :hello3
+      end
+
+    {_new_ast, new_env} =
+      ElixirSessions.Helper.expanded_quoted(ast)
+      |> Macro.prewalk(env(), &TC.typecheck/2)
+
+    assert new_env[:type] == :hello3
+  end
+end
+
 # defmodule SessionTypecheckingTest do
 #   use ExUnit.Case
 #   doctest ElixirSessions.SessionTypechecking

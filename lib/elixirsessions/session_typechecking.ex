@@ -113,7 +113,7 @@ defmodule ElixirSessions.SessionTypechecking do
     :ok
   end
 
-  defp typecheck(
+  def typecheck(
          node,
          %{
            state: :error,
@@ -132,41 +132,44 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   # Block
-  defp typecheck({:__block__, meta, args}, env) do
-    IO.puts("# Block")
-    {{:__block__, [checked: :block] ++ meta, args}, env}
+  def typecheck({:__block__, meta, args}, env) do
+    IO.puts("# Block #{inspect(args)}")
+    node = {:__block__, [checked: :block] ++ meta, args}
+    {node, env}
   end
 
   # Literals
-  defp typecheck(node, env)
+  def typecheck(node, env)
        when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
               is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
     IO.puts("# Literal: #{ElixirSessions.TypeOperations.typeof(node)}")
     {node, %{env | type: ElixirSessions.TypeOperations.typeof(node)}}
   end
 
-  defp typecheck(node, env) when is_list(node) do
+  def typecheck(node, env) when is_list(node) do
     IO.puts("# List}")
 
     {node, env}
   end
 
-  defp typecheck({{:., _meta1, [:erlang, :+]}, _meta2, _args}, env) do
+  # Operations
+  def typecheck({{:., _meta1, [:erlang, :+]}, _meta2, _args}, env) do
     IO.puts("# erlang +")
 
     {nil, env}
+
     # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
     #  env}
   end
 
-  defp typecheck({{:., [], [:erlang, erlang_function]}, _meta, args}, env) do
+  def typecheck({{:., [], [:erlang, erlang_function]}, _meta, args}, env) do
     IO.puts("# erlang others #{erlang_function}")
 
     # {nil, env}
     {{{:., [], [:erlang, erlang_function]}, [], args}, env}
   end
 
-  defp typecheck(other, env) do
+  def typecheck(other, env) do
     IO.puts("# other #{inspect(other)}")
 
     {other, env}
@@ -177,9 +180,17 @@ defmodule ElixirSessions.SessionTypechecking do
     ast =
       quote do
         ab = 77_777_777_777 + 55
-        abbbbb = ab + 55
-        # send(self(), {:aaaaaaaaa})
-        # :bbbbbb
+        _abbb = ab + 55
+        _ = pid
+        # # xxx = 76
+        # # _ = xxx and false
+        # # @session "!A().rec X.(!A().X)"
+        # send(pid, {:A})
+        # # @session "rec X.(!A().X)"
+        # # @session "!A().rec X.(!A().X)"
+        # aaa = 11111 + 2222 * 33333 + 44444 + 55555
+        # _ = aaa * 7
+        # example(pid)
       end
 
     env = %{
@@ -192,12 +203,8 @@ defmodule ElixirSessions.SessionTypechecking do
       :function_session_type__ctx => %{}
     }
 
-    # :elixir_module.compile(Module, ast, [], __ENV__)
-    # Macro.prewalk(ast, &Macro.expand(&1, __ENV__))
-    # |>
-    {ast, %Macro.Env{}} = :elixir_expand.expand(ast, __ENV__)
-
-    Macro.prewalk(ast, &typecheck(&1, env))
+    ElixirSessions.Helper.expanded_quoted(ast)
+    |> Macro.prewalk(env, &typecheck/2)
     |> elem(0)
   end
 
