@@ -90,9 +90,8 @@ defmodule ElixirSessions.TypeOperations do
   @spec get_var(any) :: any
   def get_var({var, _, _}) when is_atom(var) do
     name = Atom.to_string(var)
-    init = String.at(name, 0)
 
-    if init == "_" do
+    if String.at(name, 0) == "_" do
       nil
     else
       var

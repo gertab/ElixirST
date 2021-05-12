@@ -26,8 +26,8 @@ defmodule ElixirSessions.SmallExample do
   @session "rec X.(!A().!B().X)"
   @spec example(pid) :: no_return
   def example(pid) do
-    xxx = 76
-    _ = xxx and false
+    # xxx = 76
+    # _ = xxx and false
     # @session "!A().rec X.(!A().X)"
     send(pid, {:A})
     # @session "rec X.(!A().X)"

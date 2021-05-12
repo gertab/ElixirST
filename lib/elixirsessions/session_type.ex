@@ -267,7 +267,7 @@ defmodule ST do
               guards: [],
               types_known?: false,
               return_type: :any,
-              param_types: {:list, []}
+              param_types: []
 
     # Structure of functions in Beam debug_info
     # {{name, arity}, :def_or_p, meta, [{meta, parameters, guards, body}, case2, ...]}
@@ -284,7 +284,7 @@ defmodule ST do
             guards: [any()],
             types_known?: boolean(),
             return_type: any(),
-            param_types: {:list, [any()]}
+            param_types: [any()]
           }
   end
 

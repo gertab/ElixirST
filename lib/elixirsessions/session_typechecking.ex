@@ -34,18 +34,11 @@ defmodule ElixirSessions.SessionTypechecking do
     for {{name, arity}, expected_session_type} <- function_session_type do
       function = lookup_function!(functions, name, arity)
 
-      # for bod <-  do
-
-      # end
-      # todo pass forward the updated function_session_type
-      # Enum.each(bodies, fn ast ->
       session_typecheck_by_function(
         function,
         expected_session_type,
         module_context
       )
-
-      # end)
     end
   end
 
@@ -59,7 +52,7 @@ defmodule ElixirSessions.SessionTypechecking do
           bodies: bodies,
           return_type: return_type,
           parameters: parameters,
-          param_types: {:list, param_types}
+          param_types: param_types
         },
         expected_session_type,
         module_context
