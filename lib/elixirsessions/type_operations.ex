@@ -102,14 +102,14 @@ defmodule ElixirSessions.TypeOperations do
     nil
   end
 
-  def typeof(value) when is_number(value), do: :number
-  def typeof(value) when is_atom(value), do: value
-  def typeof(value) when is_binary(value), do: :binary
-  def typeof(value) when is_boolean(value), do: :boolean
-  def typeof(value) when is_float(value), do: :float
-  def typeof(value) when is_integer(value), do: :integer
   def typeof(value) when is_nil(value), do: nil
+  def typeof(value) when is_boolean(value), do: :boolean
+  def typeof(value) when is_integer(value), do: :integer
+  def typeof(value) when is_float(value), do: :float
+  def typeof(value) when is_number(value), do: :number
   def typeof(value) when is_pid(value), do: :pid
+  def typeof(value) when is_binary(value), do: :binary
+  def typeof(value) when is_atom(value), do: value
   def typeof(_), do: :error
 
   # Is type1 a subtype of type2, type1 <: type2?
@@ -156,12 +156,10 @@ defmodule ElixirSessions.TypeOperations do
       Enum.zip(type1, type2)
       |> Enum.map(fn {left, right} -> greatest_lower_bound(left, right) end)
 
-    case Enum.find(result, nil, fn
-           :error -> true
-           _ -> false
-         end) do
-      :error -> :error
-      _ -> result
+    if Enum.member?(result, :error) do
+      :error
+    else
+      result
     end
   end
 
