@@ -5,14 +5,25 @@ defmodule SessionTypecheckingTest do
 
   def env do
     %{
-      :condition => :ok,
-      :error => nil,
+      :state => :ok,
+      :error_data => nil,
       :variable_ctx => %{},
       :session_type => %ST.Terminate{},
       :type => :any,
       :functions => %{},
       :function_session_type__ctx => %{}
     }
+  end
+
+  def typecheck(ast) do
+    typecheck(ast, env())
+  end
+
+  def typecheck(ast, env) do
+    ElixirSessions.Helper.expanded_quoted(ast)
+    |> IO.inspect()
+    |> Macro.prewalk(env, &TC.typecheck/2)
+    |> elem(1)
   end
 
   test "literal - atom" do
@@ -23,11 +34,47 @@ defmodule SessionTypecheckingTest do
         :hello3
       end
 
-    {_new_ast, new_env} =
-      ElixirSessions.Helper.expanded_quoted(ast)
-      |> Macro.prewalk(env(), &TC.typecheck/2)
+    assert typecheck(ast)[:type] == :hello3
+  end
 
-    assert new_env[:type] == :hello3
+  test "literal - binary operations" do
+    ast =
+      quote do
+        7 + 3
+      end
+
+    assert typecheck(ast)[:type] == :integer
+
+    ast =
+      quote do
+        7.5 + 3
+      end
+
+    assert typecheck(ast)[:type] == :float
+
+    ast =
+      quote do
+        7.6 - 8923
+      end
+
+    assert typecheck(ast)[:type] == :float
+
+    ast =
+      quote do
+        7 * 8923
+      end
+
+    assert typecheck(ast)[:type] == :integer
+  end
+
+
+  test "literal - binary operations - error state" do
+    ast =
+      quote do
+        7.6 + true
+      end
+
+    assert typecheck(ast)[:state] == :error
   end
 end
 

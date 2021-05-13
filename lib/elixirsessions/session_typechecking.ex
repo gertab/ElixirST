@@ -92,44 +92,26 @@ defmodule ElixirSessions.SessionTypechecking do
       |> IO.inspect()
     end
 
-    # {_rec_var, _function_st_context, remaining_session_type} =
-    #   session_typecheck_ast(
-    #     ast,
-    #     expected_session_type,
-    #     rec_var,
-    #     function_st_context,
-    #     module_context
-    #   )
-
-    # case remaining_session_type do
-    #   %ST.Terminate{} ->
-    #     # IO.puts("Session type checking was successful.")
-    #     :ok
-
-    #   # todo what if call_recursive
-    #   _ ->
-    #     throw("Remaining session type: #{ST.st_to_string(remaining_session_type)}")
-    # end
     :ok
   end
 
-  def typecheck(
-        node,
-        %{
-          state: :error,
-          error_data: _,
-          error: _,
-          variable_ctx: _,
-          session_type: _,
-          type: _,
-          functions: _,
-          function_session_type__ctx: _
-        } = env
-      ) do
-    IO.warn("Error!")
-    throw("ERROR")
-    {node, env}
-  end
+  # def typecheck(
+  #       node,
+  #       %{
+  #         state: :error,
+  #         error_data: _,
+  #         error: _,
+  #         variable_ctx: _,
+  #         session_type: _,
+  #         type: _,
+  #         functions: _,
+  #         function_session_type__ctx: _
+  #       } = env
+  #     ) do
+  #   IO.warn("Error!")
+  #   throw("ERROR")
+  #   {node, env}
+  # end
 
   # Block
   def typecheck({:__block__, meta, args}, env) do
@@ -142,7 +124,7 @@ defmodule ElixirSessions.SessionTypechecking do
   def typecheck(node, env)
       when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
              is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
-    IO.puts("# Literal: #{inspect node} #{ElixirSessions.TypeOperations.typeof(node)}")
+    IO.puts("# Literal: #{inspect(node)} #{ElixirSessions.TypeOperations.typeof(node)}")
 
     {{:literal, [checked: :literal, type: ElixirSessions.TypeOperations.typeof(node)], nil},
      %{env | type: ElixirSessions.TypeOperations.typeof(node)}}
@@ -162,52 +144,18 @@ defmodule ElixirSessions.SessionTypechecking do
     IO.puts("# erlang #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
-    {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
-    {_op2_ast, op2_env} = Macro.prewalk(arg2, env, &typecheck/2)
-    max_type = :integer
-
-    case op1_env[:state] do
-      :error ->
-        {node, op1_env}
-
-      _ ->
-        case op2_env[:state] do
-          :error ->
-            {node, op2_env}
-
-          _ ->
-            type =
-              ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
-
-            expected_type = ElixirSessions.TypeOperations.greatest_lower_bound(type, max_type)
-
-            # throw({type, max_type})
-            case expected_type do
-              :error ->
-                {node,
-                 %{
-                   op1_env
-                   | state: :error,
-                     error_data: "#{inspect(type)} is not a #{inspect(max_type)}"
-                 }}
-
-              _ ->
-                # todo merge var from op1 to op2
-                {node, op1_env}
-            end
-        end
-    end
-
-    {node, env}
+    process_binary_operations(node, meta2, arg1, arg2, :number, false, env)
 
     # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
     #  env}
   end
 
-  def typecheck({{:., _meta1, [:erlang, :-]}, _meta2, [_arg1]}, env) do
+  def typecheck({{:., meta1, [:erlang, :-]}, meta2, [arg]}, env) do
     IO.puts("# erlang negation")
 
-    {nil, env}
+    node = {{:., meta1, [:erlang, :-]}, meta2, []}
+    # {nil, env}
+    process_unary_operations(node, meta2, arg, :number, env)
 
     # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
     #  env}
@@ -246,7 +194,7 @@ defmodule ElixirSessions.SessionTypechecking do
   def run() do
     ast =
       quote do
-        :ok + true
+      7.6 + true
         # # xxx = 76
         # # _ = xxx and false
         # # @session "!A().rec X.(!A().X)"
@@ -269,9 +217,91 @@ defmodule ElixirSessions.SessionTypechecking do
     }
 
     ElixirSessions.Helper.expanded_quoted(ast)
+    |> IO.inspect()
     |> Macro.prewalk(env, &typecheck/2)
 
     # |> elem(0)
+  end
+
+  defp process_binary_operations(node, meta, arg1, arg2, max_type, _is_comparison, env) do
+
+    {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
+    {_op2_ast, op2_env} = Macro.prewalk(arg2, env, &typecheck/2)
+
+    case op1_env[:state] do
+      :error ->
+        {node, op1_env}
+
+      _ ->
+        case op2_env[:state] do
+          :error ->
+            {node, op2_env}
+
+          _ ->
+            type =
+              ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
+
+            type =
+              if type == :error do
+                ElixirSessions.TypeOperations.greatest_lower_bound(op2_env[:type], op1_env[:type])
+              else
+                type
+              end
+
+            expected_type = ElixirSessions.TypeOperations.greatest_lower_bound(type, max_type)
+
+            case expected_type do
+              :error ->
+                {node,
+                 %{
+                   op1_env
+                   | state: :error,
+                     error_data:
+                       error_message(
+                         "Operator type problem: #{inspect(op1_env[:type])}, #{
+                           inspect(op2_env[:type])
+                         } is not a #{inspect(max_type)}",
+                         meta
+                       )
+                 }}
+
+              _ ->
+                # todo merge var from op1 to op2
+                {node, op1_env}
+            end
+        end
+    end
+  end
+
+  defp process_unary_operations(node, meta, arg1, max_type, env) do
+
+    {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
+
+    case op1_env[:state] do
+      :error ->
+        {node, op1_env}
+
+      _ ->
+        expected_type =
+          ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], max_type)
+
+        case expected_type do
+          :error ->
+            {node,
+             %{
+               op1_env
+               | state: :error,
+                 error_data:
+                   error_message(
+                     "Unary type problem: #{inspect(op1_env[:type])} is not a #{inspect(max_type)}",
+                     meta
+                   )
+             }}
+
+          _ ->
+            {node, op1_env}
+        end
+    end
   end
 
   # @doc """
@@ -831,6 +861,17 @@ defmodule ElixirSessions.SessionTypechecking do
   #   # IO.puts("Other input")
   #   {rec_var, function_st_context, session_type}
   # end
+
+  defp error_message(message, meta) do
+    line =
+      if meta[:line] do
+        "[Line #{meta[:line]}]"
+      else
+        ""
+      end
+
+    message <> line
+  end
 
   @doc false
   # Takes case of :-> and returns the label and number of values as ':any' type.
