@@ -132,9 +132,54 @@ defmodule ElixirSessions.SessionTypechecking do
     # {node, %{env | type: ElixirSessions.TypeOperations.typeof(node)}}
   end
 
+  # Tuples
+  def typecheck({:{}, meta, args}, env) when is_list(args) do
+    node = {:{}, meta, []}
+
+    {types_list, new_env} =
+      Enum.map(args, fn arg -> elem(Macro.prewalk(arg, env, &typecheck/2), 1) end)
+      |> Enum.reduce_while({[], env}, fn result, {types_list, env_acc} ->
+        # result = Utils.prepare_result_data(result)
+
+        case result[:state] do
+          :error ->
+            {:halt, {[], result}}
+
+          _ ->
+            {:cont,
+             {types_list ++ [result[:type]],
+              %{env_acc | variable_ctx: Map.merge(env_acc[:variable_ctx], result[:vars] || %{})}}}
+        end
+      end)
+
+    {node, %{new_env | type: {:tuple, types_list}}}
+  end
+
+  # Tuples
+  def typecheck({arg1, arg2}, env) do
+    node = {:{}, [], [arg1, arg2]}
+    typecheck(node, env)
+  end
+
+  # def typecheck({elem1, elem2} = elem, env) do
+  #   {types_list, result} =
+  #     Enum.map([elem1, elem2], fn t -> elem(Macro.prewalk(t, env, &typecheck/2), 1) end)
+  #     |> Enum.reduce_while({[], env}, fn result, {types_list, env_acc} ->
+  #         result = Utils.prepare_result_data(result)
+
+  #         case result[:state] do
+  #           :error -> {:halt, {[], result}}
+  #           _ -> {:cont, {types_list ++ [result[:type]], elem(Utils.return_merge_vars(elem, env_acc, result[:vars]), 1)}}
+  #         end
+  #       end)
+
+  #   {{}, %{result | type: {:tuple, types_list}}}
+  # end
+
   def typecheck(node, env) when is_list(node) do
     IO.puts("# List}")
 
+    # todo
     {node, env}
   end
 
@@ -160,7 +205,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # Elixir format:          [:==, :!=,   :===,   :!== ,  :>, :<, :<=,   :>=  ]
   # Extended Elixir format: [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :">="]
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
-      when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :">="] do
+      when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :>=] do
     node = {{:., meta1, []}, meta2, []}
     # todo convert operator from extened elixir to elixir
     process_binary_operations(node, meta2, operator, arg1, arg2, :any, true, env)
@@ -183,7 +228,12 @@ defmodule ElixirSessions.SessionTypechecking do
     node = {nil, meta2, []}
     # {{{:., [], [:erlang, erlang_function]}, [], arg}, %{env | type: :any}}
     # {node, %{env | type: :any}}
-    {node, %{env | state: :error, error_data: error_message("Unknown erlang function #{inspect erlang_function}", meta2)}}
+    {node,
+     %{
+       env
+       | state: :error,
+         error_data: error_message("Unknown erlang function #{inspect(erlang_function)}", meta2)
+     }}
   end
 
   # Binding operator
@@ -206,7 +256,8 @@ defmodule ElixirSessions.SessionTypechecking do
             {node, %{expr_env | state: :error, error_data: error_message(msg, meta)}}
 
           _ ->
-            {node, %{expr_env | variable_ctx: Map.merge(expr_env[:variable_ctx], pattern_vars)}}
+            {node,
+             %{expr_env | variable_ctx: Map.merge(expr_env[:variable_ctx], pattern_vars || %{})}}
         end
     end
   end
@@ -226,6 +277,15 @@ defmodule ElixirSessions.SessionTypechecking do
     end
   end
 
+  # Send Function
+  def typecheck({{:., _meta1, [:erlang, :send]}, meta2, [_, send_body | _]}, env) do
+    IO.puts("# erlang negation")
+
+    node = {nil, meta2, []}
+
+    {node, env}
+  end
+
   # Functions
   def typecheck({x, meta, args}, env) when is_list(args) do
     IO.puts("# Function #{inspect(x)}")
@@ -239,6 +299,13 @@ defmodule ElixirSessions.SessionTypechecking do
     {other, env}
   end
 
+  # todo remaining: send
+  # todo remaining: receive
+  # todo remaining: case
+  # todo remaining: if/unless
+  # todo remaining: tuple
+  # todo remaining: function call
+
   # recompile && ElixirSessions.SessionTypechecking.run
   def run() do
     ast =
@@ -246,7 +313,7 @@ defmodule ElixirSessions.SessionTypechecking do
         a = 7
         b = a + 99 + 9.9
         c = a
-        a + b        # # xxx = 76
+        {:abc, 55, true}
         # # _ = xxx and false
         # # @session "!A().rec X.(!A().X)"
         # send(pid, {:A})

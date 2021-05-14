@@ -180,6 +180,40 @@ defmodule SessionTypecheckingTest do
     assert typecheck(ast)[:variable_ctx] == %{a: :integer, b: :float, c: :integer}
     assert typecheck(ast)[:type] == :float
   end
+
+  test "tuples" do
+    ast =
+      quote do
+        {1, 2, true, :abc, 6.6}
+      end
+
+    assert typecheck(ast)[:type] == {:tuple, [:integer, :integer, :boolean, :abc, :float]}
+
+    ast =
+      quote do
+        {1, 2}
+      end
+
+    assert typecheck(ast)[:type] == {:tuple, [:integer, :integer]}
+
+    ast =
+      quote do
+        a = 323
+        b = true
+        c = a
+        d = c
+        a = {a, b, c, d}
+        z = {a, {a, b}}
+        z
+      end
+
+    assert typecheck(ast)[:type] ==
+             {:tuple,
+              [
+                tuple: [:integer, :boolean, :integer, :integer],
+                tuple: [{:tuple, [:integer, :boolean, :integer, :integer]}, :boolean]
+              ]}
+  end
 end
 
 # defmodule SessionTypecheckingTest do
