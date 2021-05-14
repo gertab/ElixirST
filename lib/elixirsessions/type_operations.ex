@@ -149,6 +149,15 @@ defmodule ElixirSessions.TypeOperations do
   def subtype?(_, :any), do: true
   def subtype?(_, _), do: false
 
+  def greatest_lower_bound(types) when is_list(types) do
+    Enum.reduce_while(types, hd(types), fn type, acc ->
+      case greatest_lower_bound(type, acc) do
+        :error -> {:halt, :error}
+        x -> {:cont, x}
+      end
+    end)
+  end
+
   def greatest_lower_bound(type1, type2)
   def greatest_lower_bound(type, type), do: type
   def greatest_lower_bound(type1, :atom) when is_atom(type1) and type1 not in @types, do: :atom
@@ -228,25 +237,29 @@ defmodule ElixirSessions.TypeOperations do
     end
   end
 
-  def var_pattern(params, param_type_list) do
-    new_vars =
-      Enum.zip(params, param_type_list)
-      |> Enum.map(fn {var, type} -> get_vars(var, type) end)
-      |> List.flatten()
+  def var_pattern(params, param_type_list) when is_list(params) and is_list(param_type_list) do
+    if length(params) != length(param_type_list) do
+      {:error, "Incorrectly sized parameters/types"}
+    else
+      new_vars =
+        Enum.zip(params, param_type_list)
+        |> Enum.map(fn {var, type} -> get_vars(var, type) end)
+        |> List.flatten()
 
-    case new_vars[:error] do
-      nil ->
-        Enum.reduce_while(new_vars, %{}, fn {var, type}, acc ->
-          t = Map.get(acc, var)
+      case new_vars[:error] do
+        nil ->
+          Enum.reduce_while(new_vars, %{}, fn {var, type}, acc ->
+            t = Map.get(acc, var)
 
-          cond do
-            t === nil or t === type -> {:cont, Map.put(acc, var, type)}
-            true -> {:halt, {:error, "Variable #{var} is already defined with type #{t}"}}
-          end
-        end)
+            cond do
+              t === nil or t === type -> {:cont, Map.put(acc, var, type)}
+              true -> {:halt, {:error, "Variable #{var} is already defined with type #{t}"}}
+            end
+          end)
 
-      message ->
-        {:error, message}
+        message ->
+          {:error, message}
+      end
     end
   end
 

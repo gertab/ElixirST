@@ -40,7 +40,22 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
     return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
 
-    assert args_types == {:list, [:any, :atom, :binary, :boolean, :float, :integer, nil, :number, :pid, :string, :no_return]}
+    assert args_types ==
+             {:list,
+              [
+                :any,
+                :atom,
+                :binary,
+                :boolean,
+                :float,
+                :integer,
+                nil,
+                :number,
+                :pid,
+                :string,
+                :no_return
+              ]}
+
     assert return_type == :any
   end
 
@@ -77,7 +92,7 @@ defmodule TypeOperationsTest do
   test "further literals example" do
     {:@, _, [spec]} =
       quote do
-        @spec function(7676.4, true, :false, 78, nil, pid, "hello") :: :ok
+        @spec function(7676.4, true, false, 78, nil, pid, "hello") :: :ok
       end
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
@@ -88,7 +103,6 @@ defmodule TypeOperationsTest do
     assert args_types == {:list, [:float, true, false, :integer, nil, :pid, :binary]}
     assert return_type == :ok
   end
-
 
   test "edge tuple example" do
     {:@, _, [spec]} =
@@ -119,7 +133,6 @@ defmodule TypeOperationsTest do
     assert args_types == {:list, [:error]}
     assert return_type == :number
   end
-
 
   test "subtype? atom 1" do
     type1 = :atom
@@ -182,9 +195,10 @@ defmodule TypeOperationsTest do
     type2 = {:tuple, [:atom, :integer, :atom]}
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === {:tuple, [:atom, :integer, :atom]}
-  end
 
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) ===
+             {:tuple, [:atom, :integer, :atom]}
+  end
 
   test "subtype? list" do
     type1 = {:list, [:abc]}
@@ -199,7 +213,9 @@ defmodule TypeOperationsTest do
     type2 = {:list, [:atom, :integer, :atom]}
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === {:list, [:atom, :integer, :atom]}
+
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) ===
+             {:list, [:atom, :integer, :atom]}
   end
 
   test "subtype? bad" do
@@ -207,7 +223,24 @@ defmodule TypeOperationsTest do
     assert ElixirSessions.TypeOperations.subtype?({:tuple, [:atom]}, {:list, [:abc]}) === false
     assert ElixirSessions.TypeOperations.subtype?(:float, :atom) === false
     assert ElixirSessions.TypeOperations.greatest_lower_bound(:abc, :number) === :error
-    assert ElixirSessions.TypeOperations.greatest_lower_bound({:tuple, [:atom]}, {:list, [:abc]}) === :error
+
+    assert ElixirSessions.TypeOperations.greatest_lower_bound({:tuple, [:atom]}, {:list, [:abc]}) ===
+             :error
+
     assert ElixirSessions.TypeOperations.greatest_lower_bound(:float, :atom) === :error
+  end
+
+  test "greatest lower bound list" do
+    assert ElixirSessions.TypeOperations.greatest_lower_bound([:integer, :number, :float]) == :number
+
+    assert ElixirSessions.TypeOperations.greatest_lower_bound([
+             {:integer, :number, :float},
+             {:number, :integer, :integer}
+           ]) == :error
+
+    assert ElixirSessions.TypeOperations.greatest_lower_bound([
+      {:tuple, [:integer, :number, :float]},
+      {:tuple, [:number, :integer, :integer]}
+    ]) == {:tuple, [:number, :number, :float]}
   end
 end

@@ -35,6 +35,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :hello3
+    assert typecheck(ast)[:state] == :ok
   end
 
   test "literal - binary operations" do
@@ -44,6 +45,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :integer
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -51,6 +53,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :float
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -58,6 +61,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :float
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -65,6 +69,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :integer
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -72,6 +77,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :float
+    assert typecheck(ast)[:state] == :ok
   end
 
   test "literal - binary operations - error state" do
@@ -92,6 +98,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -99,6 +106,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -106,6 +114,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -113,6 +122,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -120,6 +130,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -127,6 +138,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -134,6 +146,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -141,6 +154,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -155,6 +169,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+    assert typecheck(ast)[:state] == :ok
   end
 
   test "binding variable" do
@@ -168,6 +183,7 @@ defmodule SessionTypecheckingTest do
 
     assert typecheck(ast)[:variable_ctx] == %{a: :integer, b: :boolean, c: :boolean}
     assert typecheck(ast)[:type] == :integer
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -179,6 +195,7 @@ defmodule SessionTypecheckingTest do
 
     assert typecheck(ast)[:variable_ctx] == %{a: :integer, b: :float, c: :integer}
     assert typecheck(ast)[:type] == :float
+    assert typecheck(ast)[:state] == :ok
   end
 
   test "tuples" do
@@ -188,6 +205,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == {:tuple, [:integer, :integer, :boolean, :abc, :float]}
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -195,6 +213,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == {:tuple, [:integer, :integer]}
+    assert typecheck(ast)[:state] == :ok
 
     ast =
       quote do
@@ -213,6 +232,104 @@ defmodule SessionTypecheckingTest do
                 tuple: [:integer, :boolean, :integer, :integer],
                 tuple: [{:tuple, [:integer, :boolean, :integer, :integer]}, :boolean]
               ]}
+
+    assert typecheck(ast)[:state] == :ok
+  end
+
+  test "send" do
+    ast =
+      quote do
+        self()
+      end
+
+    assert typecheck(ast)[:type] == :pid
+
+    ast =
+      quote do
+        a = 4
+        a = true
+        p = self()
+        send(p, {:hello, a, false})
+      end
+
+    assert typecheck(ast)[:type] == {:tuple, [:hello, :boolean, :boolean]}
+    assert typecheck(ast)[:state] == :ok
+
+    ast =
+      quote do
+        a = 4
+        send(a, a)
+      end
+
+    assert typecheck(ast)[:state] == :error
+  end
+
+  test "receive" do
+    ast =
+      quote do
+        receive do
+          {:A, value} ->
+            value
+
+          {:B, value1, value2} ->
+            value2 + value2
+        end
+      end
+
+    env = %{env | session_type: ST.string_to_st("&{?A(number), ?B(number, float)}")}
+    assert typecheck(ast, env)[:type] == :number
+    assert typecheck(ast, env)[:state] == :ok
+
+    ast =
+      quote do
+        value = 5
+
+        receive do
+          {:A, value2} ->
+            value + value2
+
+          {:B, value1, value2} ->
+            value2 + value2
+        end
+      end
+
+    env = %{env | session_type: ST.string_to_st("&{?A(float), ?B(number, float)}")}
+    assert typecheck(ast, env)[:type] == :float
+    assert typecheck(ast, env)[:state] == :ok
+
+    ast =
+      quote do
+        value = 5
+
+        receive do
+          {:A, value2} ->
+            value + value2
+            true
+
+          {:B, value1, value2} ->
+            value2 + value2
+        end
+      end
+
+    env = %{env | session_type: ST.string_to_st("&{?A(float), ?B(number, float)}")}
+    assert typecheck(ast, env)[:state] == :error
+
+    ast =
+      quote do
+        value = true
+
+        receive do
+          {:A, value2, value3} ->
+            value and value2
+
+          {:B, value1, value2} ->
+            value1 < value2
+        end
+      end
+
+    env = %{env | session_type: ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")}
+    assert typecheck(ast, env)[:state] == :ok
+    assert typecheck(ast, env)[:type] == :boolean
   end
 end
 

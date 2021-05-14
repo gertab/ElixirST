@@ -54,8 +54,7 @@ defmodule ElixirSessions.Helper do
 
   def ast() do
     quote do
-      a = 7.6 <= true
-      b = c
+      send(self(), {:label, 123, 46})
     end
 
     # type1 has to be of type boolean
