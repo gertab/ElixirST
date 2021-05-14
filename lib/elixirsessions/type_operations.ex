@@ -194,7 +194,10 @@ defmodule ElixirSessions.TypeOperations do
       result
     end
   end
-  def greatest_lower_bound(type1, type2) when is_atom(type1) and is_atom(type2) and type1 not in @types and type2 not in @types, do: :atom
+
+  def greatest_lower_bound(type1, type2)
+      when is_atom(type1) and is_atom(type2) and type1 not in @types and type2 not in @types,
+      do: :atom
 
   def greatest_lower_bound(type, :any), do: type
   def greatest_lower_bound(:any, type), do: type
@@ -223,5 +226,94 @@ defmodule ElixirSessions.TypeOperations do
       "string" -> "is_binary"
       _ -> :error
     end
+  end
+
+  def var_pattern(params, param_type_list) do
+    new_vars =
+      Enum.zip(params, param_type_list)
+      |> Enum.map(fn {var, type} -> get_vars(var, type) end)
+      |> List.flatten()
+
+    case new_vars[:error] do
+      nil ->
+        Enum.reduce_while(new_vars, %{}, fn {var, type}, acc ->
+          t = Map.get(acc, var)
+
+          cond do
+            t === nil or t === type -> {:cont, Map.put(acc, var, type)}
+            true -> {:halt, {:error, "Variable #{var} is already defined with type #{t}"}}
+          end
+        end)
+
+      message ->
+        {:error, message}
+    end
+  end
+
+  # var is the quoted part of the lhs in a binding operation (i.e. =)
+  defp get_vars(var, type)
+  defp get_vars(_, :any), do: []
+  defp get_vars({op, _, _}, type) when op not in [:{}, :%{}, :=, :_, :|], do: {op, type}
+  defp get_vars({:_, _, _}, _type), do: []
+
+  defp get_vars({:=, _, [_arg1, _arg2]}, _),
+    do: {:error, "'=' is not supported"}
+
+  defp get_vars([], {:list, _type}), do: []
+
+  defp get_vars(op, {:list, type}) when is_list(op),
+    do: Enum.map(op, fn x -> get_vars(x, type) end)
+
+  defp get_vars({:|, _, [operand1, operand2]}, {:list, type}),
+    do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+
+  defp get_vars(_, {:list, _}), do: {:error, "Incorrect type specification"}
+
+  defp get_vars([], _), do: {:error, "Incorrect type specification"}
+
+  defp get_vars({:|, _, _}, _), do: {:error, "Incorrect type specification"}
+
+  defp get_vars({:%{}, _, op}, {:map, {_, value_types}}),
+    do:
+      Enum.zip(op, value_types)
+      |> Enum.map(fn {{_, value}, value_type} -> get_vars(value, value_type) end)
+
+  defp get_vars({:%{}, _, _}, _), do: {:error, "Incorrect type specification"}
+
+  defp get_vars(_, {:map, {_, _}}), do: {:error, "Incorrect type specification"}
+
+  defp get_vars({:{}, _, ops}, {:tuple, type_list}), do: get_vars_tuple(ops, type_list)
+
+  defp get_vars(ops, {:tuple, type_list}) when is_tuple(ops),
+    do: get_vars_tuple(Tuple.to_list(ops), type_list)
+
+  defp get_vars({:{}, _, _}, _), do: {:error, "Incorrect type specification"}
+
+  defp get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
+
+  defp get_vars(value, type) when type in @types do
+    literal =
+      (is_nil(value) and type == nil) or
+        (is_boolean(value) and type == :boolean) or
+        (is_integer(value) and type == :integer) or
+        (is_float(value) and type == :float) or
+        (is_number(value) and type == :number) or
+        (is_pid(value) and type == :pid) or
+        (is_binary(value) and type == :binary) or
+        (is_atom(value) and subtype?(type, :atom))
+
+    if literal do
+      []
+    else
+      {:error, "Incorrect type specification"}
+    end
+  end
+
+  defp get_vars(_, _), do: {:error, "Incorrect type specification"}
+
+  defp get_vars_tuple(ops, type_list) do
+    if length(ops) === length(type_list),
+      do: Enum.zip(ops, type_list) |> Enum.map(fn {var, type} -> get_vars(var, type) end),
+      else: {:error, "The number of parameters in tuple does not match the number of types"}
   end
 end

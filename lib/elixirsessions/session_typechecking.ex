@@ -158,9 +158,9 @@ defmodule ElixirSessions.SessionTypechecking do
   # [:and, :or]
 
   # Elixir format:          [:==, :!=,   :===,   :!== ,  :>, :<, :<=,   :>=  ]
-  # Extended Elixir format: [:==, :"/=", :"=:=", :"=/=", :>, :<, :"<=", :">="]
+  # Extended Elixir format: [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :">="]
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
-      when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :<=, :>=] do
+      when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :">="] do
     node = {{:., meta1, []}, meta2, []}
     # todo convert operator from extened elixir to elixir
     process_binary_operations(node, meta2, operator, arg1, arg2, :any, true, env)
@@ -171,29 +171,66 @@ defmodule ElixirSessions.SessionTypechecking do
     process_unary_operations(node, meta2, arg, :boolean, env)
   end
 
-  def typecheck({{:., meta1, [:erlang, :-]}, meta2, [arg]}, env) do
+  def typecheck({{:., _meta1, [:erlang, :-]}, meta2, [arg]}, env) do
     IO.puts("# erlang negation")
 
-    node = {{:., meta1, [:erlang, :-]}, meta2, []}
-    # {nil, env}
+    node = {nil, meta2, []}
     process_unary_operations(node, meta2, arg, :number, env)
-
-    # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
-    #  env}
   end
 
-  def typecheck({{:., _meta1, [:erlang, erlang_function]}, _meta2, arg}, env) do
-    IO.puts("# erlang others #{erlang_function}")
-
-    # {nil, env}
-    {{{:., [], [:erlang, erlang_function]}, [], arg}, env}
+  def typecheck({{:., _meta1, [:erlang, erlang_function]}, meta2, _arg}, env) do
+    IO.puts("# erlang others #{erlang_function} (not supported)")
+    node = {nil, meta2, []}
+    # {{{:., [], [:erlang, erlang_function]}, [], arg}, %{env | type: :any}}
+    # {node, %{env | type: :any}}
+    {node, %{env | state: :error, error_data: error_message("Unknown erlang function #{inspect erlang_function}", meta2)}}
   end
 
-  def typecheck({:=, meta2, [arg1, arg2]}, env) do
-    IO.puts("# equal op")
+  # Binding operator
+  def typecheck({:=, meta, [pattern, expr]}, env) do
+    IO.puts("# Binding op")
+    node = {:=, meta, []}
 
-    # {nil, env}
-    {{:=, meta2, [arg1, arg2]}, env}
+    {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
+
+    case expr_env[:state] do
+      :error ->
+        {node, expr_env}
+
+      _ ->
+        pattern = if is_list(pattern), do: pattern, else: [pattern]
+        pattern_vars = ElixirSessions.TypeOperations.var_pattern(pattern, [expr_env[:type]])
+
+        case pattern_vars do
+          {:error, msg} ->
+            {node, %{expr_env | state: :error, error_data: error_message(msg, meta)}}
+
+          _ ->
+            {node, %{expr_env | variable_ctx: Map.merge(expr_env[:variable_ctx], pattern_vars)}}
+        end
+    end
+  end
+
+  # Variables
+  def typecheck({x, meta, arg}, env) when is_atom(arg) do
+    IO.puts("# Variable #{inspect(x)}: #{inspect(env[:variable_ctx][x])}")
+    node = {x, meta, arg}
+
+    case env[:variable_ctx][x] do
+      nil ->
+        {node,
+         %{env | state: :error, error_data: error_message("Variable #{x} was not found", meta)}}
+
+      type ->
+        {node, %{env | type: type}}
+    end
+  end
+
+  # Functions
+  def typecheck({x, meta, args}, env) when is_list(args) do
+    IO.puts("# Function #{inspect(x)}")
+    node = {x, meta, []}
+    {node, env}
   end
 
   def typecheck(other, env) do
@@ -206,8 +243,10 @@ defmodule ElixirSessions.SessionTypechecking do
   def run() do
     ast =
       quote do
-        7 + 6.8
-        # # xxx = 76
+        a = 7
+        b = a + 99 + 9.9
+        c = a
+        a + b        # # xxx = 76
         # # _ = xxx and false
         # # @session "!A().rec X.(!A().X)"
         # send(pid, {:A})

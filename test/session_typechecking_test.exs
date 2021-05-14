@@ -65,6 +65,7 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :integer
+
     ast =
       quote do
         7 / 8923.6
@@ -83,7 +84,7 @@ defmodule SessionTypecheckingTest do
   end
 
   test "comparators" do
-    # Elixir format:          [:==, :!=,   :===,   :!== ,  :>, :<, :<=,   :>=  ]
+    # Elixir format: [==, !=, ===, !==, >, <, <=, >=]
 
     ast =
       quote do
@@ -140,18 +141,44 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :boolean
+
     ast =
       quote do
         not 6
       end
 
     assert typecheck(ast)[:state] == :error
+
     ast =
       quote do
         not true
       end
 
     assert typecheck(ast)[:type] == :boolean
+  end
+
+  test "binding variable" do
+    ast =
+      quote do
+        a = 7
+        b = a < 99
+        c = true
+        a
+      end
+
+    assert typecheck(ast)[:variable_ctx] == %{a: :integer, b: :boolean, c: :boolean}
+    assert typecheck(ast)[:type] == :integer
+
+    ast =
+      quote do
+        a = 7
+        b = a + 99 + 9.9
+        c = a
+        a + b
+      end
+
+    assert typecheck(ast)[:variable_ctx] == %{a: :integer, b: :float, c: :integer}
+    assert typecheck(ast)[:type] == :float
   end
 end
 

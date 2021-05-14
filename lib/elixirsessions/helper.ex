@@ -53,25 +53,49 @@ defmodule ElixirSessions.Helper do
   end
 
   def ast() do
-    # [:==, :!=,   :>, :<, :<=,   :>=,   :===,   :!==  ]
-    # [:==, :"/=", :>, :<, :"<=", :">=", :"=:=", :"=/="]
     quote do
-      # x = 3
-      # _ = x == 3
-      # _ = x != 3
-      # _ = x > 3
-      # _ = x < 3
-      # _ = x <= 3
-      # _ = x >= 3
-      # _ = x === 3
-      # _ = x !== 3
-      # x = true
-      # not x
-      x = true
-      y = false
-      _ = x and y
-      # _ = x or y
+      a = 7.6 <= true
+      b = c
     end
+
+    # type1 has to be of type boolean
+    # the of the if statement is equal to the type of _do_something and _do_something_else
+    # {:case, _,
+    #  [
+    #    _type1,
+    #    [
+    #      do: [
+    #        {:->, _,
+    #         [
+    #           [
+    #             {:when, [],
+    #              [
+    #                _type2,
+    #                {{:., [], [:erlang, :orelse]}, [],
+    #                 [
+    #                   {{:., [], [:erlang, :"=:="]}, [], [_type3, false]},
+    #                   {{:., [], [:erlang, :"=:="]}, [], [_type4, nil]}
+    #                 ]}
+    #              ]}
+    #           ],
+    #           _do_something
+    #         ]},
+    #        {:->, _, [[{:_, [], Kernel}], _do_something_else]}
+    #      ]
+    #    ]
+    #  ]}
+
+    # {:case, _,
+    #  [
+    #    {{:., [], [:erlang, :>]}, [context: ElixirSessions.Helper, import: Kernel],
+    #     [{:x, [], ElixirSessions.Helper}, 66]},
+    #    [
+    #      do: [
+    #        {:->, [generated: true], [[false], :notok]},
+    #        {:->, [generated: true], [[true], :ok]}
+    #      ]
+    #    ]
+    #  ]}
   end
 
   # recompile && ElixirSessions.Helper.quoted

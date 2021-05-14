@@ -5,6 +5,7 @@ defmodule Mix.Tasks.SessionCheck do
   # @moduledoc false
   @spec run([binary]) :: list
   def run(args) do
+    # ElixirSessions.SessionTypechecking.run
     {opts, argv} = OptionParser.parse!(args, switches: [expression_typing: :boolean])
     expression_typing = Keyword.get(opts, :expression_typing, true)
 
