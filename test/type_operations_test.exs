@@ -126,6 +126,7 @@ defmodule TypeOperationsTest do
     type2 = :atom
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
   end
 
   test "subtype? atom 2" do
@@ -133,6 +134,7 @@ defmodule TypeOperationsTest do
     type2 = :atom
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
   end
 
   test "subtype? atom 3" do
@@ -140,6 +142,7 @@ defmodule TypeOperationsTest do
     type2 = :def
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === false
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
   end
 
   test "subtype? atom 4" do
@@ -147,6 +150,7 @@ defmodule TypeOperationsTest do
     type2 = :abc
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === false
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
   end
 
   test "subtype? number 1" do
@@ -154,6 +158,7 @@ defmodule TypeOperationsTest do
     type2 = :number
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :number
   end
 
   test "subtype? number 2" do
@@ -161,6 +166,7 @@ defmodule TypeOperationsTest do
     type2 = :float
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :float
   end
 
   test "subtype? number 3" do
@@ -168,6 +174,7 @@ defmodule TypeOperationsTest do
     type2 = :number
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :number
   end
 
   test "subtype? tuple" do
@@ -175,6 +182,7 @@ defmodule TypeOperationsTest do
     type2 = {:tuple, [:atom, :integer, :atom]}
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === {:tuple, [:atom, :integer, :atom]}
   end
 
 
@@ -183,6 +191,7 @@ defmodule TypeOperationsTest do
     type2 = {:list, [:atom]}
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === {:list, [:atom]}
   end
 
   test "subtype? list - maybe todo remove" do
@@ -190,11 +199,15 @@ defmodule TypeOperationsTest do
     type2 = {:list, [:atom, :integer, :atom]}
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
     assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === {:list, [:atom, :integer, :atom]}
   end
 
   test "subtype? bad" do
     assert ElixirSessions.TypeOperations.subtype?(:abc, :number) === false
     assert ElixirSessions.TypeOperations.subtype?({:tuple, [:atom]}, {:list, [:abc]}) === false
     assert ElixirSessions.TypeOperations.subtype?(:float, :atom) === false
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(:abc, :number) === :error
+    assert ElixirSessions.TypeOperations.greatest_lower_bound({:tuple, [:atom]}, {:list, [:abc]}) === :error
+    assert ElixirSessions.TypeOperations.greatest_lower_bound(:float, :atom) === :error
   end
 end

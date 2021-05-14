@@ -113,20 +113,53 @@ defmodule ElixirSessions.TypeOperations do
   def typeof(_), do: :error
 
   # Is type1 a subtype of type2, type1 <: type2?
-  def subtype?(type1, type2) do
-    case greatest_lower_bound(type1, type2) do
-      :error -> false
-      _ -> true
-    end
+  # def subtype?(type1, type2) do
+  #   case greatest_lower_bound(type1, type2) do
+  #     :error -> false
+  #     _ -> true
+  #   end
+  # end
+
+  def subtype?(type1, type2)
+  def subtype?(type, type), do: true
+  def subtype?(type1, :atom) when is_atom(type1) and type1 not in @types, do: true
+  # def subtype?(type1, :atom) when is_atom(type1), do: true # todo not sure
+  def subtype?(:integer, :number), do: true
+  def subtype?(:integer, :float), do: true
+  def subtype?(:float, :number), do: true
+
+  def subtype?({:tuple, type1}, {:tuple, type2})
+      when is_list(type1) and is_list(type2) do
+    subtype?(type1, type2)
   end
+
+  def subtype?({:list, type1}, {:list, type2})
+      when is_list(type1) and is_list(type2) do
+    # todo: either t or [t]; [t1, t2] is not a valid type
+    subtype?(type1, type2)
+  end
+
+  def subtype?(type1, type2) when is_list(type1) and is_list(type2) do
+    result =
+      Enum.zip(type1, type2)
+      |> Enum.map(fn {left, right} -> subtype?(left, right) end)
+
+    not Enum.member?(result, false)
+  end
+
+  def subtype?(_, _), do: false
 
   def greatest_lower_bound(type1, type2)
   def greatest_lower_bound(type, type), do: type
   def greatest_lower_bound(type1, :atom) when is_atom(type1) and type1 not in @types, do: :atom
+  def greatest_lower_bound(:atom, type2) when is_atom(type2) and type2 not in @types, do: :atom
   # def greatest_lower_bound(type1, :atom) when is_atom(type1), do: true # todo not sure
   def greatest_lower_bound(:integer, :number), do: :number
+  def greatest_lower_bound(:number, :integer), do: :number
   def greatest_lower_bound(:integer, :float), do: :float
+  def greatest_lower_bound(:float, :integer), do: :float
   def greatest_lower_bound(:float, :number), do: :number
+  def greatest_lower_bound(:number, :float), do: :number
 
   def greatest_lower_bound({:tuple, type1}, {:tuple, type2})
       when is_list(type1) and is_list(type2) do
@@ -162,6 +195,7 @@ defmodule ElixirSessions.TypeOperations do
       result
     end
   end
+  def greatest_lower_bound(type1, type2) when is_atom(type1) and is_atom(type2) and type1 not in @types and type2 not in @types, do: :atom
 
   def greatest_lower_bound(_, _), do: :error
 
