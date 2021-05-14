@@ -144,10 +144,31 @@ defmodule ElixirSessions.SessionTypechecking do
     IO.puts("# erlang #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
-    process_binary_operations(node, meta2, arg1, arg2, :number, false, env)
+    process_binary_operations(node, meta2, operator, arg1, arg2, :number, false, env)
+  end
 
-    # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
-    #  env}
+  def typecheck({{:., meta1, [:erlang, :/]}, meta2, [arg1, arg2]}, env) do
+    IO.puts("# erlang /")
+    node = {{:., meta1, []}, meta2, []}
+
+    process_binary_operations(node, meta2, :/, arg1, arg2, :number, false, env)
+  end
+
+  # too complex in extended elixir
+  # [:and, :or]
+
+  # Elixir format:          [:==, :!=,   :===,   :!== ,  :>, :<, :<=,   :>=  ]
+  # Extended Elixir format: [:==, :"/=", :"=:=", :"=/=", :>, :<, :"<=", :">="]
+  def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
+      when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :<=, :>=] do
+    node = {{:., meta1, []}, meta2, []}
+    # todo convert operator from extened elixir to elixir
+    process_binary_operations(node, meta2, operator, arg1, arg2, :any, true, env)
+  end
+
+  # not
+  def typecheck({{:., _meta1, [:erlang, :not]}, meta2, [arg]} = node, env) do
+    process_unary_operations(node, meta2, arg, :boolean, env)
   end
 
   def typecheck({{:., meta1, [:erlang, :-]}, meta2, [arg]}, env) do
@@ -156,15 +177,6 @@ defmodule ElixirSessions.SessionTypechecking do
     node = {{:., meta1, [:erlang, :-]}, meta2, []}
     # {nil, env}
     process_unary_operations(node, meta2, arg, :number, env)
-
-    # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
-    #  env}
-  end
-
-  def typecheck({{:., _meta1, [:erlang, :/]}, _meta2, [_arg1, _arg2]}, env) do
-    IO.puts("# erlang /")
-
-    {nil, env}
 
     # {{{:., [checked: :.] ++ meta1, [:erlang, :+]}, [checked: :..] ++ meta2, [40_000_000_000, 5]},
     #  env}
@@ -194,7 +206,7 @@ defmodule ElixirSessions.SessionTypechecking do
   def run() do
     ast =
       quote do
-      7.6 + true
+        7 + 6.8
         # # xxx = 76
         # # _ = xxx and false
         # # @session "!A().rec X.(!A().X)"
@@ -223,8 +235,7 @@ defmodule ElixirSessions.SessionTypechecking do
     # |> elem(0)
   end
 
-  defp process_binary_operations(node, meta, arg1, arg2, max_type, _is_comparison, env) do
-
+  defp process_binary_operations(node, meta, operator, arg1, arg2, max_type, is_comparison, env) do
     {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
     {_op2_ast, op2_env} = Macro.prewalk(arg2, env, &typecheck/2)
 
@@ -238,43 +249,53 @@ defmodule ElixirSessions.SessionTypechecking do
             {node, op2_env}
 
           _ ->
-            type =
-              ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
+            if is_comparison do
+              # todo merge var from op1 to op2
+              {node, %{op1_env | type: :boolean}}
+            else
+              common_type =
+                ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
 
-            type =
-              if type == :error do
-                ElixirSessions.TypeOperations.greatest_lower_bound(op2_env[:type], op1_env[:type])
-              else
-                type
+              case common_type do
+                :error ->
+                  {node,
+                   %{
+                     op1_env
+                     | state: :error,
+                       error_data:
+                         error_message(
+                           "Operator type problem in #{inspect(operator)}: #{
+                             inspect(op1_env[:type])
+                           }, #{inspect(op2_env[:type])} are not of the same type",
+                           meta
+                         )
+                   }}
+
+                _ ->
+                  if ElixirSessions.TypeOperations.subtype?(common_type, max_type) do
+                    # todo merge var from op1 to op2
+                    {node, %{op1_env | type: common_type}}
+                  else
+                    {node,
+                     %{
+                       op1_env
+                       | state: :error,
+                         error_data:
+                           error_message(
+                             "Operator type problem in #{inspect(operator)}: #{
+                               inspect(op1_env[:type])
+                             }, #{inspect(op2_env[:type])} is not of type #{inspect(max_type)}",
+                             meta
+                           )
+                     }}
+                  end
               end
-
-            expected_type = ElixirSessions.TypeOperations.greatest_lower_bound(type, max_type)
-
-            case expected_type do
-              :error ->
-                {node,
-                 %{
-                   op1_env
-                   | state: :error,
-                     error_data:
-                       error_message(
-                         "Operator type problem: #{inspect(op1_env[:type])}, #{
-                           inspect(op2_env[:type])
-                         } is not a #{inspect(max_type)}",
-                         meta
-                       )
-                 }}
-
-              _ ->
-                # todo merge var from op1 to op2
-                {node, op1_env}
             end
         end
     end
   end
 
   defp process_unary_operations(node, meta, arg1, max_type, env) do
-
     {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
 
     case op1_env[:state] do

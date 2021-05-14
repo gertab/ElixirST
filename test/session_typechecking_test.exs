@@ -65,8 +65,13 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:type] == :integer
-  end
+    ast =
+      quote do
+        7 / 8923.6
+      end
 
+    assert typecheck(ast)[:type] == :float
+  end
 
   test "literal - binary operations - error state" do
     ast =
@@ -75,6 +80,78 @@ defmodule SessionTypecheckingTest do
       end
 
     assert typecheck(ast)[:state] == :error
+  end
+
+  test "comparators" do
+    # Elixir format:          [:==, :!=,   :===,   :!== ,  :>, :<, :<=,   :>=  ]
+
+    ast =
+      quote do
+        7.6 == true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 != true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 === true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 !== true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 < true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 > true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 <= true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+
+    ast =
+      quote do
+        7.6 >= true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
+    ast =
+      quote do
+        not 6
+      end
+
+    assert typecheck(ast)[:state] == :error
+    ast =
+      quote do
+        not true
+      end
+
+    assert typecheck(ast)[:type] == :boolean
   end
 end
 

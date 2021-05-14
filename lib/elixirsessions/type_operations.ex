@@ -128,8 +128,7 @@ defmodule ElixirSessions.TypeOperations do
   def subtype?(:integer, :float), do: true
   def subtype?(:float, :number), do: true
 
-  def subtype?({:tuple, type1}, {:tuple, type2})
-      when is_list(type1) and is_list(type2) do
+  def subtype?({:tuple, type1}, {:tuple, type2}) do
     subtype?(type1, type2)
   end
 
@@ -147,6 +146,7 @@ defmodule ElixirSessions.TypeOperations do
     not Enum.member?(result, false)
   end
 
+  def subtype?(_, :any), do: true
   def subtype?(_, _), do: false
 
   def greatest_lower_bound(type1, type2)
@@ -161,8 +161,7 @@ defmodule ElixirSessions.TypeOperations do
   def greatest_lower_bound(:float, :number), do: :number
   def greatest_lower_bound(:number, :float), do: :number
 
-  def greatest_lower_bound({:tuple, type1}, {:tuple, type2})
-      when is_list(type1) and is_list(type2) do
+  def greatest_lower_bound({:tuple, type1}, {:tuple, type2}) do
     case greatest_lower_bound(type1, type2) do
       :error ->
         :error
@@ -197,6 +196,8 @@ defmodule ElixirSessions.TypeOperations do
   end
   def greatest_lower_bound(type1, type2) when is_atom(type1) and is_atom(type2) and type1 not in @types and type2 not in @types, do: :atom
 
+  def greatest_lower_bound(type, :any), do: type
+  def greatest_lower_bound(:any, type), do: type
   def greatest_lower_bound(_, _), do: :error
 
   @spec type_to_guard(binary) :: :error | binary

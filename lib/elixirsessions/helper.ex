@@ -53,12 +53,24 @@ defmodule ElixirSessions.Helper do
   end
 
   def ast() do
+    # [:==, :!=,   :>, :<, :<=,   :>=,   :===,   :!==  ]
+    # [:==, :"/=", :>, :<, :"<=", :">=", :"=:=", :"=/="]
     quote do
-      x = 3
-
-      if x == 4 do
-        IO.puts(abc)
-      end
+      # x = 3
+      # _ = x == 3
+      # _ = x != 3
+      # _ = x > 3
+      # _ = x < 3
+      # _ = x <= 3
+      # _ = x >= 3
+      # _ = x === 3
+      # _ = x !== 3
+      # x = true
+      # not x
+      x = true
+      y = false
+      _ = x and y
+      # _ = x or y
     end
   end
 
