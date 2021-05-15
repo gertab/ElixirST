@@ -8,6 +8,7 @@ defmodule ElixirSessions.Operations do
 
   # todo make all methods that throw errors contain '!'. Add equivalent non '!' methods
   # Performs validations on the session type.
+  # todo get rid of unused and infinite (empty) recursion e.g.: rec Y.rec X.Y
   @spec validate(session_type()) :: :ok | {:error, any()}
   def validate(session_type) do
     try do
@@ -51,12 +52,8 @@ defmodule ElixirSessions.Operations do
         end
       )
 
-    # AND operation
-    if false in res do
-      false
-    else
-      true
-    end
+    # Return false if one (or more) false are found
+    Enum.find(res, true, fn x -> !x end)
   end
 
   def validate!(%ST.Branch{branches: branches}) do
