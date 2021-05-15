@@ -57,32 +57,46 @@ defmodule ElixirSessions.TypeOperations do
   @doc """
     Give types in @spec format, returns usable types.
     Accepts: any, atom, binary, boolean, float, integer, nil, number, pid, string, no_return, [] and {}
+    The type of variables is returned if the environment is configured.
   """
-  @spec spec_get_type(any) :: atom | {:list, list} | {:tuple, list}
-  def spec_get_type({type, _, _}) when type in @types do
+  @spec get_type(any) :: atom | {:list, list} | {:tuple, list}
+  def get_type(type) do
+    get_type(type, %{})
+  end
+
+  @spec get_type(any, %{}) :: atom | {:list, list} | {:tuple, list}
+  def get_type({type, _, _}, _env) when type in @types do
     type
   end
 
-  def spec_get_type({:{}, _, types}), do: {:tuple, Enum.map(types, &spec_get_type/1)}
+  def get_type({:{}, _, types}, env), do: {:tuple, Enum.map(types, &get_type(&1, env))}
 
-  def spec_get_type({type, _, _}) when type not in @types do
+  def get_type({variable, _, args}, env) when is_atom(variable) and is_atom(args) do
+    if env[:variable_ctx][variable] do
+      env[:variable_ctx][variable]
+    else
+      :error
+    end
+  end
+
+  def get_type({type, _, _}, _env) when type not in @types do
     :error
   end
 
-  def spec_get_type(type) when is_list(type), do: {:list, Enum.map(type, &spec_get_type/1)}
+  def get_type(type, env) when is_list(type), do: {:list, Enum.map(type, &get_type(&1, env))}
 
-  def spec_get_type(type) when is_tuple(type),
-    do: {:tuple, Enum.map(Tuple.to_list(type), &spec_get_type/1)}
+  def get_type(type, env) when is_tuple(type),
+    do: {:tuple, Enum.map(Tuple.to_list(type), &get_type(&1, env))}
 
-  def spec_get_type(type) when is_atom(type), do: type
-  def spec_get_type(type) when is_binary(type), do: :binary
-  def spec_get_type(type) when is_boolean(type), do: :boolean
-  def spec_get_type(type) when is_float(type), do: :float
-  def spec_get_type(type) when is_integer(type), do: :integer
-  def spec_get_type(type) when is_nil(type), do: nil
-  def spec_get_type(type) when is_number(type), do: :number
-  def spec_get_type(type) when is_pid(type), do: :pid
-  def spec_get_type(_), do: :error
+  def get_type(type, _env) when is_binary(type), do: :binary
+  def get_type(type, _env) when is_boolean(type), do: :boolean
+  def get_type(type, _env) when is_float(type), do: :float
+  def get_type(type, _env) when is_integer(type), do: :integer
+  def get_type(type, _env) when is_nil(type), do: nil
+  def get_type(type, _env) when is_number(type), do: :number
+  def get_type(type, _env) when is_pid(type), do: :pid
+  def get_type(type, _env) when is_atom(type), do: type
+  def get_type(_, _), do: :error
 
   @doc """
   Returns the name of the quoted variable or nil in case of an underscore at the beginning.
@@ -157,6 +171,8 @@ defmodule ElixirSessions.TypeOperations do
       end
     end)
   end
+
+  # todo add any
 
   def greatest_lower_bound(type1, type2)
   def greatest_lower_bound(type, type), do: type

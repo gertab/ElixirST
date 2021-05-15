@@ -119,8 +119,8 @@ defmodule ElixirSessions.Checking do
     if not is_nil(spec) and length(spec) > 0 do
       {:spec, {:"::", _, [{spec_name, _, args_types}, return_type]}, _module} = hd(spec)
 
-      args_types_converted = ElixirSessions.TypeOperations.spec_get_type(args_types)
-      return_type_converted = ElixirSessions.TypeOperations.spec_get_type(return_type)
+      args_types_converted = ElixirSessions.TypeOperations.get_type(args_types)
+      return_type_converted = ElixirSessions.TypeOperations.get_type(return_type)
 
       if args_types_converted == :error or return_type_converted == :error do
         throw(

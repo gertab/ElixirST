@@ -10,8 +10,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
     assert args_types == {:list, [:integer, :integer]}
     assert return_type == :number
@@ -37,8 +37,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
     assert args_types ==
              {:list,
@@ -67,8 +67,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
     assert args_types == {:list, [:integer, {:list, [:integer]}]}
     assert return_type == {:tuple, [:number]}
@@ -82,8 +82,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
     assert args_types == {:list, [:integer, nil, :abc, :binary]}
     assert return_type == :ok
@@ -97,10 +97,10 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:float, true, false, :integer, nil, :pid, :binary]}
+    assert args_types == {:list, [:float, :boolean, :boolean, :integer, nil, :pid, :binary]}
     assert return_type == :ok
   end
 
@@ -112,8 +112,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
     assert args_types == {:list, [{:tuple, [:number, :integer, :ok]}]}
     assert return_type == :ok
@@ -127,8 +127,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{__spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.spec_get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.spec_get_type(return_type)
+    args_types = ElixirSessions.TypeOperations.get_type(args_types)
+    return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
     assert args_types == {:list, [:error]}
     assert return_type == :number

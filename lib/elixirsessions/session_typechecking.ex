@@ -5,6 +5,10 @@ defmodule ElixirSessions.SessionTypechecking do
   Given a session type and Elixir code, the Elixir code is typechecked against the session type.
   """
 
+  # todo correctly print atoms in error messages
+  # todo improve error messages
+  # todo do logger levels w/ options
+
   @typedoc false
   @type ast :: ST.ast()
   @typedoc false
@@ -271,17 +275,86 @@ defmodule ElixirSessions.SessionTypechecking do
 
     node = {nil, meta2, []}
 
-    {_ast, send_destination_env} = Macro.prewalk(send_destination, env, &typecheck/2)
+    {_ast1, send_destination_env} = Macro.prewalk(send_destination, env, &typecheck/2)
+    {_ast2, send_body_env} = Macro.prewalk(send_body, env, &typecheck/2)
 
-    if ElixirSessions.TypeOperations.subtype?(send_destination_env[:type], :pid) do
-      {_ast, send_body} = Macro.prewalk(send_body, env, &typecheck/2)
+    try do
+      if ElixirSessions.TypeOperations.subtype?(send_destination_env[:type], :pid) == false do
+        throw(
+          {:error,
+           "Expected pid in send statment, but found #{inspect(send_destination_env[:type])}"}
+        )
+      end
+
+      if ElixirSessions.TypeOperations.subtype?(send_body_env[:type], {:tuple, :any}) == false do
+        throw({:error, "Expected a tuple in send statment containing {:label, ...}"})
+      end
+
+      [label | parameters] = tuple_to_list(send_body)
+
+      if ElixirSessions.TypeOperations.subtype?(label, :atom) == false do
+        throw({:error, "First item in tuple should be a literal/atom"})
+      end
 
       # todo do session type checks
 
-      {node, send_body}
-    else
-      {node,
-       %{env | state: :error, error_data: error_message("Expected pid but no pid found", meta2)}}
+      %ST.Send{label: expected_label, types: expected_types, next: remaining_session_types} =
+        case env[:session_type] do
+          %ST.Send{} = st ->
+            # todo ensure types correctness for parameters
+
+            st
+
+          %ST.Choice{choices: choices} ->
+            if choices[label] do
+              choices[label]
+            else
+              throw(
+                {:error,
+                 "Cannot match send statment `#{Macro.to_string(send_body)}` " <>
+                   "with #{ST.st_to_string_current(env[:session_type])}"}
+              )
+            end
+
+          x ->
+            {:error, "Found a send/choice, but expected #{ST.st_to_string(x)}."}
+        end
+
+      if expected_label != label do
+        throw(
+          {:error,
+           "Expected send with label #{inspect(expected_label)} but found #{inspect(label)}."}
+        )
+      end
+
+      if length(expected_types) != length(parameters) do
+        throw(
+          {:error,
+           "Session type parameter length mismatch. Expected " <>
+             "#{ST.st_to_string_current(env[:session_type])} (length = " <>
+             "#{length(expected_types)}), but found #{Macro.to_string(send_body)} " <>
+             "(length = #{length(parameters)})."}
+        )
+      end
+
+      {:list, parameter_type} = ElixirSessions.TypeOperations.get_type(parameters, env)
+
+      if ElixirSessions.TypeOperations.subtype?(parameter_type, expected_types) == false do
+        throw(
+          {:error,
+           "Incorrect parameter types. Expected " <>
+             "#{ST.st_to_string_current(env[:session_type])} " <>
+             "but found #{Macro.to_string(parameters)} with type/s #{inspect(parameter_type)}"}
+        )
+      end
+
+      {node, %{send_body_env | session_type: remaining_session_types}}
+    catch
+      {:error, message} ->
+        {node, %{env | state: :error, error_data: error_message(message, meta2)}}
+
+      x ->
+        throw("Unknown error: " <> inspect(x))
     end
   end
 
@@ -328,6 +401,7 @@ defmodule ElixirSessions.SessionTypechecking do
       end
 
     case sizes do
+      # todo remove throw
       {:error, msg} -> throw(msg)
       _ -> :ok
     end
@@ -374,8 +448,6 @@ defmodule ElixirSessions.SessionTypechecking do
           end
       end)
 
-    # IO.warn(inspect all_branches)
-
     result =
       Enum.reduce_while(all_branches, hd(all_branches), fn branch, acc ->
         case branch do
@@ -396,9 +468,10 @@ defmodule ElixirSessions.SessionTypechecking do
                 {:cont, %{branch | type: common_type}}
               else
                 {:halt,
-                 "Mismatch in session type following the branch: " <>
-                   "#{ST.st_to_string(branch[:session_type])} and " <>
-                   "#{ST.st_to_string(acc[:session_type])}"}
+                 {:error,
+                  "Mismatch in session type following the branch: " <>
+                    "#{ST.st_to_string(branch[:session_type])} and " <>
+                    "#{ST.st_to_string(acc[:session_type])}"}}
               end
             end
         end
@@ -409,12 +482,11 @@ defmodule ElixirSessions.SessionTypechecking do
         {node, %{env | state: :error, error_data: error_message(message, meta)}}
 
       _ ->
-        IO.warn(inspect(result))
         {node, %{env | session_type: result[:session_type], type: result[:type]}}
     end
   end
 
-  # Hardcoded stuff (for ease of use)
+  # Hardcoded stuff (cheating)
   def typecheck({{:., _meta1, [:erlang, :self]}, meta2, []}, env) do
     IO.puts("# erlang self")
     node = {nil, meta2, []}
@@ -445,18 +517,13 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        value = 5
-
-        receive do
-          {:A, value2} ->
-            value + value2
-
-          {:B, value1, value2} ->
-            value2 + value2
-        end
+        a = 4
+        a = true
+        p = self()
+        send(p, {:hello, a, false})
       end
 
-    st = ST.string_to_st("&{?A(float), ?B(number, float)}")
+    st = ST.string_to_st("!hello(boolean, boolean)")
 
     env = %{
       :state => :ok,
