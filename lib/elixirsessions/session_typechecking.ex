@@ -56,7 +56,9 @@ defmodule ElixirSessions.SessionTypechecking do
           bodies: bodies,
           return_type: return_type,
           parameters: parameters,
-          param_types: param_types
+          param_types: param_types,
+          name: name,
+          arity: arity
         },
         expected_session_type,
         module_context
@@ -92,7 +94,18 @@ defmodule ElixirSessions.SessionTypechecking do
         :function_session_type_ctx => module_context[:function_session_type]
       }
 
-      Macro.prewalk(ast, env, &typecheck/2)
+      res = Macro.prewalk(ast, env, &typecheck/2)
+      |> elem(1)
+
+      IO.puts("Results for: #{name}/#{arity}")
+      %{
+        state: res[:state],
+        error_data: res[:error_data],
+        variable_ctx: res[:variable_ctx],
+        session_type: res[:session_type],
+        type: res[:type],
+        function_session_type_ctx: %{}
+      }
       |> IO.inspect()
     end
 
@@ -1232,12 +1245,12 @@ defmodule ElixirSessions.SessionTypechecking do
   defp error_message(message, meta) do
     line =
       if meta[:line] do
-        "[Line #{meta[:line]}]"
+        "[Line #{meta[:line]}] "
       else
         ""
       end
 
-    message <> line
+      line <> message
   end
 
   @doc false

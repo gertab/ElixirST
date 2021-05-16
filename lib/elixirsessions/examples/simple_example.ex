@@ -1,7 +1,79 @@
 defmodule ElixirSessions.SmallExample do
   use ElixirSessions.Checking
+  @dialyzer {:nowarn_function, ['example/0', 'example2/0', 'example3/1', 'example4/0']}
+
   @moduledoc false
   # iex -S mix
+  # mix session_check SmallExample
+
+
+
+
+
+
+
+  # @session ""
+  # @spec example() :: :ok
+  # def example() do
+  #   ab = 700 + 55
+  #   _ = ab + 8
+  #   # _ = ab + true
+
+  #   :ok
+  # end
+
+  ## Types from spec
+  # @session ""
+  # @spec example2(number) :: :ok
+  # def example2(num) do
+  #   _ = 700 + num
+  #   # _ = not num
+
+  #   :ok
+  # end
+
+  ## Variable types bound from session types
+  # @session "?Hi(number).!Hello(boolean)"
+  # @spec example3(pid) :: :ok
+  # def example3(pid) do
+  #   receive do
+  #     {:Hi, value} ->
+  #       send(pid, {:Hello, value < 9})
+  #       # send(pid, {:Hello, value})
+  #   end
+
+  #   :ok
+  # end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  # Types of branches
+  # @session "&{?A(number),?B()}"
+  # @spec example4() :: :ok
+  # def example4() do
+  #   x =
+  #     receive do
+  #       {:A, value} ->
+  #         value + 4
+
+  #       {:B} ->
+  #         9
+  #         # :ok
+  #     end
+
+  #   x
+  # end
 
   # def adddddd(1111, 443434) do
   #   48343893
@@ -24,22 +96,22 @@ defmodule ElixirSessions.SmallExample do
   # end
 
   # @session "rec X.(!A().!B().X)"
-  @session ""
-  @spec example(pid) :: no_return
-  def example(pid) do
-    ab = 77_777_777_777 + 55
-    _abbb = ab + 55
-    _ = pid
-    # # xxx = 76
-    # # _ = xxx and false
-    # # @session "!A().rec X.(!A().X)"
-    # send(pid, {:A})
-    # # @session "rec X.(!A().X)"
-    # # @session "!A().rec X.(!A().X)"
-    # aaa = 11111 + 2222 * 33333 + 44444 + 55555
-    # _ = aaa * 7
-    # example(pid)
-  end
+  # @session ""
+  # @spec example(pid) :: no_return
+  # def example(pid) do
+  #   ab = 77_777_777_777 + 55
+  #   _abbb = ab + 55
+  #   _ = pid
+  #   # # xxx = 76
+  #   # # _ = xxx and false
+  #   # # @session "!A().rec X.(!A().X)"
+  #   # send(pid, {:A})
+  #   # # @session "rec X.(!A().X)"
+  #   # # @session "!A().rec X.(!A().X)"
+  #   # aaa = 11111 + 2222 * 33333 + 44444 + 55555
+  #   # _ = aaa * 7
+  #   # example(pid)
+  # end
 
   # @session ""
   # @spec abccccccc(55, number()) :: any
