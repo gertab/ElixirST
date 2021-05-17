@@ -1,6 +1,6 @@
 defmodule ElixirSessions.SmallExample do
   use ElixirSessions.Checking
-  @dialyzer {:nowarn_function, ['example/0', 'example2/0', 'example3/1', 'example4/0']}
+  # @dialyzer {:nowarn_function, ['example/0', 'example2/0', 'example3/1', 'example4/0']}
 
   @moduledoc false
   # iex -S mix
@@ -12,34 +12,36 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  # @session ""
-  # @spec example() :: :ok
-  # def example() do
-  #   ab = 700 + 55
-  #   _ = ab + 8
-  #   # _ = ab + true
+  @session ""
+  @spec example() :: :ok
+  def example() do
+    # ab = 700 + 55
+    # _ = ab + 8
+    # _ = ab + true
 
-  #   :ok
-  # end
+    :ok
+  end
 
-  ## Types from spec
+
+
+  # # Types from spec
   # @session ""
   # @spec example2(number) :: :ok
   # def example2(num) do
-  #   _ = 700 + num
-  #   # _ = not num
+  #   # _ = 700 + num
+  #   _ = not num
 
   #   :ok
   # end
 
-  ## Variable types bound from session types
+  # # Variable types bound from session types
   # @session "?Hi(number).!Hello(boolean)"
   # @spec example3(pid) :: :ok
   # def example3(pid) do
   #   receive do
   #     {:Hi, value} ->
-  #       send(pid, {:Hello, value < 9})
-  #       # send(pid, {:Hello, value})
+  #       # send(pid, {:Hello, value < 9})
+  #       send(pid, {:Hello, value})
   #   end
 
   #   :ok
@@ -58,14 +60,14 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  # Types of branches
-  # @session "&{?A(number),?B()}"
-  # @spec example4() :: :ok
-  # def example4() do
+  # # Types of branches
+  # @session "&{?A(boolean, number),?B()}"
+  # @spec example4(number()) :: :ok
+  # def example4(aaaaa) do
   #   x =
   #     receive do
-  #       {:A, value} ->
-  #         value + 4
+  #       {:A, _value, value2} ->
+  #         aaaaa + value2
 
   #       {:B} ->
   #         9
@@ -74,6 +76,13 @@ defmodule ElixirSessions.SmallExample do
 
   #   x
   # end
+
+  # @dual &ElixirSessions.SmallExample.example4/1
+  # def other() do
+  #   send(self(), {:Bjsjds})
+  # end
+
+
 
   # def adddddd(1111, 443434) do
   #   48343893

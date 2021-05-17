@@ -8,6 +8,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # todo correctly print atoms in error messages
   # todo improve error messages
   # todo do logger levels w/ options
+  # todo ignore variable type starting with _
 
   @typedoc false
   @type ast :: ST.ast()
@@ -303,12 +304,12 @@ defmodule ElixirSessions.SessionTypechecking do
       if ElixirSessions.TypeOperations.subtype?(send_destination_env[:type], :pid) == false do
         throw(
           {:error,
-           "Expected pid in send statment, but found #{inspect(send_destination_env[:type])}"}
+           "Expected pid in send statement, but found #{inspect(send_destination_env[:type])}"}
         )
       end
 
       if ElixirSessions.TypeOperations.subtype?(send_body_env[:type], {:tuple, :any}) == false do
-        throw({:error, "Expected a tuple in send statment containing {:label, ...}"})
+        throw({:error, "Expected a tuple in send statement containing {:label, ...}"})
       end
 
       {:tuple, [label_type | parameter_types]} = send_body_env[:type]
@@ -317,9 +318,6 @@ defmodule ElixirSessions.SessionTypechecking do
       if ElixirSessions.TypeOperations.subtype?(label_type, :atom) == false do
         throw({:error, "First item in tuple should be a literal/atom"})
       end
-
-
-      # todo do session type checks
 
       %ST.Send{label: expected_label, types: expected_types, next: remaining_session_types} =
         case env[:session_type] do
@@ -332,7 +330,7 @@ defmodule ElixirSessions.SessionTypechecking do
             else
               throw(
                 {:error,
-                 "Cannot match send statment `#{Macro.to_string(send_body)}` " <>
+                 "Cannot match send statement `#{Macro.to_string(send_body)}` " <>
                    "with #{ST.st_to_string_current(env[:session_type])}"}
               )
             end
@@ -663,7 +661,7 @@ defmodule ElixirSessions.SessionTypechecking do
                | state: :error,
                  error_data:
                    error_message(
-                     "Unary type problem: Found #{inspect(op1_env[:type])} but expected a #{
+                     "Type problem: Found #{inspect(op1_env[:type])} but expected a #{
                        inspect(max_type)
                      }",
                      meta
@@ -890,14 +888,14 @@ defmodule ElixirSessions.SessionTypechecking do
 
   #         :error ->
   #           throw(
-  #             "#{line} Cannot match send statment `#{Macro.to_string(ast)}` " <>
+  #             "#{line} Cannot match send statement `#{Macro.to_string(ast)}` " <>
   #               "with #{ST.st_to_string_current(session_type)}."
   #           )
   #       end
 
   #     _ ->
   #       throw(
-  #         "#{line} Cannot match send statment `#{Macro.to_string(ast)}` " <>
+  #         "#{line} Cannot match send statement `#{Macro.to_string(ast)}` " <>
   #           "with #{ST.st_to_string_current(session_type)}."
   #       )
   #   end
