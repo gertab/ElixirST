@@ -17,6 +17,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # todo maybe ^x
   # todo todo remove subtypes
   # todo prettify type outputs
+  # todo todo match labels with receive (allow multiple pattern matching cases)
 
   @typedoc false
   @type ast :: ST.ast()
@@ -391,94 +392,84 @@ defmodule ElixirSessions.SessionTypechecking do
     node = {:receive, meta, []}
     cases = process_cases(body[:do])
 
-    # todo remove direct throws
-    if length(cases) == 0 do
-      throw("Should not happen [receive statements need to have 1 or more cases]")
-    end
+    try do
+      # 1 or more receive branches
+      # In case of one receive branch, it should match with a %ST.Recv{}
+      # In case of more than one receive branch, it should match with a %ST.Branch{}
+      # todo unfold if required
+      branches_session_types =
+        case env[:session_type] do
+          %ST.Branch{branches: branches} ->
+            branches
 
-    # 1 or more receive branches
-    # In case of one receive branch, it should match with a %ST.Recv{}
-    # In case of more than one receive branch, it should match with a %ST.Branch{}
-    # todo unfold if required
-    branches_session_types =
-      case env[:session_type] do
-        %ST.Branch{branches: branches} ->
-          branches
+          %ST.Recv{label: label, types: types, next: next} ->
+            %{label => %ST.Recv{label: label, types: types, next: next}}
 
-        %ST.Recv{label: label, types: types, next: next} ->
-          %{label => %ST.Recv{label: label, types: types, next: next}}
-
-        x ->
-          {:error, "Found a receive/branch, but expected #{ST.st_to_string(x)}."}
-      end
-
-    case branches_session_types do
-      {:error, msg} -> throw(msg)
-      _ -> :ok
-    end
-
-    # Each branch from the session type should have an equivalent branch in the receive cases
-    sizes =
-      if map_size(branches_session_types) != length(cases) do
-        {:error,
-         "[in branch/receive] Mismatch in number of receive and & branches. " <>
-           "Expected session type #{ST.st_to_string_current(env[:session_type])}"}
-      else
-        :ok
-      end
-
-    case sizes do
-      # todo remove throw
-      {:error, msg} -> throw(msg)
-      _ -> :ok
-    end
-
-    # Get label, parameters and remaining ast from the source ast
-    all_branches_result =
-      Enum.map(cases, fn {lhs, rhs} ->
-        [head | _] = tuple_to_list(lhs)
-        IO.puts("RECEIVE CASE: #{inspect(head)}")
-
-        if branches_session_types[head] do
-          %ST.Recv{types: expected_types, next: remaining_st} = branches_session_types[head]
-
-          pattern_vars =
-            ElixirSessions.TypeOperations.var_pattern(
-              [lhs],
-              [{:tuple, [:atom] ++ expected_types}]
-            ) || %{}
-
-          case pattern_vars do
-            {:error, msg} ->
-              {:error, msg}
-
-            _ ->
-              env = %{
-                env
-                | session_type: remaining_st,
-                  variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
-              }
-
-              {_branch_ast, branch_env} = Macro.prewalk(rhs, env, &typecheck/2)
-
-              case branch_env[:state] do
-                :error -> {:error, branch_env[:error_data]}
-                _ -> branch_env
-              end
-          end
-        else
-          {:error, "Receive branch with label #{inspect(head)} did not match session type"}
+          x ->
+            throw({:error, "Found a receive/branch, but expected #{ST.st_to_string(x)}."})
         end
-      end)
 
-    result = process_cases_result(all_branches_result)
+      # Each branch from the session type should have an equivalent branch in the receive cases
+      if map_size(branches_session_types) != length(cases) do
+        throw(
+          {:error,
+           "[in branch/receive] Mismatch in number of receive and & branches. " <>
+             "Expected session type #{ST.st_to_string_current(env[:session_type])}"}
+        )
+      end
 
-    case result do
-      {:error, message} ->
-        {node, %{env | state: :error, error_data: error_message(message, meta)}}
+      # Get label, parameters and remaining ast from the source ast
+      all_branches_result =
+        Enum.map(cases, fn {lhs, rhs} ->
+          [head | _] = tuple_to_list(lhs)
 
-      _ ->
-        {node, %{env | session_type: result[:session_type], type: result[:type]}}
+          if branches_session_types[head] do
+            %ST.Recv{types: expected_types, next: remaining_st} = branches_session_types[head]
+
+            pattern_vars =
+              ElixirSessions.TypeOperations.var_pattern(
+                [lhs],
+                [{:tuple, [:atom] ++ expected_types}]
+              ) || %{}
+
+            case pattern_vars do
+              {:error, msg} ->
+                {:error, msg}
+
+              _ ->
+                env = %{
+                  env
+                  | session_type: remaining_st,
+                    variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
+                }
+
+                {_branch_ast, branch_env} = Macro.prewalk(rhs, env, &typecheck/2)
+
+                case branch_env[:state] do
+                  :error -> {:error, {:inner_error, branch_env[:error_data]}}
+                  _ -> branch_env
+                end
+            end
+          else
+            throw(
+              {:error, "Receive branch with label #{inspect(head)} did not match session type"}
+            )
+          end
+        end)
+
+      case process_cases_result(all_branches_result) do
+        {:error, message} ->
+          throw({:error, message})
+
+        result ->
+          {node, %{env | session_type: result[:session_type], type: result[:type]}}
+      end
+    catch
+      {:error, _} = error ->
+        {node, append_error(env, error, meta)}
+
+      x ->
+        throw("Unknown error: " <> inspect(x))
     end
   end
 
@@ -493,7 +484,7 @@ defmodule ElixirSessions.SessionTypechecking do
     result =
       case expr_env[:state] do
         :error ->
-          {:error, :inner_error, expr_env[:error_data]}
+          {:error, {:inner_error, expr_env[:error_data]}}
 
         _ ->
           # Get label, parameters and remaining ast from the source ast
@@ -528,11 +519,8 @@ defmodule ElixirSessions.SessionTypechecking do
       end
 
     case result do
-      {:error, :inner_error, message} ->
-        {node, %{env | state: :error, error_data: message}}
-
-      {:error, message} ->
-        {node, %{env | state: :error, error_data: error_message(message, meta)}}
+      {:error, _} = error ->
+        {node, append_error(env, error, meta)}
 
       _ ->
         {node, %{env | session_type: result[:session_type], type: result[:type]}}
@@ -570,17 +558,13 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        {:dn, y, z} = {:dn, 99, 8}
-        value = true
+        x = 7
 
-        # case x do
-        #   {:dn, b, c} -> :ok
-        #   # {:dn, value2, value3} ->
-        #   #   value <= value2
-
-        #   # {:B, value1, value2} ->
-        #   #   value1 < value2
-        # end
+        if x do
+          :ok
+        else
+          :not_ok
+        end
       end
 
     st = ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")
@@ -615,33 +599,41 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Reduces a list of environments, ensuring that the type and session type are the same
   defp process_cases_result(all_cases) when is_list(all_cases) do
-    Enum.reduce_while(all_cases, hd(all_cases), fn case, acc ->
-      case case do
+    Enum.reduce_while(all_cases, hd(all_cases), fn curr_case, acc ->
+      case curr_case do
         {:error, message} ->
           {:halt, {:error, message}}
 
         _ ->
           common_type =
-            ElixirSessions.TypeOperations.greatest_lower_bound(case[:type], acc[:type])
+            ElixirSessions.TypeOperations.greatest_lower_bound(curr_case[:type], acc[:type])
 
           if common_type == :error do
             {:halt,
              {:error,
-              "Types #{inspect(case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
+              "Types #{inspect(curr_case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
                 "cases should have end up with the same type."}}
           else
-            if ST.equal?(case[:session_type], acc[:session_type]) do
-              {:cont, %{case | type: common_type}}
+            if ST.equal?(curr_case[:session_type], acc[:session_type]) do
+              {:cont, %{curr_case | type: common_type}}
             else
               {:halt,
                {:error,
                 "Mismatch in session type following the case: " <>
-                  "#{ST.st_to_string(case[:session_type])} and " <>
+                  "#{ST.st_to_string(curr_case[:session_type])} and " <>
                   "#{ST.st_to_string(acc[:session_type])}"}}
             end
           end
       end
     end)
+  end
+
+  defp append_error(env, {:error, {:inner_error, message}}, _meta) do
+    %{env | state: :error, error_data: message}
+  end
+
+  defp append_error(env, {:error, message}, meta) do
+    %{env | state: :error, error_data: error_message(message, meta)}
   end
 
   defp process_binary_operations(node, meta, operator, arg1, arg2, max_type, is_comparison, env) do

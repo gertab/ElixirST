@@ -585,6 +585,7 @@ defmodule SessionTypecheckingTest do
         case a do
           x when is_number(x) and x > 5 ->
             :ok
+
           _ ->
             :ok_ok
         end
@@ -602,6 +603,7 @@ defmodule SessionTypecheckingTest do
         case a do
           x when is_number(x) and x > 5 ->
             :ok
+
           _ ->
             9
         end
@@ -618,8 +620,10 @@ defmodule SessionTypecheckingTest do
         case a do
           {:Hello, 8} ->
             7
+
           {_var, num} ->
             num
+
           _ ->
             9
         end
@@ -629,6 +633,75 @@ defmodule SessionTypecheckingTest do
     result = typecheck(ast, env)
     assert result[:state] == :ok
     assert result[:type] == :integer
+    assert result[:session_type] == %ST.Terminate{}
+
+    ast =
+      quote do
+        x = 6
+        a = send(self(), {:Hello, x})
+
+        case a do
+          {:Hello, 8} ->
+            send(self(), {:Option1, x})
+            x
+
+          {_var, num} ->
+            y = x * 2
+            a = send(self(), {:Option2, y})
+            y
+
+          _ ->
+            send(self(), {:Option3, x * 3})
+            x * 3
+        end
+
+        send(self(), {:Terminate})
+      end
+
+    env = %{
+      env
+      | session_type:
+          ST.string_to_st(
+            "!Hello(number).+{!Option1(number).!Terminate(), !Option2(number).!Terminate(), !Option3(number).!Terminate()}"
+          )
+    }
+
+    result = typecheck(ast, env)
+    assert result[:state] == :ok
+    assert result[:type] == {:tuple, [:Terminate]}
+    assert result[:session_type] == %ST.Terminate{}
+  end
+
+  test "if" do
+    ast =
+      quote do
+        x = 7
+
+        y = if x do
+          :ok
+        end
+
+        y
+        # y is either an atom or nil
+      end
+
+    result = typecheck(ast)
+    assert result[:state] == :error
+
+    ast =
+      quote do
+        x = 7
+
+        if x do
+          :ok
+        else
+          :not_ok
+        end
+      end
+
+    result = typecheck(ast)
+    assert result[:type] == :atom
+    assert result[:state] == :ok
     assert result[:session_type] == %ST.Terminate{}
   end
 end
