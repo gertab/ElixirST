@@ -321,7 +321,7 @@ defmodule ElixirSessions.TypeOperations do
 
   defp get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
 
-  defp get_vars(value, type) when type in @types do
+  defp get_vars(value, type) when type in @types or is_atom(type) do
     literal =
       (is_nil(value) and type == nil) or
         (is_boolean(value) and type == :boolean) or
@@ -330,6 +330,7 @@ defmodule ElixirSessions.TypeOperations do
         (is_number(value) and type == :number) or
         (is_pid(value) and type == :pid) or
         (is_binary(value) and type == :binary) or
+        # (is_atom(value) and type == :atom)
         (is_atom(value) and subtype?(type, :atom))
 
     if literal do

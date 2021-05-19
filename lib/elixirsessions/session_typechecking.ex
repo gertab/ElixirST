@@ -16,6 +16,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # todo force session_check regardless of previous results
   # todo maybe ^x
   # todo todo remove subtypes
+  # todo prettify type outputs
 
   @typedoc false
   @type ast :: ST.ast()
@@ -344,7 +345,7 @@ defmodule ElixirSessions.SessionTypechecking do
             end
 
           x ->
-            {:error, "Found a send/choice, but expected #{ST.st_to_string(x)}."}
+            throw({:error, "Found a send/choice, but expected #{ST.st_to_string(x)}."})
         end
 
       if expected_label != label do
@@ -380,66 +381,6 @@ defmodule ElixirSessions.SessionTypechecking do
 
       x ->
         throw("Unknown error: " <> inspect(x))
-    end
-  end
-
-  # Receive
-  def typecheck({:case, meta, [expr, body | _]}, env) do
-    # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
-    node = {:case, meta, []}
-    cases = process_cases(body[:do])
-
-    # todo remove direct throws
-    if length(cases) == 0 do
-      throw("Should not happen [receive case statements need to have 1 or more cases]")
-    end
-
-    {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
-
-    case expr_env[:state] do
-      :error ->
-        throw({:error, {node, expr_env}})
-
-      _ ->
-        :ok
-    end
-
-    # Get label, parameters and remaining ast from the source ast
-    all_cases_result =
-      Enum.map(cases, fn {lhs, rhs} ->
-        pattern_vars =
-          ElixirSessions.TypeOperations.var_pattern(
-            [lhs],
-            [expr_env[:type]]
-          ) || %{}
-
-        case pattern_vars do
-          {:error, msg} ->
-            {:error, msg}
-
-          _ ->
-            env = %{
-              env
-              | variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
-            }
-
-            {_case_ast, case_env} = Macro.prewalk(rhs, env, &typecheck/2)
-
-            case case_env[:state] do
-              :error -> {:error, case_env[:error_data]}
-              _ -> case_env
-            end
-        end
-      end)
-
-    result = process_cases_result(all_cases_result)
-
-    case result do
-      {:error, message} ->
-        {node, %{env | state: :error, error_data: error_message(message, meta)}}
-
-      _ ->
-        {node, %{env | session_type: result[:session_type], type: result[:type]}}
     end
   end
 
@@ -541,6 +482,63 @@ defmodule ElixirSessions.SessionTypechecking do
     end
   end
 
+  # Case
+  def typecheck({:case, meta, [expr, body | _]}, env) do
+    # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
+    node = {:case, meta, []}
+    cases = process_cases(body[:do])
+
+    {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
+
+    result =
+      case expr_env[:state] do
+        :error ->
+          {:error, :inner_error, expr_env[:error_data]}
+
+        _ ->
+          # Get label, parameters and remaining ast from the source ast
+          all_cases_result =
+            Enum.map(cases, fn {lhs, rhs} ->
+              pattern_vars =
+                ElixirSessions.TypeOperations.var_pattern(
+                  [lhs],
+                  [expr_env[:type]]
+                ) || %{}
+
+              case pattern_vars do
+                {:error, msg} ->
+                  {:error, msg}
+
+                _ ->
+                  env = %{
+                    env
+                    | variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
+                  }
+
+                  {_case_ast, case_env} = Macro.prewalk(rhs, env, &typecheck/2)
+
+                  case case_env[:state] do
+                    :error -> {:error, case_env[:error_data]}
+                    _ -> case_env
+                  end
+              end
+            end)
+
+          process_cases_result(all_cases_result)
+      end
+
+    case result do
+      {:error, :inner_error, message} ->
+        {node, %{env | state: :error, error_data: message}}
+
+      {:error, message} ->
+        {node, %{env | state: :error, error_data: error_message(message, meta)}}
+
+      _ ->
+        {node, %{env | session_type: result[:session_type], type: result[:type]}}
+    end
+  end
+
   # Hardcoded stuff (cheating)
   def typecheck({{:., _meta1, [:erlang, :self]}, meta2, []}, env) do
     IO.puts("# erlang self")
@@ -560,11 +558,11 @@ defmodule ElixirSessions.SessionTypechecking do
     {other, env}
   end
 
-  # todo remaining: send
-  # todo remaining: receive
-  # todo remaining: case
+  ### todo remaining: send
+  ### todo remaining: receive
+  ### todo remaining: case
+  ## todo remaining: tuple
   # todo remaining: if/unless
-  # todo remaining: tuple
   # todo remaining: function call
 
   # recompile && ElixirSessions.SessionTypechecking.run
@@ -572,15 +570,17 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
+        {:dn, y, z} = {:dn, 99, 8}
         value = true
 
-        receive do
-          {:A, value2, value3} ->
-            value and value2
+        # case x do
+        #   {:dn, b, c} -> :ok
+        #   # {:dn, value2, value3} ->
+        #   #   value <= value2
 
-          {:B, value1, value2} ->
-            value1 < value2
-        end
+        #   # {:B, value1, value2} ->
+        #   #   value1 < value2
+        # end
       end
 
     st = ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")
@@ -628,7 +628,7 @@ defmodule ElixirSessions.SessionTypechecking do
             {:halt,
              {:error,
               "Types #{inspect(case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
-                "cases in a receive statement should have end up with the same type."}}
+                "cases should have end up with the same type."}}
           else
             if ST.equal?(case[:session_type], acc[:session_type]) do
               {:cont, %{case | type: common_type}}

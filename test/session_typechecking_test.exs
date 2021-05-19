@@ -576,6 +576,61 @@ defmodule SessionTypecheckingTest do
     result = typecheck(ast, env)
     assert result[:state] == :error
   end
+
+  test "case" do
+    ast =
+      quote do
+        a = 4
+
+        case a do
+          x when is_number(x) and x > 5 ->
+            :ok
+          _ ->
+            :ok_ok
+        end
+      end
+
+    result = typecheck(ast)
+    assert result[:type] == :atom
+    assert result[:state] == :ok
+    assert result[:session_type] == %ST.Terminate{}
+
+    ast =
+      quote do
+        a = 4
+
+        case a do
+          x when is_number(x) and x > 5 ->
+            :ok
+          _ ->
+            9
+        end
+      end
+
+    result = typecheck(ast)
+    assert result[:state] == :error
+
+    ast =
+      quote do
+        x = 6
+        a = send(self(), {:Hello, x})
+
+        case a do
+          {:Hello, 8} ->
+            7
+          {_var, num} ->
+            num
+          _ ->
+            9
+        end
+      end
+
+    env = %{env | session_type: ST.string_to_st("!Hello(number)")}
+    result = typecheck(ast, env)
+    assert result[:state] == :ok
+    assert result[:type] == :integer
+    assert result[:session_type] == %ST.Terminate{}
+  end
 end
 
 # defmodule SessionTypecheckingTest do

@@ -231,7 +231,8 @@ defmodule TypeOperationsTest do
   end
 
   test "greatest lower bound list" do
-    assert ElixirSessions.TypeOperations.greatest_lower_bound([:integer, :number, :float]) == :number
+    assert ElixirSessions.TypeOperations.greatest_lower_bound([:integer, :number, :float]) ==
+             :number
 
     assert ElixirSessions.TypeOperations.greatest_lower_bound([
              {:integer, :number, :float},
@@ -239,14 +240,27 @@ defmodule TypeOperationsTest do
            ]) == :error
 
     assert ElixirSessions.TypeOperations.greatest_lower_bound([
-      {:tuple, [:integer, :number, :float]},
-      {:tuple, [:number, :integer, :integer]}
-    ]) == {:tuple, [:number, :number, :float]}
+             {:tuple, [:integer, :number, :float]},
+             {:tuple, [:number, :integer, :integer]}
+           ]) == {:tuple, [:number, :number, :float]}
   end
 
   test "var_pattern" do
     a = [{:{}, [line: 74], [:A, {:_value, [line: 74], nil}, {:_value2, [line: 74], nil}]}]
     b = [{:tuple, [:atom, :boolean, :number]}]
-    assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{_value: :boolean, _value2: :number}
+
+    assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{
+             _value: :boolean,
+             _value2: :number
+           }
+
+    a = [
+      quote do
+        {:dn, y, z}
+      end
+    ]
+
+    b = [{:tuple, [:abc, :number, :float]}]
+    assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{y: :number, z: :float}
   end
 end
