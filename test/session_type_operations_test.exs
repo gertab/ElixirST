@@ -192,8 +192,7 @@ defmodule ElixirSessionsOperations do
   test "unfold_current more complex" do
     s1 = "rec X.(!A().+{!B().X, !C().?D().X})"
 
-    result =
-      "!A().+{!B().rec X.(!A().+{!B().X, !C().?D().X}), !C().?D().rec X.(!A().+{!B().X, !C().?D().X})}"
+    result = "!A().+{!B().rec X.(!A().+{!B().X, !C().?D().X}), !C().?D().rec X.(!A().+{!B().X, !C().?D().X})}"
 
     session1 = ST.string_to_st(s1)
     session_result = ST.string_to_st(result)
@@ -206,8 +205,7 @@ defmodule ElixirSessionsOperations do
   test "unfold_current more complex - branch" do
     s1 = "rec X.(!A().&{?B().X, ?C().?D().X})"
 
-    result =
-      "!A().&{?B().rec X.(!A().&{?B().X, ?C().?D().X}), ?C().?D().rec X.(!A().&{?B().X, ?C().?D().X})}"
+    result = "!A().&{?B().rec X.(!A().&{?B().X, ?C().?D().X}), ?C().?D().rec X.(!A().&{?B().X, ?C().?D().X})}"
 
     session1 = ST.string_to_st(s1)
     session_result = ST.string_to_st(result)
@@ -357,8 +355,7 @@ defmodule ElixirSessionsOperations do
   end
 
   test "Comparing session types 1 choice" do
-    s1 =
-      "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
+    s1 = "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
 
     s2 = "!Hello2(atom, number).!Hello(atom, number)"
 
@@ -372,8 +369,7 @@ defmodule ElixirSessionsOperations do
         assert false
     end
 
-    s1 =
-      "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
+    s1 = "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
 
     s2 = "!Hello2(atom, number).+{!Hello(atom, number)}"
 
@@ -450,13 +446,11 @@ defmodule ElixirSessionsOperations do
   end
 
   test "Tail subtract session types 1 choice" do
-    s1 =
-      "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
+    s1 = "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
 
     s2 = "?H11()"
 
-    expected =
-      "!Hello2(atom, number).+{!Hello(atom, number), !Hello2(atom, number), !Hello3(atom, number)}"
+    expected = "!Hello2(atom, number).+{!Hello(atom, number), !Hello2(atom, number), !Hello3(atom, number)}"
 
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
@@ -468,13 +462,11 @@ defmodule ElixirSessionsOperations do
         assert false
     end
 
-    s1 =
-      "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
+    s1 = "!Hello2(atom, number).+{!Hello(atom, number).?H11(), !Hello2(atom, number).?H11(), !Hello3(atom, number).?H11()}"
 
     s2 = "?H11()"
 
-    expected =
-      "!Hello2(atom, number).+{!Hello(atom, number), !Hello2(atom, number), !Hello3(atom, number)}"
+    expected = "!Hello2(atom, number).+{!Hello(atom, number), !Hello2(atom, number), !Hello3(atom, number)}"
 
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->

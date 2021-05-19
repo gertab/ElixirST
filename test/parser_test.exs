@@ -38,7 +38,13 @@ defmodule ParserTest do
   test "branch session type" do
     source = "&{?neg(Number), ?add(Number, Number)}"
 
-    expected = %ST.Branch{branches: %{add: %ST.Recv{label: :add, next: %ST.Terminate{}, types: [:number, :number]}, neg: %ST.Recv{label: :neg, next: %ST.Terminate{}, types: [:number]}}}
+    expected = %ST.Branch{
+      branches: %{
+        add: %ST.Recv{label: :add, next: %ST.Terminate{}, types: [:number, :number]},
+        neg: %ST.Recv{label: :neg, next: %ST.Terminate{}, types: [:number]}
+      }
+    }
+
     result = Parser.parse(source)
     assert expected == result
   end
@@ -54,8 +60,13 @@ defmodule ParserTest do
   test "send receive choicde session type" do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number)}"
 
-    expected =
-      %ST.Send{label: :Hello, types: [:integer], next: %ST.Choice{choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}}}
+    expected = %ST.Send{
+      label: :Hello,
+      types: [:integer],
+      next: %ST.Choice{
+        choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}
+      }
+    }
 
     result = Parser.parse(source)
     assert expected == result
@@ -65,19 +76,25 @@ defmodule ParserTest do
   test "complex session type" do
     source = "!ABC(any).rec X.(!Hello(any) . ?HelloBack(any) . rec Y.(!Num(number).rec Z.(Z)))"
 
-    expected =
-      %ST.Send{
-        label: :ABC,
-        next: %ST.Recurse{
-          body: %ST.Send{
-            label: :Hello,
-            next: %ST.Recv{label: :HelloBack, next: %ST.Recurse{body: %ST.Send{label: :Num, next: %ST.Recurse{body: %ST.Call_Recurse{label: :Z}, label: :Z}, types: [:number]}, label: :Y}, types: [:any]},
+    expected = %ST.Send{
+      label: :ABC,
+      next: %ST.Recurse{
+        body: %ST.Send{
+          label: :Hello,
+          next: %ST.Recv{
+            label: :HelloBack,
+            next: %ST.Recurse{
+              body: %ST.Send{label: :Num, next: %ST.Recurse{body: %ST.Call_Recurse{label: :Z}, label: :Z}, types: [:number]},
+              label: :Y
+            },
             types: [:any]
           },
-          label: :X
+          types: [:any]
         },
-        types: [:any]
-      }
+        label: :X
+      },
+      types: [:any]
+    }
 
     result = Parser.parse(source)
     assert expected == result
@@ -105,7 +122,6 @@ defmodule ParserTest do
     end
   end
 
-
   test "validation same label error - branch" do
     source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
 
@@ -116,6 +132,7 @@ defmodule ParserTest do
       _ -> assert true
     end
   end
+
   test "validation error - choice" do
     source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg2(number, pid).?Num(Number)}"
 
@@ -139,7 +156,8 @@ defmodule ParserTest do
   end
 
   test "session type to string" do
-    source = "?M220(string).+{!Helo(string).?M250(string).rec X.(+{!MailFrom(string).?M250(string).rec Y.(+{!Data().?M354(string).!Content(string).?M250(string).X, !Quit().?M221(string), !RcptTo(string).?M250(string).Y}), !Quit().?M221(string)}), !Quit().?M221(string)}"
+    source =
+      "?M220(string).+{!Helo(string).?M250(string).rec X.(+{!MailFrom(string).?M250(string).rec Y.(+{!Data().?M354(string).!Content(string).?M250(string).X, !Quit().?M221(string), !RcptTo(string).?M250(string).Y}), !Quit().?M221(string)}), !Quit().?M221(string)}"
 
     st = ElixirSessions.Parser.parse(source)
 
@@ -156,5 +174,4 @@ defmodule ParserTest do
   #     _ -> assert true
   #   end
   # end
-
 end

@@ -39,11 +39,7 @@ defmodule ElixirSessions.Operations do
             validate!(next)
 
           {_, other} ->
-            throw(
-              "Session type parsing validation error: Each branch needs a send as the first statement: #{
-                ST.st_to_string(other)
-              }."
-            )
+            throw("Session type parsing validation error: Each branch needs a send as the first statement: #{ST.st_to_string(other)}.")
 
             false
 
@@ -65,11 +61,7 @@ defmodule ElixirSessions.Operations do
             validate!(next)
 
           {_, other} ->
-            throw(
-              "Session type parsing validation error: Each branch needs a receive as the first statement: #{
-                ST.st_to_string(other)
-              }."
-            )
+            throw("Session type parsing validation error: Each branch needs a receive as the first statement: #{ST.st_to_string(other)}.")
 
             false
 
@@ -718,9 +710,7 @@ defmodule ElixirSessions.Operations do
     if ST.equal?(ST.unfold_unknown(rec1, rec_var1), ST.unfold_unknown(rec2, rec_var2)) do
       %ST.Terminate{}
     else
-      throw(
-        "Session types #{ST.st_to_string(rec1)} does not correspond to #{ST.st_to_string(rec2)}."
-      )
+      throw("Session types #{ST.st_to_string(rec1)} does not correspond to #{ST.st_to_string(rec2)}.")
     end
   end
 
@@ -729,9 +719,7 @@ defmodule ElixirSessions.Operations do
   end
 
   def session_subtraction!(%ST.Terminate{}, _rec_var1, remaining_session_type, _rec_var2) do
-    throw(
-      "Session type larger than expected. Remaining: #{ST.st_to_string(remaining_session_type)}."
-    )
+    throw("Session type larger than expected. Remaining: #{ST.st_to_string(remaining_session_type)}.")
   end
 
   def session_subtraction!(st, rec_var1, %ST.Recurse{label: label2, body: body} = rec2, rec_var2) do
@@ -995,9 +983,7 @@ defmodule ElixirSessions.Operations do
           found
 
         :error ->
-          throw(
-            "Trying to expand Call_Recurse, but #{label} was not found (#{inspect(recurse_var)})."
-          )
+          throw("Trying to expand Call_Recurse, but #{label} was not found (#{inspect(recurse_var)}).")
       end
     end
   end
@@ -1008,11 +994,9 @@ defmodule ElixirSessions.Operations do
 
   # recompile && ElixirSessions.Operations.run
   def run() do
-    s1 =
-      "rec X.(!A().X)"
+    s1 = "rec X.(!A().X)"
 
-      s2 =
-        "!A().!A().!A().!A().!A().rec Y.(!A().Y)"
+    s2 = "!A().!A().!A().!A().!A().rec Y.(!A().Y)"
 
     subtype?(ST.string_to_st(s1), ST.string_to_st(s2))
 

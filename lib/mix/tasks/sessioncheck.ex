@@ -10,6 +10,7 @@ defmodule Mix.Tasks.SessionCheck do
     expression_typing = Keyword.get(opts, :expression_typing, true)
 
     load_paths = Mix.Project.compile_path()
+
     paths =
       if length(argv) > 0 do
         Enum.map(argv, fn path -> Path.wildcard(load_paths <> "/Elixir*." <> path <> ".beam") end)
@@ -25,14 +26,14 @@ defmodule Mix.Tasks.SessionCheck do
 
     files =
       for path <- paths do
-          case File.read(path) do
-            {:ok, file} -> file
-            {:error, _} -> throw("Could not read #{path}.")
-          end
+        case File.read(path) do
+          {:ok, file} -> file
+          {:error, _} -> throw("Could not read #{path}.")
+        end
       end
 
     for file <- files do
-      ElixirSessions.Retriever.process(file, [expression_typing: expression_typing])
+      ElixirSessions.Retriever.process(file, expression_typing: expression_typing)
     end
   end
 end

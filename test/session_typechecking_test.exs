@@ -661,9 +661,7 @@ defmodule SessionTypecheckingTest do
     env = %{
       env
       | session_type:
-          ST.string_to_st(
-            "!Hello(number).+{!Option1(number).!Terminate(), !Option2(number).!Terminate(), !Option3(number).!Terminate()}"
-          )
+          ST.string_to_st("!Hello(number).+{!Option1(number).!Terminate(), !Option2(number).!Terminate(), !Option3(number).!Terminate()}")
     }
 
     result = typecheck(ast, env)
@@ -677,9 +675,10 @@ defmodule SessionTypecheckingTest do
       quote do
         x = 7
 
-        y = if x do
-          :ok
-        end
+        y =
+          if x do
+            :ok
+          end
 
         y
         # y is either an atom or nil

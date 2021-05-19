@@ -54,17 +54,16 @@ defmodule ElixirSessions.Helper do
 
   def ast() do
     quote do
-
       case aaaaa do
         5 -> :ok
         _ -> :not_ok
       end
 
       receive do
-        x when is_number(x) and is_atom(x) or x in [4, 5] -> :ok
+        x when (is_number(x) and is_atom(x)) or x in [4, 5] -> :ok
         _ -> :not_ok
       end
-        end
+    end
 
     # type1 has to be of type boolean
     # the of the if statement is equal to the type of _do_something and _do_something_else

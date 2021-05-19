@@ -6,12 +6,6 @@ defmodule ElixirSessions.SmallExample do
   # iex -S mix
   # mix session_check SmallExample
 
-
-
-
-
-
-
   # @session ""
   # @spec example() :: :ok
   # def example() do
@@ -21,8 +15,6 @@ defmodule ElixirSessions.SmallExample do
 
   #   :ok
   # end
-
-
 
   # # Types from spec
   # @session ""
@@ -47,28 +39,16 @@ defmodule ElixirSessions.SmallExample do
   #   :ok
   # end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   # Types of branches
   @session "&{?A(boolean, number),?B()}"
   @spec example4(number()) :: atom()
   def example4(aaaaa) do
+    b =
+      case aaaaa do
+        5 -> :ok
+        _ -> :not_ok
+      end
 
-    b = case aaaaa do
-      5 -> :ok
-      _ -> :not_ok
-    end
     x =
       receive do
         {:A, _value, _value2} ->
@@ -86,8 +66,6 @@ defmodule ElixirSessions.SmallExample do
   # def other() do
   #   send(self(), {:Bjsjds})
   # end
-
-
 
   # def adddddd(1111, 443434) do
   #   48343893

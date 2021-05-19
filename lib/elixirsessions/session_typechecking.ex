@@ -271,8 +271,7 @@ defmodule ElixirSessions.SessionTypechecking do
             {node, %{expr_env | state: :error, error_data: error_message(msg, meta)}}
 
           _ ->
-            {node,
-             %{expr_env | variable_ctx: Map.merge(expr_env[:variable_ctx], pattern_vars || %{})}}
+            {node, %{expr_env | variable_ctx: Map.merge(expr_env[:variable_ctx], pattern_vars || %{})}}
         end
     end
   end
@@ -284,8 +283,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
     case env[:variable_ctx][x] do
       nil ->
-        {node,
-         %{env | state: :error, error_data: error_message("Variable #{x} was not found", meta)}}
+        {node, %{env | state: :error, error_data: error_message("Variable #{x} was not found", meta)}}
 
       type ->
         {node, %{env | type: type}}
@@ -311,10 +309,7 @@ defmodule ElixirSessions.SessionTypechecking do
       end
 
       if ElixirSessions.TypeOperations.subtype?(send_destination_env[:type], :pid) == false do
-        throw(
-          {:error,
-           "Expected pid in send statement, but found #{inspect(send_destination_env[:type])}"}
-        )
+        throw({:error, "Expected pid in send statement, but found #{inspect(send_destination_env[:type])}"})
       end
 
       if ElixirSessions.TypeOperations.subtype?(send_body_env[:type], {:tuple, :any}) == false do
@@ -350,10 +345,7 @@ defmodule ElixirSessions.SessionTypechecking do
         end
 
       if expected_label != label do
-        throw(
-          {:error,
-           "Expected send with label #{inspect(expected_label)} but found #{inspect(label)}."}
-        )
+        throw({:error, "Expected send with label #{inspect(expected_label)} but found #{inspect(label)}."})
       end
 
       if length(expected_types) != length(parameter_types) do
@@ -451,9 +443,7 @@ defmodule ElixirSessions.SessionTypechecking do
                 end
             end
           else
-            throw(
-              {:error, "Receive branch with label #{inspect(head)} did not match session type"}
-            )
+            throw({:error, "Receive branch with label #{inspect(head)} did not match session type"})
           end
         end)
 
@@ -605,8 +595,7 @@ defmodule ElixirSessions.SessionTypechecking do
           {:halt, {:error, message}}
 
         _ ->
-          common_type =
-            ElixirSessions.TypeOperations.greatest_lower_bound(curr_case[:type], acc[:type])
+          common_type = ElixirSessions.TypeOperations.greatest_lower_bound(curr_case[:type], acc[:type])
 
           if common_type == :error do
             {:halt,
@@ -640,68 +629,59 @@ defmodule ElixirSessions.SessionTypechecking do
     {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
     {_op2_ast, op2_env} = Macro.prewalk(arg2, env, &typecheck/2)
 
-    case op1_env[:state] do
-      :error ->
-        {node, op1_env}
+    try do
+      if op1_env[:state] == :error do
+        throw({:error, {:inner_error, op1_env[:error_data]}})
+      end
 
-      _ ->
-        case op2_env[:state] do
-          :error ->
-            {node, op2_env}
+      if op2_env[:state] == :error do
+        throw({:error, {:inner_error, op2_env[:error_data]}})
+      end
 
-          _ ->
-            if is_comparison do
-              {node,
-               %{
-                 op1_env
-                 | type: :boolean,
-                   variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
-               }}
-            else
-              common_type =
-                ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
+      if is_comparison do
+        {node,
+         %{
+           op1_env
+           | type: :boolean,
+             variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
+         }}
+      else
+        common_type = ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
 
-              case common_type do
-                :error ->
-                  {node,
-                   %{
-                     op1_env
-                     | state: :error,
-                       error_data:
-                         error_message(
-                           "Operator type problem in #{inspect(operator)}: #{
-                             inspect(op1_env[:type])
-                           }, #{inspect(op2_env[:type])} are not of the same type",
-                           meta
-                         )
-                   }}
-
-                _ ->
-                  if ElixirSessions.TypeOperations.subtype?(common_type, max_type) do
-                    {node,
-                     %{
-                       op1_env
-                       | type: common_type,
-                         variable_ctx:
-                           Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
-                     }}
-                  else
-                    {node,
-                     %{
-                       op1_env
-                       | state: :error,
-                         error_data:
-                           error_message(
-                             "Operator type problem in #{inspect(operator)}: #{
-                               inspect(op1_env[:type])
-                             }, #{inspect(op2_env[:type])} is not of type #{inspect(max_type)}",
-                             meta
-                           )
-                     }}
-                  end
-              end
-            end
+        if common_type == :error do
+          {node,
+           %{
+             op1_env
+             | state: :error,
+               error_data:
+                 error_message(
+                   "Operator type problem in #{inspect(operator)}: #{inspect(op1_env[:type])}, #{inspect(op2_env[:type])} are not of the same type",
+                   meta
+                 )
+           }}
         end
+
+        if ElixirSessions.TypeOperations.subtype?(common_type, max_type) do
+          {node,
+           %{
+             op1_env
+             | type: common_type,
+               variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
+           }}
+        else
+          throw(
+            {:error,
+             "Operator type problem in #{inspect(operator)}: #{inspect(op1_env[:type])}, " <>
+               "#{inspect(op2_env[:type])} is not of type #{inspect(max_type)}"}
+          )
+        end
+      end
+    catch
+      {:error, message} ->
+        {node, %{env | state: :error, error_data: error_message(message, meta)}}
+
+      x ->
+        throw("Unknown error: " <> inspect(x))
     end
   end
 
@@ -713,8 +693,7 @@ defmodule ElixirSessions.SessionTypechecking do
         {node, op1_env}
 
       _ ->
-        expected_type =
-          ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], max_type)
+        expected_type = ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], max_type)
 
         case expected_type do
           :error ->
@@ -724,9 +703,7 @@ defmodule ElixirSessions.SessionTypechecking do
                | state: :error,
                  error_data:
                    error_message(
-                     "Type problem: Found #{inspect(op1_env[:type])} but expected a #{
-                       inspect(max_type)
-                     }",
+                     "Type problem: Found #{inspect(op1_env[:type])} but expected a #{inspect(max_type)}",
                      meta
                    )
              }}
