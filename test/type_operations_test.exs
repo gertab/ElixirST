@@ -243,4 +243,10 @@ defmodule TypeOperationsTest do
       {:tuple, [:number, :integer, :integer]}
     ]) == {:tuple, [:number, :number, :float]}
   end
+
+  test "var_pattern" do
+    a = [{:{}, [line: 74], [:A, {:_value, [line: 74], nil}, {:_value2, [line: 74], nil}]}]
+    b = [{:tuple, [:atom, :boolean, :number]}]
+    assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{_value: :boolean, _value2: :number}
+  end
 end

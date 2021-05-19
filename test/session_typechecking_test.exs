@@ -482,9 +482,10 @@ defmodule SessionTypecheckingTest do
 
     env = %{env | session_type: ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")}
     result = typecheck(ast, env)
-    assert result[:state] == :ok
-    assert result[:type] == :boolean
-    assert result[:session_type] == %ST.Terminate{}
+    assert result[:state] == :error
+    # assert result[:state] == :ok
+    # assert result[:type] == :boolean
+    # assert result[:session_type] == %ST.Terminate{}
 
     ast =
       quote do

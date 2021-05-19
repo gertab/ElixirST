@@ -12,15 +12,15 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  @session ""
-  @spec example() :: :ok
-  def example() do
-    # ab = 700 + 55
-    # _ = ab + 8
-    # _ = ab + true
+  # @session ""
+  # @spec example() :: :ok
+  # def example() do
+  #   # ab = 700 + 55
+  #   # _ = ab + 8
+  #   # _ = ab + true
 
-    :ok
-  end
+  #   :ok
+  # end
 
 
 
@@ -60,22 +60,27 @@ defmodule ElixirSessions.SmallExample do
 
 
 
-  # # Types of branches
-  # @session "&{?A(boolean, number),?B()}"
-  # @spec example4(number()) :: :ok
-  # def example4(aaaaa) do
-  #   x =
-  #     receive do
-  #       {:A, _value, value2} ->
-  #         aaaaa + value2
+  # Types of branches
+  @session "&{?A(boolean, number),?B()}"
+  @spec example4(number()) :: atom()
+  def example4(aaaaa) do
 
-  #       {:B} ->
-  #         9
-  #         # :ok
-  #     end
+    b = case aaaaa do
+      5 -> :ok
+      _ -> :not_ok
+    end
+    x =
+      receive do
+        {:A, _value, _value2} ->
+          b
 
-  #   x
-  # end
+        {:B} ->
+          # 9
+          :ok
+      end
+
+    x
+  end
 
   # @dual &ElixirSessions.SmallExample.example4/1
   # def other() do

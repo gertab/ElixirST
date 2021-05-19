@@ -7,15 +7,20 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # todo correctly print atoms in error messages
   # todo improve error messages
-  # todo do logger levels w/ options
+  # todo do logger levels w/ options!
   # todo ignore variable type starting with _
+  # todo use aliases
+  # todo case
+  # todo unfold multiple
+  # todo erlang <=> elixir converter for custom operators
+  # todo force session_check regardless of previous results
+  # todo maybe ^x
+  # todo todo remove subtypes
 
   @typedoc false
   @type ast :: ST.ast()
   @typedoc false
   @type session_type :: ST.session_type()
-  @typedoc false
-  @type accepted_types :: any()
 
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
   @spec session_typecheck_module(
@@ -95,10 +100,12 @@ defmodule ElixirSessions.SessionTypechecking do
         :function_session_type_ctx => module_context[:function_session_type]
       }
 
-      res = Macro.prewalk(ast, env, &typecheck/2)
-      |> elem(1)
+      res =
+        Macro.prewalk(ast, env, &typecheck/2)
+        |> elem(1)
 
       IO.puts("Results for: #{name}/#{arity}")
+
       %{
         state: res[:state],
         error_data: res[:error_data],
@@ -315,6 +322,7 @@ defmodule ElixirSessions.SessionTypechecking do
       {:tuple, [label_type | parameter_types]} = send_body_env[:type]
 
       [label | parameters] = tuple_to_list(send_body)
+
       if ElixirSessions.TypeOperations.subtype?(label_type, :atom) == false do
         throw({:error, "First item in tuple should be a literal/atom"})
       end
@@ -376,12 +384,73 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   # Receive
+  def typecheck({:case, meta, [expr, body | _]}, env) do
+    # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
+    node = {:case, meta, []}
+    cases = process_cases(body[:do])
+
+    # todo remove direct throws
+    if length(cases) == 0 do
+      throw("Should not happen [receive case statements need to have 1 or more cases]")
+    end
+
+    {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
+
+    case expr_env[:state] do
+      :error ->
+        throw({:error, {node, expr_env}})
+
+      _ ->
+        :ok
+    end
+
+    # Get label, parameters and remaining ast from the source ast
+    all_cases_result =
+      Enum.map(cases, fn {lhs, rhs} ->
+        pattern_vars =
+          ElixirSessions.TypeOperations.var_pattern(
+            [lhs],
+            [expr_env[:type]]
+          ) || %{}
+
+        case pattern_vars do
+          {:error, msg} ->
+            {:error, msg}
+
+          _ ->
+            env = %{
+              env
+              | variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
+            }
+
+            {_case_ast, case_env} = Macro.prewalk(rhs, env, &typecheck/2)
+
+            case case_env[:state] do
+              :error -> {:error, case_env[:error_data]}
+              _ -> case_env
+            end
+        end
+      end)
+
+    result = process_cases_result(all_cases_result)
+
+    case result do
+      {:error, message} ->
+        {node, %{env | state: :error, error_data: error_message(message, meta)}}
+
+      _ ->
+        {node, %{env | session_type: result[:session_type], type: result[:type]}}
+    end
+  end
+
+  # Receive
   def typecheck({:receive, meta, [body | _]}, env) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
 
     node = {:receive, meta, []}
-    cases = body[:do]
+    cases = process_cases(body[:do])
 
+    # todo remove direct throws
     if length(cases) == 0 do
       throw("Should not happen [receive statements need to have 1 or more cases]")
     end
@@ -424,78 +493,44 @@ defmodule ElixirSessions.SessionTypechecking do
     end
 
     # Get label, parameters and remaining ast from the source ast
-    all_branches =
-      Enum.map(cases, fn
-        {:->, _, [[lhs] | rhs]} ->
-          parameters = tuple_to_list(lhs)
-          IO.puts("RECEIVE CASE: #{inspect(parameters)}")
+    all_branches_result =
+      Enum.map(cases, fn {lhs, rhs} ->
+        [head | _] = tuple_to_list(lhs)
+        IO.puts("RECEIVE CASE: #{inspect(head)}")
 
-          [head | tail] = parameters
+        if branches_session_types[head] do
+          %ST.Recv{types: expected_types, next: remaining_st} = branches_session_types[head]
 
-          if ElixirSessions.TypeOperations.subtype?(head, :atom) do
-            if branches_session_types[head] do
-              %ST.Recv{types: expected_types, next: remaining_st} = branches_session_types[head]
+          pattern_vars =
+            ElixirSessions.TypeOperations.var_pattern(
+              [lhs],
+              [{:tuple, [:atom] ++ expected_types}]
+            ) || %{}
 
-              pattern_vars =
-                ElixirSessions.TypeOperations.var_pattern(
-                  tail,
-                  expected_types
-                ) || %{}
+          case pattern_vars do
+            {:error, msg} ->
+              {:error, msg}
 
-              case pattern_vars do
-                {:error, msg} ->
-                  {:error, msg}
+            _ ->
+              env = %{
+                env
+                | session_type: remaining_st,
+                  variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
+              }
 
-                _ ->
-                  env = %{
-                    env
-                    | session_type: remaining_st,
-                      variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)
-                  }
+              {_branch_ast, branch_env} = Macro.prewalk(rhs, env, &typecheck/2)
 
-                  {_branch_ast, branch_env} = Macro.prewalk(rhs, env, &typecheck/2)
-
-                  case branch_env[:state] do
-                    :error -> {:error, branch_env[:error_data]}
-                    _ -> branch_env
-                  end
+              case branch_env[:state] do
+                :error -> {:error, branch_env[:error_data]}
+                _ -> branch_env
               end
-            else
-              {:error, "Receive branch with label #{head} did not match session type"}
-            end
-          else
-            {:error, "Label #{head} should be an atom"}
           end
-      end)
-
-    result =
-      Enum.reduce_while(all_branches, hd(all_branches), fn branch, acc ->
-        case branch do
-          {:error, message} ->
-            {:halt, {:error, message}}
-
-          _ ->
-            common_type =
-              ElixirSessions.TypeOperations.greatest_lower_bound(branch[:type], acc[:type])
-
-            if common_type == :error do
-              {:halt,
-               {:error,
-                "Types #{inspect(branch[:type])} and #{inspect(acc[:type])} do not match. Different " <>
-                  "branches in a receive statement should have end up with the same type."}}
-            else
-              if ST.equal?(branch[:session_type], acc[:session_type]) do
-                {:cont, %{branch | type: common_type}}
-              else
-                {:halt,
-                 {:error,
-                  "Mismatch in session type following the branch: " <>
-                    "#{ST.st_to_string(branch[:session_type])} and " <>
-                    "#{ST.st_to_string(acc[:session_type])}"}}
-              end
-            end
+        else
+          {:error, "Receive branch with label #{inspect(head)} did not match session type"}
         end
       end)
+
+    result = process_cases_result(all_branches_result)
 
     case result do
       {:error, message} ->
@@ -537,24 +572,18 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        a = 4
-        # a = true
-        # p = self()
-        # send(p, {:hello, a, false})
+        value = true
+
         receive do
-          {:hello, value} ->
-            # code
+          {:A, value2, value3} ->
+            value and value2
 
-            x = not value
-
-
-            send(self(), {:abc, a < 4, not value, a + 9.6})
-
-            {:other}-> :ok
+          {:B, value1, value2} ->
+            value1 < value2
         end
       end
 
-    st = ST.string_to_st("&{?other(), ?hello(boolean).!abc(boolean, boolean, number)}")
+    st = ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")
 
     env = %{
       :state => :ok,
@@ -571,6 +600,48 @@ defmodule ElixirSessions.SessionTypechecking do
     |> Macro.prewalk(env, &typecheck/2)
 
     # |> elem(0)
+  end
+
+  # Returns the lhs and rhs for all cases (i.e. lhs -> rhs)
+  defp process_cases(cases) do
+    Enum.map(cases, fn
+      {:->, _, [[{:when, _, [var, _cond | _]}] | rhs]} ->
+        {var, rhs}
+
+      {:->, _, [[lhs] | rhs]} ->
+        {lhs, rhs}
+    end)
+  end
+
+  # Reduces a list of environments, ensuring that the type and session type are the same
+  defp process_cases_result(all_cases) when is_list(all_cases) do
+    Enum.reduce_while(all_cases, hd(all_cases), fn case, acc ->
+      case case do
+        {:error, message} ->
+          {:halt, {:error, message}}
+
+        _ ->
+          common_type =
+            ElixirSessions.TypeOperations.greatest_lower_bound(case[:type], acc[:type])
+
+          if common_type == :error do
+            {:halt,
+             {:error,
+              "Types #{inspect(case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
+                "cases in a receive statement should have end up with the same type."}}
+          else
+            if ST.equal?(case[:session_type], acc[:session_type]) do
+              {:cont, %{case | type: common_type}}
+            else
+              {:halt,
+               {:error,
+                "Mismatch in session type following the case: " <>
+                  "#{ST.st_to_string(case[:session_type])} and " <>
+                  "#{ST.st_to_string(acc[:session_type])}"}}
+            end
+          end
+      end
+    end)
   end
 
   defp process_binary_operations(node, meta, operator, arg1, arg2, max_type, is_comparison, env) do
@@ -1248,7 +1319,7 @@ defmodule ElixirSessions.SessionTypechecking do
         ""
       end
 
-      line <> message
+    line <> message
   end
 
   @doc false

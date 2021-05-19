@@ -274,7 +274,8 @@ defmodule ElixirSessions.TypeOperations do
           end)
 
         message ->
-          {:error, message}
+          # {:error, message}
+          {:error, message <> ": Expected " <> inspect(param_type_list) <> ", but found " <> Macro.to_string(params)}
       end
     end
   end
