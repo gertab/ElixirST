@@ -51,7 +51,7 @@ defmodule ElixirSessions.SmallExample do
 
     receive do
       {:A, _value, _value2} ->
-        b
+        # b
         send(self(), {:C})
 
         call()

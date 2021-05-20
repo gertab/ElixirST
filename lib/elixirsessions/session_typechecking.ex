@@ -41,31 +41,25 @@ defmodule ElixirSessions.SessionTypechecking do
         ) :: list
   def session_typecheck_module(
         %{
-          functions: functions,
+          functions: all_functions,
           function_session_type: function_session_type,
           module_name: _module_name
-        } = module_context,
+        },
         _options \\ []
       ) do
     # IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
-      function = lookup_function!(functions, name, arity)
+      function = lookup_function!(all_functions, name, arity)
 
-      session_typecheck_by_function(
-        function,
-        expected_session_type,
-        module_context
-      )
+      session_typecheck_by_function(function, expected_session_type, all_functions, function_session_type)
     end
   end
 
-  @spec session_typecheck_by_function(ST.Function.t(), session_type(), %{
-          functions: [ST.Function.t()],
-          function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
-          module_name: atom()
-        }) :: :ok
-  def session_typecheck_by_function(%ST.Function{} = function, expected_session_type, module_context) do
+  @spec session_typecheck_by_function(ST.Function.t(), session_type(), %{{atom, number} => ST.Function.t()}, %{
+          {ST.label(), non_neg_integer()} => session_type()
+        }) :: %{}
+  def session_typecheck_by_function(%ST.Function{} = function, expected_session_type, functions, function_session_type) do
     %ST.Function{
       bodies: bodies,
       return_type: return_type,
@@ -102,9 +96,9 @@ defmodule ElixirSessions.SessionTypechecking do
           # Expected type
           :type => return_type,
           # {name, arity} => %ST.Function
-          :functions => module_context[:functions],
+          :functions => functions,
           # {name, arity} => rec X.(!A().X)
-          :function_session_type_ctx => module_context[:function_session_type]
+          :function_session_type_ctx => function_session_type
         }
 
         res =
@@ -132,7 +126,8 @@ defmodule ElixirSessions.SessionTypechecking do
       error_data: res[:error_data],
       variable_ctx: res[:variable_ctx],
       session_type: ST.st_to_string(res[:session_type]),
-      type: res[:type]
+      type: res[:type],
+      # functions: res[:functions],
       # function_session_type_ctx: res[:function_session_type_ctx]
     }
     |> IO.inspect()
@@ -545,6 +540,18 @@ defmodule ElixirSessions.SessionTypechecking do
     {node, %{env | type: :pid}}
   end
 
+  def typecheck({{:., _meta, _}, meta2, _}, env) do
+    IO.puts("# Remote function call")
+    node = {nil, meta2, []}
+
+    {node, %{env | state: :error, error_data: error_message("Remote functions not allowed.", meta2)}}
+  end
+
+  def typecheck({:., meta, _}, env) do
+    node = {nil, meta, []}
+    {node, env}
+  end
+
   # Functions
   def typecheck({name, meta, args}, env) when is_list(args) do
     IO.puts("# Function #{inspect(name)}")
@@ -581,6 +588,8 @@ defmodule ElixirSessions.SessionTypechecking do
         end
       else
         # Function with unknown session type (i.e. defp)
+        # Map.merge(env[:function_session_type_ctx][name_arity], %{name_arity => env[:session_type]})
+        throw({:error, "todo: Need to implement."})
         {node, env}
       end
     catch
@@ -602,16 +611,19 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        x = 7
+        a = 4
 
-        if x do
-          :ok
-        else
-          :not_ok
+        receive do
+          {:hello, value} ->
+            x = not value
+            a = a < 4
+            send(self(), {:abc, a, x})
         end
+
+        a
       end
 
-    st = ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")
+    st = ST.string_to_st("?hello(boolean).!abc(boolean, boolean)")
 
     env = %{
       :state => :ok,
