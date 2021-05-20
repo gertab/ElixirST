@@ -40,7 +40,7 @@ defmodule ElixirSessions.SmallExample do
   # end
 
   # Types of branches
-  @session "&{?A(boolean, number),?B()}"
+  @session "rec X.(&{?A(boolean, number).!C().X,?B().X})"
   @spec example4(number()) :: atom()
   def example4(aaaaa) do
     b =
@@ -49,17 +49,23 @@ defmodule ElixirSessions.SmallExample do
         _ -> :not_ok
       end
 
-    x =
-      receive do
-        {:A, _value, _value2} ->
-          b
+    receive do
+      {:A, _value, _value2} ->
+        b
+        send(self(), {:C})
 
-        {:B} ->
-          # 9
-          :ok
-      end
+        call()
+      {:B} ->
+        # 9
+        example4(aaaaa)
+        :ok
+    end
+  end
 
-    x
+  @spec call() :: :ok
+  defp call() do
+    send(self(), {:D})
+
   end
 
   # @dual &ElixirSessions.SmallExample.example4/1

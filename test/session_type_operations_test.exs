@@ -231,17 +231,46 @@ defmodule ElixirSessionsOperations do
   test "unfold_current exception" do
     s1 = "!B().rec X.(!A().X)"
 
-    result = "!A().rec X.(!A().X)"
+    result = "!B().rec X.(!A().X)"
 
     session1 = ST.string_to_st(s1)
-    _session_result = ST.string_to_st(result)
+    session_result = ST.string_to_st(result)
 
-    try do
-      ST.unfold_current(session1)
-      assert false
-    catch
-      _ -> assert true
-    end
+    actual = ST.unfold_current(session1)
+
+    assert ST.st_to_string(actual) == ST.st_to_string(session_result)
+
+  end
+
+  # todo fix multiple unfolds; unfold_current
+  test "unfold_current multiple" do
+    s1 = "rec X.(rec Y.(&{?A().X, ?B.Y}))"
+
+    result = "&{?A().rec X.(rec Y.(&{?A().X, ?B.Y})), ?B.rec Y.(&{?A().X, ?B.Y})}"
+
+    # session1 = ST.string_to_st(s1)
+    # session_result = ST.string_to_st(result)
+
+    # actual = ST.unfold_current(session1)
+
+    # assert ST.st_to_string(actual) == ST.st_to_string(session_result)
+  end
+
+  # todo reject recursion without any actions
+  test "unfold_current multiple no infill" do
+    s1 = "rec X.(rec Y.(X))"
+
+    # result = "!A().rec X.(!A().X)"
+
+    session1 = ST.string_to_st(s1)
+    # _session_result = ST.string_to_st(result)
+
+    # try do
+    #   ST.unfold_current(session1)
+    #   assert false
+    # catch
+    #   _ -> assert true
+    # end
   end
 
   test "unfold_unknown simple" do

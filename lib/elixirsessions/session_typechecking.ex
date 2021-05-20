@@ -10,7 +10,6 @@ defmodule ElixirSessions.SessionTypechecking do
   # todo do logger levels w/ options!
   # todo ignore variable type starting with _
   # todo use aliases
-  # todo case
   # todo unfold multiple
   # todo erlang <=> elixir converter for custom operators
   # todo force session_check regardless of previous results
@@ -18,6 +17,13 @@ defmodule ElixirSessions.SessionTypechecking do
   # todo todo remove subtypes
   # todo prettify type outputs
   # todo todo match labels with receive (allow multiple pattern matching cases)
+  # todo remaining: function call
+  ### todo case
+  ### todo remaining: send
+  ### todo remaining: receive
+  ### todo remaining: case
+  ### todo remaining: tuple
+  ### todo remaining: if/unless
 
   @typedoc false
   @type ast :: ST.ast()
@@ -59,67 +65,77 @@ defmodule ElixirSessions.SessionTypechecking do
           function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
           module_name: atom()
         }) :: :ok
-  def session_typecheck_by_function(
-        %ST.Function{
-          bodies: bodies,
-          return_type: return_type,
-          parameters: parameters,
-          param_types: param_types,
-          name: name,
-          arity: arity
-        },
-        expected_session_type,
-        module_context
-      ) do
-    for {ast, parameters} <- List.zip([bodies, parameters]) do
-      # Initialize the variable context with the parameters and their types
-      variable_ctx =
-        Enum.zip(parameters, param_types)
-        # Remove any nils
-        |> Enum.filter(fn
-          {nil, _} -> false
-          _ -> true
-        end)
-        |> Enum.into(%{})
+  def session_typecheck_by_function(%ST.Function{} = function, expected_session_type, module_context) do
+    %ST.Function{
+      bodies: bodies,
+      return_type: return_type,
+      parameters: parameters,
+      param_types: param_types,
+      name: name,
+      arity: arity
+    } = function
 
-      # IO.warn(inspect(variable_ctx))
+    all_results =
+      for {ast, parameters} <- List.zip([bodies, parameters]) do
+        # Initialize the variable context with the parameters and their types
+        variable_ctx =
+          Enum.zip(parameters, param_types)
+          # Remove any nils
+          |> Enum.filter(fn
+            {nil, _} -> false
+            _ -> true
+          end)
+          |> Enum.into(%{})
 
-      env = %{
-        # :ok or :error or :warning
-        :state => :ok,
-        # error message
-        :error_data => nil,
-        # :x => :atom
-        :variable_ctx => variable_ctx,
-        # Expected session type
-        # rec X.(!A().X)
-        :session_type => expected_session_type,
-        # Expected type
-        :type => return_type,
-        # {name, arity} => %ST.Function
-        :functions => module_context[:functions],
-        # {name, arity} => rec X.(!A().X)
-        :function_session_type_ctx => module_context[:function_session_type]
-      }
+        # IO.warn(inspect(variable_ctx))
 
-      res =
-        Macro.prewalk(ast, env, &typecheck/2)
-        |> elem(1)
+        env = %{
+          # :ok or :error or :warning
+          :state => :ok,
+          # error message
+          :error_data => nil,
+          # :x => :atom
+          :variable_ctx => variable_ctx,
+          # Expected session type
+          # rec X.(!A().X)
+          :session_type => expected_session_type,
+          # Expected type
+          :type => return_type,
+          # {name, arity} => %ST.Function
+          :functions => module_context[:functions],
+          # {name, arity} => rec X.(!A().X)
+          :function_session_type_ctx => module_context[:function_session_type]
+        }
 
-      IO.puts("Results for: #{name}/#{arity}")
+        res =
+          Macro.prewalk(ast, env, &typecheck/2)
+          |> elem(1)
 
-      %{
-        state: res[:state],
-        error_data: res[:error_data],
-        variable_ctx: res[:variable_ctx],
-        session_type: res[:session_type],
-        type: res[:type],
-        function_session_type_ctx: %{}
-      }
-      |> IO.inspect()
-    end
+        IO.puts("Results for: #{name}/#{arity}")
 
-    :ok
+        res
+      end
+
+    res =
+      Enum.reduce_while(all_results, hd(all_results), fn result, _acc ->
+        case result[:state] do
+          :error ->
+            {:halt, result}
+
+          _ ->
+            {:cont, result}
+        end
+      end)
+
+    %{
+      state: res[:state],
+      error_data: res[:error_data],
+      variable_ctx: res[:variable_ctx],
+      session_type: ST.st_to_string(res[:session_type]),
+      type: res[:type]
+      # function_session_type_ctx: res[:function_session_type_ctx]
+    }
+    |> IO.inspect()
   end
 
   def typecheck(
@@ -191,7 +207,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def typecheck(node, env) when is_list(node) do
-    IO.puts("# List}")
+    IO.puts("# List")
 
     # todo
     {node, env}
@@ -225,11 +241,12 @@ defmodule ElixirSessions.SessionTypechecking do
     process_binary_operations(node, meta2, operator, arg1, arg2, :any, true, env)
   end
 
-  # not
+  # Not
   def typecheck({{:., _meta1, [:erlang, :not]}, meta2, [arg]} = node, env) do
     process_unary_operations(node, meta2, arg, :boolean, env)
   end
 
+  # Negate
   def typecheck({{:., _meta1, [:erlang, :-]}, meta2, [arg]}, env) do
     IO.puts("# erlang negation")
 
@@ -242,7 +259,6 @@ defmodule ElixirSessions.SessionTypechecking do
     IO.puts("# erlang others #{erlang_function} (not supported)")
     node = {nil, meta2, []}
     # {{{:., [], [:erlang, erlang_function]}, [], arg}, %{env | type: :any}}
-    # {node, %{env | type: :any}}
     {node,
      %{
        env
@@ -324,8 +340,11 @@ defmodule ElixirSessions.SessionTypechecking do
         throw({:error, "First item in tuple should be a literal/atom"})
       end
 
+      # Unfold if session type starts with rec X.
+      session_type = ST.unfold_current(env[:session_type])
+
       %ST.Send{label: expected_label, types: expected_types, next: remaining_session_types} =
-        case env[:session_type] do
+        case session_type do
           %ST.Send{} = st ->
             st
 
@@ -336,7 +355,7 @@ defmodule ElixirSessions.SessionTypechecking do
               throw(
                 {:error,
                  "Cannot match send statement `#{Macro.to_string(send_body)}` " <>
-                   "with #{ST.st_to_string_current(env[:session_type])}"}
+                   "with #{ST.st_to_string_current(session_type)}"}
               )
             end
 
@@ -352,7 +371,7 @@ defmodule ElixirSessions.SessionTypechecking do
         throw(
           {:error,
            "Session type parameter length mismatch. Expected " <>
-             "#{ST.st_to_string_current(env[:session_type])} (length = " <>
+             "#{ST.st_to_string_current(session_type)} (length = " <>
              "#{length(expected_types)}), but found #{Macro.to_string(send_body)} " <>
              "(length = #{length(parameter_types)})."}
         )
@@ -362,7 +381,7 @@ defmodule ElixirSessions.SessionTypechecking do
         throw(
           {:error,
            "Incorrect parameter types. Expected " <>
-             "#{ST.st_to_string_current(env[:session_type])} " <>
+             "#{ST.st_to_string_current(session_type)} " <>
              "but found #{Macro.to_string(parameters)} with type/s #{inspect(parameter_types)}"}
         )
       end
@@ -388,9 +407,11 @@ defmodule ElixirSessions.SessionTypechecking do
       # 1 or more receive branches
       # In case of one receive branch, it should match with a %ST.Recv{}
       # In case of more than one receive branch, it should match with a %ST.Branch{}
-      # todo unfold if required
+      # Unfold if session type starts with rec X.(...)
+      session_type = ST.unfold_current(env[:session_type])
+
       branches_session_types =
-        case env[:session_type] do
+        case session_type do
           %ST.Branch{branches: branches} ->
             branches
 
@@ -406,7 +427,7 @@ defmodule ElixirSessions.SessionTypechecking do
         throw(
           {:error,
            "[in branch/receive] Mismatch in number of receive and & branches. " <>
-             "Expected session type #{ST.st_to_string_current(env[:session_type])}"}
+             "Expected session type #{ST.st_to_string_current(session_type)}"}
         )
       end
 
@@ -525,23 +546,56 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   # Functions
-  def typecheck({x, meta, args}, env) when is_list(args) do
-    IO.puts("# Function #{inspect(x)}")
-    node = {x, meta, []}
-    {node, env}
+  def typecheck({name, meta, args}, env) when is_list(args) do
+    IO.puts("# Function #{inspect(name)}")
+    node = {name, meta, []}
+
+    name_arity = {name, length(args)}
+
+    try do
+      function =
+        if env[:functions][name_arity] do
+          env[:functions][name_arity]
+        else
+          # Function does not exist in current module
+          throw({:error, "Function #{name}/#{length(args)} does not exist in current module."})
+        end
+
+      if not function.types_known? do
+        throw({:error, "Function #{name}/#{length(args)} has unknown return type. Uuse @spec to set parameter and return types."})
+      end
+
+      if env[:function_session_type_ctx][name_arity] do
+        # Function with known session type (i.e. def with @session)
+        function_session_type = env[:function_session_type_ctx][name_arity]
+        expected_session_type = env[:session_type]
+
+        if ST.equal?(function_session_type, expected_session_type) do
+          {node, %{env | session_type: %ST.Terminate{}, type: function.return_type}}
+        else
+          throw(
+            {:error,
+             "Function #{name}/#{length(args)} has session type #{ST.st_to_string(function_session_type)} " <>
+               "but was expecting #{ST.st_to_string_current(expected_session_type)}."}
+          )
+        end
+      else
+        # Function with unknown session type (i.e. defp)
+        {node, env}
+      end
+    catch
+      {:error, _} = error ->
+        {node, append_error(env, error, meta)}
+
+      x ->
+        throw("Unknown error: " <> inspect(x))
+    end
   end
 
   def typecheck(other, env) do
     IO.puts("# other #{inspect(other)}")
     {other, env}
   end
-
-  ### todo remaining: send
-  ### todo remaining: receive
-  ### todo remaining: case
-  ## todo remaining: tuple
-  # todo remaining: if/unless
-  # todo remaining: function call
 
   # recompile && ElixirSessions.SessionTypechecking.run
   def run() do

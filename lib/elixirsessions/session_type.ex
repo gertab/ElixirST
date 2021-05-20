@@ -462,13 +462,13 @@ defmodule ST do
           ...> ST.st_to_string(unfolded)
           "!A().rec X.(!A().X)"
   """
-  @spec unfold_current(ST.Recurse.t()) :: session_type()
+  @spec unfold_current(session_type()) :: session_type()
   def unfold_current(%ST.Recurse{label: label, body: body} = rec) do
     ElixirSessions.Operations.unfold_current_inside(body, label, rec)
   end
 
-  def unfold_current(_) do
-    throw("Expected a rec X.(...)")
+  def unfold_current(x) do
+    x
   end
 
   @doc """
