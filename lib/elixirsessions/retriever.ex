@@ -55,12 +55,12 @@ defmodule ElixirSessions.Retriever do
 
     all_functions = add_types_to_functions(all_functions, to_map(function_types))
 
-    %{
-      functions: all_functions,
-      function_session_type: to_map(session_types_parsed),
-      module_name: dbgi_map[:module]
-    }
-    |> ElixirSessions.SessionTypechecking.session_typecheck_module(options)
+    ElixirSessions.SessionTypechecking.session_typecheck_module(
+      all_functions,
+      to_map(session_types_parsed),
+      dbgi_map[:module],
+      options
+    )
   end
 
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile), e.g. kinda similar to ExUnit

@@ -244,9 +244,9 @@ defmodule ElixirSessionsOperations do
 
   # todo fix multiple unfolds; unfold_current
   test "unfold_current multiple" do
-    s1 = "rec X.(rec Y.(&{?A().X, ?B.Y}))"
+    _s1 = "rec X.(rec Y.(&{?A().X, ?B.Y}))"
 
-    result = "&{?A().rec X.(rec Y.(&{?A().X, ?B.Y})), ?B.rec Y.(&{?A().X, ?B.Y})}"
+    _result = "&{?A().rec X.(rec Y.(&{?A().X, ?B.Y})), ?B.rec Y.(&{?A().X, ?B.Y})}"
 
     # session1 = ST.string_to_st(s1)
     # session_result = ST.string_to_st(result)
@@ -262,7 +262,7 @@ defmodule ElixirSessionsOperations do
 
     # result = "!A().rec X.(!A().X)"
 
-    session1 = ST.string_to_st(s1)
+    _session1 = ST.string_to_st(s1)
     # _session_result = ST.string_to_st(result)
 
     # try do

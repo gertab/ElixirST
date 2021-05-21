@@ -1,5 +1,7 @@
 defmodule ElixirSessions.SessionTypechecking do
   require ST
+  require ElixirSessions.TypeOperations
+  require Logger
 
   @moduledoc """
   Given a session type and Elixir code, the Elixir code is typechecked against the session type.
@@ -17,7 +19,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # todo todo remove subtypes
   # todo prettify type outputs
   # todo todo match labels with receive (allow multiple pattern matching cases)
-  # todo remaining: function call
+  ### todo remaining: function call
   ### todo case
   ### todo remaining: send
   ### todo remaining: receive
@@ -32,22 +34,18 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
   @spec session_typecheck_module(
-          %{
-            functions: %{{ST.label(), non_neg_integer()} => ST.Function.t()},
-            function_session_type: %{{ST.label(), non_neg_integer()} => session_type()},
-            module_name: atom()
-          },
+          %{{ST.label(), non_neg_integer()} => ST.Function.t()},
+          %{{ST.label(), non_neg_integer()} => session_type()},
+          atom(),
           list
         ) :: list
   def session_typecheck_module(
-        %{
-          functions: all_functions,
-          function_session_type: function_session_type,
-          module_name: _module_name
-        },
+        all_functions,
+        function_session_type,
+        module_name,
         _options \\ []
       ) do
-    # IO.puts("Starting session type checking #{inspect(function_session_type)}")
+    Logger.debug("Starting session typechecking for module #{inspect(module_name)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
       function = lookup_function!(all_functions, {name, arity})
@@ -80,16 +78,16 @@ defmodule ElixirSessions.SessionTypechecking do
 
       result_env = session_typecheck_by_function(function, env)
 
-      IO.puts("Results for: #{name}/#{arity}")
+      Logger.info("Results for: #{name}/#{arity}")
 
       %{
         state: result_env[:state],
         error_data: result_env[:error_data],
         variable_ctx: result_env[:variable_ctx],
         session_type: ST.st_to_string(result_env[:session_type]),
-        type: result_env[:type],
-        functions: result_env[:functions],
-        function_session_type_ctx: result_env[:function_session_type_ctx]
+        type: result_env[:type]
+        # functions: result_env[:functions],
+        # function_session_type_ctx: result_env[:function_session_type_ctx]
       }
       |> IO.inspect()
 
@@ -123,39 +121,37 @@ defmodule ElixirSessions.SessionTypechecking do
         res_env
       end
 
-      Enum.reduce_while(all_results, hd(all_results), fn result, _acc ->
-        case result[:state] do
-          :error ->
-            {:halt, result}
+    Enum.reduce_while(all_results, hd(all_results), fn result, _acc ->
+      case result[:state] do
+        :error ->
+          {:halt, result}
 
-          _ ->
-            # Check return type
-            common_type = ElixirSessions.TypeOperations.greatest_lower_bound(result[:type], expected_return_type)
+        _ ->
+          # Check return type
+          common_type = ElixirSessions.TypeOperations.greatest_lower_bound(result[:type], expected_return_type)
 
-            cond do
-              result[:session_type] != %ST.Terminate{} ->
-                {:halt,
-                 %{
-                   result
-                   | state: :error,
-                     error_data: "Function #{name}/#{arity} terminates with remaining session type " <> ST.st_to_string(result[:session_type])
-                 }}
+          cond do
+            result[:session_type] != %ST.Terminate{} ->
+              {:halt,
+               %{
+                 result
+                 | state: :error,
+                   error_data: "Function #{name}/#{arity} terminates with remaining session type " <> ST.st_to_string(result[:session_type])
+               }}
 
-              common_type == :error ->
-                {:halt,
-                 %{
-                   result
-                   | state: :error,
-                     error_data: "Return type for #{name}/#{arity} is #{inspect(result[:type])} but expected" <> inspect(expected_return_type)
-                 }}
+            common_type == :error ->
+              {:halt,
+               %{
+                 result
+                 | state: :error,
+                   error_data: "Return type for #{name}/#{arity} is #{inspect(result[:type])} but expected" <> inspect(expected_return_type)
+               }}
 
-              true ->
-                {:cont, result}
-            end
-        end
-      end)
-
-
+            true ->
+              {:cont, result}
+          end
+      end
+    end)
   end
 
   @spec typecheck(ast(), map()) :: {ast(), map()}
@@ -163,7 +159,7 @@ defmodule ElixirSessions.SessionTypechecking do
         node,
         %{
           state: :error,
-          error_data: _error_data,
+          error_data: error_data,
           variable_ctx: _,
           session_type: _,
           type: _,
@@ -171,14 +167,14 @@ defmodule ElixirSessions.SessionTypechecking do
           function_session_type_ctx: _
         } = env
       ) do
-    # IO.warn("Error!" <> inspect(error_data))
+    Logger.error("ElixirSessions Error! " <> error_data)
     # throw("ERROR" <> inspect(error_data))
     {node, env}
   end
 
   # Block
   def typecheck({:__block__, meta, args}, env) do
-    IO.puts("# Block #{inspect(args)}")
+    Logger.debug("Typechecking: Block")
     node = {:__block__, meta, args}
 
     {node, env}
@@ -188,7 +184,7 @@ defmodule ElixirSessions.SessionTypechecking do
   def typecheck(node, env)
       when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
              is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
-    IO.puts("# Literal: #{inspect(node)} #{ElixirSessions.TypeOperations.typeof(node)}")
+    Logger.debug("Typechecking: Literal: #{inspect(node)} #{ElixirSessions.TypeOperations.typeof(node)}")
 
     {node, %{env | type: ElixirSessions.TypeOperations.typeof(node)}}
   end
@@ -220,7 +216,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # List
   def typecheck(node, env) when is_list(node) do
-    IO.puts("# List")
+    Logger.debug("Typechecking: List")
 
     # todo
     {node, env}
@@ -229,7 +225,7 @@ defmodule ElixirSessions.SessionTypechecking do
   # Operations
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:+, :-, :*, :/] do
-    IO.puts("# Erlang #{operator}")
+    Logger.debug("Typechecking: Erlang #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
     process_binary_operations(node, meta2, operator, arg1, arg2, :number, false, env)
@@ -253,7 +249,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Negate
   def typecheck({{:., _meta1, [:erlang, :-]}, meta2, [arg]}, env) do
-    IO.puts("# Erlang negation")
+    Logger.debug("Typechecking: Erlang negation")
 
     node = {nil, meta2, []}
     process_unary_operations(node, meta2, arg, :number, env)
@@ -261,7 +257,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   def typecheck({{:., _meta1, [:erlang, erlang_function]}, meta2, _arg}, env)
       when erlang_function not in [:send, :self] do
-    IO.puts("# Erlang others #{erlang_function} (not supported)")
+    Logger.debug("Typechecking: Erlang others #{erlang_function} (not supported)")
     node = {nil, meta2, []}
 
     {node, %{env | state: :error, error_data: error_message("Unknown erlang function #{inspect(erlang_function)}", meta2)}}
@@ -269,7 +265,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Binding operator
   def typecheck({:=, meta, [pattern, expr]}, env) do
-    IO.puts("# Binding op")
+    Logger.debug("Typechecking: Binding operator (i.e. =)")
     node = {:=, meta, []}
 
     {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
@@ -291,12 +287,13 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Variables
   def typecheck({x, meta, arg}, env) when is_atom(arg) do
-    IO.puts("# Variable #{inspect(x)}: #{inspect(env[:variable_ctx][x])}")
+    Logger.debug("Typechecking: Variable #{inspect(x)} with type #{inspect(env[:variable_ctx][x])}")
     node = {x, meta, arg}
 
-    case env[:variable_ctx][x] do
-      nil -> {node, %{env | state: :error, error_data: error_message("Variable #{x} was not found", meta)}}
-      type -> {node, %{env | type: type}}
+    if Map.has_key?(env[:variable_ctx], x) do
+      {node, %{env | type: env[:variable_ctx][x]}}
+    else
+      {node, %{env | state: :error, error_data: error_message("Variable #{x} was not found", meta)}}
     end
   end
 
@@ -346,7 +343,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Send Function
   def typecheck({{:., _meta1, [:erlang, :send]}, meta2, [send_destination, send_body | _]}, env) do
-    IO.puts("# Erlang send")
+    Logger.debug("Typechecking: Erlang send")
 
     node = {nil, meta2, []}
 
@@ -512,15 +509,15 @@ defmodule ElixirSessions.SessionTypechecking do
     end
   end
 
-  # Hardcoded stuff (cheating)
+  # Hardcoded stuff (not ideal)
   def typecheck({{:., _meta1, [:erlang, :self]}, meta2, []}, env) do
-    IO.puts("# erlang self")
+    Logger.debug("Typechecking: Erlang self")
     node = {nil, meta2, []}
     {node, %{env | type: :pid}}
   end
 
   def typecheck({{:., _meta, _}, meta2, _}, env) do
-    IO.puts("# Remote function call")
+    Logger.debug("Typechecking: Remote function call")
     node = {nil, meta2, []}
 
     {node, %{env | state: :error, error_data: error_message("Remote functions not allowed.", meta2)}}
@@ -533,7 +530,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
   # Functions
   def typecheck({name, meta, args}, env) when is_list(args) do
-    IO.puts("# Function #{inspect(name)}")
+    Logger.debug("Typechecking: Function #{inspect(name)}")
     node = {name, meta, []}
 
     name_arity = {name, length(args)}
@@ -598,7 +595,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def typecheck(other, env) do
-    IO.puts("# other #{inspect(other)}")
+    Logger.debug("Typechecking: other #{inspect(other)}")
     {other, env}
   end
 
@@ -607,7 +604,7 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        a = p
+        a = 5
 
         receive do
           {:hello, value} ->
@@ -619,7 +616,7 @@ defmodule ElixirSessions.SessionTypechecking do
         a
       end
 
-    st = ST.string_to_st("?hello(boolean).!abc(boolean, boolean)")
+    st = ST.string_to_st("?hello(boolean).!abc(number, boolean)")
 
     env = %{
       :state => :ok,
@@ -632,7 +629,7 @@ defmodule ElixirSessions.SessionTypechecking do
     }
 
     ElixirSessions.Helper.expanded_quoted(ast)
-    |> IO.inspect()
+    # |> IO.inspect()
     |> Macro.prewalk(env, &typecheck/2)
 
     # |> elem(0)
@@ -765,7 +762,7 @@ defmodule ElixirSessions.SessionTypechecking do
                | state: :error,
                  error_data:
                    error_message(
-                     "Type problem: Found #{inspect(op1_env[:type])} but expected a #{inspect(max_type)}",
+                     "Type problem: Found expression of type #{inspect(op1_env[:type])} but expected a #{inspect(max_type)}",
                      meta
                    )
              }}
