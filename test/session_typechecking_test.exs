@@ -98,8 +98,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -107,8 +107,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -116,8 +116,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -125,8 +125,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -134,8 +134,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -143,8 +143,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -152,8 +152,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -161,8 +161,8 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
     assert result[:state] == :ok
+    assert result[:type] == :boolean
 
     ast =
       quote do
@@ -177,535 +177,613 @@ defmodule SessionTypecheckingTest do
       end
 
     result = typecheck(ast)
-    assert result[:type] == :boolean
-    assert result[:state] == :ok
-  end
-
-  test "binding variable" do
-    ast =
-      quote do
-        a = 7
-        b = a < 99
-        c = true
-        a
-      end
-
-    result = typecheck(ast)
-    assert result[:variable_ctx] == %{a: :integer, b: :boolean, c: :boolean}
-    assert result[:type] == :integer
-    assert result[:state] == :ok
-
-    ast =
-      quote do
-        a = 7
-        b = a + 99 + 9.9
-        c = a
-        a + b
-      end
-
-    result = typecheck(ast)
-    assert result[:variable_ctx] == %{a: :integer, b: :float, c: :integer}
-    assert result[:type] == :float
-    assert result[:state] == :ok
-  end
-
-  test "tuples" do
-    ast =
-      quote do
-        {1, 2, true, :abc, 6.6}
-      end
-
-    result = typecheck(ast)
-    assert result[:type] == {:tuple, [:integer, :integer, :boolean, :abc, :float]}
-    assert result[:state] == :ok
-
-    ast =
-      quote do
-        {1, 2}
-      end
-
-    result = typecheck(ast)
-    assert result[:type] == {:tuple, [:integer, :integer]}
-    assert result[:state] == :ok
-
-    ast =
-      quote do
-        a = 323
-        b = true
-        c = a
-        d = c
-        a = {a, b, c, d}
-        z = {a, {a, b}}
-        z
-      end
-
-    result = typecheck(ast)
-
-    assert result[:type] ==
-             {:tuple,
-              [
-                tuple: [:integer, :boolean, :integer, :integer],
-                tuple: [{:tuple, [:integer, :boolean, :integer, :integer]}, :boolean]
-              ]}
-
-    assert result[:state] == :ok
-  end
-
-  test "send" do
-    ast =
-      quote do
-        self()
-      end
-
-    assert typecheck(ast)[:type] == :pid
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        send(p, {:hello, a, false})
-      end
-
-    env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
-    result = typecheck(ast, env)
-    assert result[:type] == {:tuple, [:hello, :boolean, :boolean]}
-    assert result[:session_type] == %ST.Terminate{}
-    assert result[:state] == :ok
-
-    ast =
-      quote do
-        a = 4
-        send(a, a)
-      end
-
-    assert typecheck(ast)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        send(p, {:hello, a})
-      end
-
-    env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        b = :abc
-        send(p, {:hello, a, b})
-      end
-
-    env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        b = :abc
-        send(p, {6, a, b})
-      end
-
-    env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        p = self()
-        b = :abc
-        send(p, {:A, a})
-        send(p, {:B, b})
-      end
-
-    env = %{env | session_type: ST.string_to_st("!A(number).!B(atom)")}
-    result = typecheck(ast, env)
-    assert result[:type] == {:tuple, [:B, :abc]}
-    assert result[:session_type] == %ST.Terminate{}
-    assert result[:state] == :ok
-  end
-
-  test "send - choice" do
-    ast =
-      quote do
-        self()
-      end
-
-    assert typecheck(ast)[:type] == :pid
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        send(p, {:hello, a, false})
-      end
-
-    env = %{env | session_type: ST.string_to_st("+{!hello(boolean, boolean)}")}
-    result = typecheck(ast, env)
-    assert result[:type] == {:tuple, [:hello, :boolean, :boolean]}
-    assert result[:session_type] == %ST.Terminate{}
-    assert result[:state] == :ok
-
-    ast =
-      quote do
-        a = 4
-        send(a, a)
-      end
-
-    assert typecheck(ast)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        send(p, {:hello, a})
-      end
-
-    env = %{env | session_type: ST.string_to_st("+{!otheroption(), !hello(boolean, boolean)}")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        b = :abc
-        send(p, {:hello, a, b})
-      end
-
-    env = %{env | session_type: ST.string_to_st("+{!A(), !hello(boolean, boolean)}")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        a = true
-        p = self()
-        b = :abc
-        send(p, {6, a, b})
-      end
-
-    env = %{env | session_type: ST.string_to_st("+{!A(number), !B(), !hello(boolean, boolean)}")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        a = 4
-        p = self()
-        b = :abc
-        send(p, {:A, a})
-        send(p, {:B, b})
-      end
-
-    env = %{env | session_type: ST.string_to_st("+{!A(number).!B(atom), !C(atom)}")}
-    result = typecheck(ast, env)
-    assert result[:type] == {:tuple, [:B, :abc]}
-    assert result[:session_type] == %ST.Terminate{}
-    assert result[:state] == :ok
-  end
-
-  test "receive" do
-    ast =
-      quote do
-        receive do
-          {:A, value} ->
-            value
-
-          {:B, value1, value2} ->
-            value2 + value2
-        end
-      end
-
-    env = %{env | session_type: ST.string_to_st("&{?A(number), ?B(number, float)}")}
-    result = typecheck(ast, env)
-    assert result[:type] == :number
-    assert result[:state] == :ok
-    assert result[:session_type] == %ST.Terminate{}
-
-    ast =
-      quote do
-        value = 5
-
-        receive do
-          {:A, value2} ->
-            value + value2
-
-          {:B, value1, value2} ->
-            value2 + value2
-        end
-      end
-
-    env = %{env | session_type: ST.string_to_st("&{?A(float), ?B(number, float)}")}
-    result = typecheck(ast, env)
-    assert result[:type] == :float
-    assert result[:state] == :ok
-    assert result[:session_type] == %ST.Terminate{}
-
-    ast =
-      quote do
-        value = 5
-
-        receive do
-          {:A, value2} ->
-            value + value2
-            true
-
-          {:B, value1, value2} ->
-            value2 + value2
-        end
-      end
-
-    env = %{env | session_type: ST.string_to_st("&{?A(float), ?B(number, float)}")}
-    assert typecheck(ast, env)[:state] == :error
-
-    ast =
-      quote do
-        value = true
-
-        receive do
-          {:A, value2, value3} ->
-            value and value2
-
-          {:B, value1, value2} ->
-            value1 < value2
-        end
-      end
-
-    env = %{env | session_type: ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")}
-    result = typecheck(ast, env)
-    assert result[:state] == :error
-    # assert result[:state] == :ok
-    # assert result[:type] == :boolean
-    # assert result[:session_type] == %ST.Terminate{}
-
-    ast =
-      quote do
-        value = true
-
-        new_value =
-          receive do
-            {:A, othervalue} ->
-              othervalue
-          end
-
-        new_value
-      end
-
-    env = %{env | session_type: ST.string_to_st("&{?A(float)}")}
-    result = typecheck(ast, env)
-    assert result[:state] == :ok
-    assert result[:type] == :float
-    assert result[:session_type] == %ST.Terminate{}
-
-    ast =
-      quote do
-        value = true
-
-        new_value =
-          receive do
-            {:A, othervalue} ->
-              othervalue
-          end
-
-        value
-      end
-
-    env = %{env | session_type: ST.string_to_st("&{?A(float)}")}
-    result = typecheck(ast, env)
     assert result[:state] == :ok
     assert result[:type] == :boolean
-    assert result[:session_type] == %ST.Terminate{}
   end
 
-  test "receive & send" do
-    ast =
-      quote do
-        a = 4
+  # test "binding variable" do
+  #   ast =
+  #     quote do
+  #       a = 7
+  #       b = a < 99
+  #       c = true
+  #       a
+  #     end
 
-        receive do
-          {:hello, value} ->
-            x = not value
-            a = a < 4
-            send(self(), {:abc, a, x})
-        end
+  #   result = typecheck(ast)
+  #   assert result[:state] == :ok
+  #   assert result[:variable_ctx] == %{a: :integer, b: :boolean, c: :boolean}
+  #   assert result[:type] == :integer
 
-        a
-      end
+  #   ast =
+  #     quote do
+  #       a = 7
+  #       b = a + 99 + 9.9
+  #       c = a
+  #       a + b
+  #     end
 
-    env = %{env | session_type: ST.string_to_st("?hello(boolean).!abc(boolean, boolean)")}
-    result = typecheck(ast, env)
-    assert result[:type] == :integer
-    assert result[:state] == :ok
-    assert result[:session_type] == %ST.Terminate{}
+  #   result = typecheck(ast)
+  #   assert result[:state] == :ok
+  #   assert result[:variable_ctx] == %{a: :integer, b: :float, c: :integer}
+  #   assert result[:type] == :float
+  # end
 
-    ast =
-      quote do
-        a = 4
+  # test "tuples" do
+  #   ast =
+  #     quote do
+  #       {1, 2, true, :abc, 6.6}
+  #     end
 
-        receive do
-          {:hello, value} ->
-            x = not value
-            send(self(), {:abc, a < 4, not value, a + 9.6})
-        end
-      end
+  #   assert result[:state] == :ok
+  #   result = typecheck(ast)
+  #   assert result[:type] == {:tuple, [:integer, :integer, :boolean, :abc, :float]}
 
-    env = %{env | session_type: ST.string_to_st("?hello(boolean).!abc(boolean, boolean, number)")}
-    result = typecheck(ast, env)
-    assert result[:type] == {:tuple, [:abc, :boolean, :boolean, :float]}
-    assert result[:state] == :ok
-    assert result[:session_type] == %ST.Terminate{}
+  #   ast =
+  #     quote do
+  #       {1, 2}
+  #     end
 
-    ast =
-      quote do
-        receive do
-          {:A} -> :ok
-          {:B} -> 7
-        end
-      end
+  #   assert result[:state] == :ok
+  #   result = typecheck(ast)
+  #   assert result[:type] == {:tuple, [:integer, :integer]}
 
-    env = %{env | session_type: ST.string_to_st("&{?A(), ?B()}")}
-    result = typecheck(ast, env)
-    assert result[:state] == :error
-  end
+  #   ast =
+  #     quote do
+  #       a = 323
+  #       b = true
+  #       c = a
+  #       d = c
+  #       a = {a, b, c, d}
+  #       z = {a, {a, b}}
+  #       z
+  #     end
 
-  test "case" do
-    ast =
-      quote do
-        a = 4
+  #   result = typecheck(ast)
 
-        case a do
-          x when is_number(x) and x > 5 ->
-            :ok
+  #   assert result[:type] ==
+  #            {:tuple,
+  #             [
+  #               tuple: [:integer, :boolean, :integer, :integer],
+  #               tuple: [{:tuple, [:integer, :boolean, :integer, :integer]}, :boolean]
+  #             ]}
 
-          _ ->
-            :ok_ok
-        end
-      end
+  #   assert result[:state] == :ok
+  # end
 
-    result = typecheck(ast)
-    assert result[:type] == :atom
-    assert result[:state] == :ok
-    assert result[:session_type] == %ST.Terminate{}
+  # test "send" do
+  #   ast =
+  #     quote do
+  #       self()
+  #     end
 
-    ast =
-      quote do
-        a = 4
+  #   assert typecheck(ast)[:type] == :pid
 
-        case a do
-          x when is_number(x) and x > 5 ->
-            :ok
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       send(p, {:hello, a, false})
+  #     end
 
-          _ ->
-            9
-        end
-      end
+  #   env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == {:tuple, [:hello, :boolean, :boolean]}
+  #   assert result[:session_type] == %ST.Terminate{}
 
-    result = typecheck(ast)
-    assert result[:state] == :error
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       send(a, a)
+  #     end
 
-    ast =
-      quote do
-        x = 6
-        a = send(self(), {:Hello, x})
+  #   assert typecheck(ast)[:state] == :error
 
-        case a do
-          {:Hello, 8} ->
-            7
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       send(p, {:hello, a})
+  #     end
 
-          {_var, num} ->
-            num
+  #   env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
+  #   assert typecheck(ast, env)[:state] == :error
 
-          _ ->
-            9
-        end
-      end
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       b = :abc
+  #       send(p, {:hello, a, b})
+  #     end
 
-    env = %{env | session_type: ST.string_to_st("!Hello(number)")}
-    result = typecheck(ast, env)
-    assert result[:state] == :ok
-    assert result[:type] == :integer
-    assert result[:session_type] == %ST.Terminate{}
+  #   env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
+  #   assert typecheck(ast, env)[:state] == :error
 
-    ast =
-      quote do
-        x = 6
-        a = send(self(), {:Hello, x})
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       b = :abc
+  #       send(p, {6, a, b})
+  #     end
 
-        case a do
-          {:Hello, 8} ->
-            send(self(), {:Option1, x})
-            x
+  #   env = %{env | session_type: ST.string_to_st("!hello(boolean, boolean)")}
+  #   assert typecheck(ast, env)[:state] == :error
 
-          {_var, num} ->
-            y = x * 2
-            a = send(self(), {:Option2, y})
-            y
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       p = self()
+  #       b = :abc
+  #       send(p, {:A, a})
+  #       send(p, {:B, b})
+  #     end
 
-          _ ->
-            send(self(), {:Option3, x * 3})
-            x * 3
-        end
+  #   env = %{env | session_type: ST.string_to_st("!A(number).!B(atom)")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == {:tuple, [:B, :abc]}
+  #   assert result[:session_type] == %ST.Terminate{}
+  # end
 
-        send(self(), {:Terminate})
-      end
+  # test "send - choice" do
+  #   ast =
+  #     quote do
+  #       self()
+  #     end
 
-    env = %{
-      env
-      | session_type:
-          ST.string_to_st("!Hello(number).+{!Option1(number).!Terminate(), !Option2(number).!Terminate(), !Option3(number).!Terminate()}")
+  #   assert typecheck(ast)[:type] == :pid
+
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       send(p, {:hello, a, false})
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("+{!hello(boolean, boolean)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == {:tuple, [:hello, :boolean, :boolean]}
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       send(a, a)
+  #     end
+
+  #   assert typecheck(ast)[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       send(p, {:hello, a})
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("+{!otheroption(), !hello(boolean, boolean)}")}
+  #   assert typecheck(ast, env)[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       b = :abc
+  #       send(p, {:hello, a, b})
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("+{!A(), !hello(boolean, boolean)}")}
+  #   assert typecheck(ast, env)[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       a = true
+  #       p = self()
+  #       b = :abc
+  #       send(p, {6, a, b})
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("+{!A(number), !B(), !hello(boolean, boolean)}")}
+  #   assert typecheck(ast, env)[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       a = 4
+  #       p = self()
+  #       b = :abc
+  #       send(p, {:A, a})
+  #       send(p, {:B, b})
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("+{!A(number).!B(atom), !C(atom)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == {:tuple, [:B, :abc]}
+  #   assert result[:session_type] == %ST.Terminate{}
+  # end
+
+  # test "receive" do
+  #   ast =
+  #     quote do
+  #       receive do
+  #         {:A, value} ->
+  #           value
+
+  #         {:B, value1, value2} ->
+  #           value2 + value2
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(number), ?B(number, float)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :number
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       value = 5
+
+  #       receive do
+  #         {:A, value2} ->
+  #           value + value2
+
+  #         {:B, value1, value2} ->
+  #           value2 + value2
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(float), ?B(number, float)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :float
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       value = 5
+
+  #       receive do
+  #         {:A, value2} ->
+  #           value + value2
+  #           true
+
+  #         {:B, value1, value2} ->
+  #           value2 + value2
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(float), ?B(number, float)}")}
+  #   assert typecheck(ast, env)[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       value = true
+
+  #       receive do
+  #         {:A, value2, value3} ->
+  #           value and value2
+
+  #         {:B, value1, value2} ->
+  #           value1 < value2
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(float, boolean), ?B(number, float)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :error
+  #   # assert result[:state] == :ok
+  #   # assert result[:type] == :boolean
+  #   # assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       value = true
+
+  #       new_value =
+  #         receive do
+  #           {:A, othervalue} ->
+  #             othervalue
+  #         end
+
+  #       new_value
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(float)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :float
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       value = true
+
+  #       new_value =
+  #         receive do
+  #           {:A, othervalue} ->
+  #             othervalue
+  #         end
+
+  #       value
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(float)}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :boolean
+  #   assert result[:session_type] == %ST.Terminate{}
+  # end
+
+  # test "receive & send" do
+  #   ast =
+  #     quote do
+  #       a = 4
+
+  #       receive do
+  #         {:hello, value} ->
+  #           x = not value
+  #           a = a < 4
+  #           send(self(), {:abc, a, x})
+  #       end
+
+  #       a
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("?hello(boolean).!abc(boolean, boolean)")}
+  #   result = typecheck(ast, env)
+  #   assert result[:type] == :integer
+  #   assert result[:state] == :ok
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       a = 4
+
+  #       receive do
+  #         {:hello, value} ->
+  #           x = not value
+  #           send(self(), {:abc, a < 4, not value, a + 9.6})
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("?hello(boolean).!abc(boolean, boolean, number)")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == {:tuple, [:abc, :boolean, :boolean, :float]}
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       receive do
+  #         {:A} -> :ok
+  #         {:B} -> 7
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("&{?A(), ?B()}")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :error
+  # end
+
+  # test "case" do
+  #   ast =
+  #     quote do
+  #       a = 4
+
+  #       case a do
+  #         x when is_number(x) and x > 5 ->
+  #           :ok
+
+  #         _ ->
+  #           :ok_ok
+  #       end
+  #     end
+
+  #   result = typecheck(ast)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :atom
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       a = 4
+
+  #       case a do
+  #         x when is_number(x) and x > 5 ->
+  #           :ok
+
+  #         _ ->
+  #           9
+  #       end
+  #     end
+
+  #   result = typecheck(ast)
+  #   assert result[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       x = 6
+  #       a = send(self(), {:Hello, x})
+
+  #       case a do
+  #         {:Hello, 8} ->
+  #           7
+
+  #         {_var, num} ->
+  #           num
+
+  #         _ ->
+  #           9
+  #       end
+  #     end
+
+  #   env = %{env | session_type: ST.string_to_st("!Hello(number)")}
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :integer
+  #   assert result[:session_type] == %ST.Terminate{}
+
+  #   ast =
+  #     quote do
+  #       x = 6
+  #       a = send(self(), {:Hello, x})
+
+  #       case a do
+  #         {:Hello, 8} ->
+  #           send(self(), {:Option1, x})
+  #           x
+
+  #         {_var, num} ->
+  #           y = x * 2
+  #           a = send(self(), {:Option2, y})
+  #           y
+
+  #         _ ->
+  #           send(self(), {:Option3, x * 3})
+  #           x * 3
+  #       end
+
+  #       send(self(), {:Terminate})
+  #     end
+
+  #   env = %{
+  #     env
+  #     | session_type:
+  #         ST.string_to_st("!Hello(number).+{!Option1(number).!Terminate(), !Option2(number).!Terminate(), !Option3(number).!Terminate()}")
+  #   }
+
+  #   result = typecheck(ast, env)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == {:tuple, [:Terminate]}
+  #   assert result[:session_type] == %ST.Terminate{}
+  # end
+
+  # test "if" do
+  #   ast =
+  #     quote do
+  #       x = 7
+
+  #       y =
+  #         if x do
+  #           :ok
+  #         end
+
+  #       y
+  #       # y is either an atom or nil
+  #     end
+
+  #   result = typecheck(ast)
+  #   assert result[:state] == :error
+
+  #   ast =
+  #     quote do
+  #       x = 7
+
+  #       if x do
+  #         :ok
+  #       else
+  #         :not_ok
+  #       end
+  #     end
+
+  #   result = typecheck(ast)
+  #   assert result[:state] == :ok
+  #   assert result[:type] == :atom
+  #   assert result[:session_type] == %ST.Terminate{}
+  # end
+
+  def env_function_demo do
+    %{
+      error_data: nil,
+      function_session_type_ctx: %{},
+      functions: %{
+        {:test_call, 1} => %ST.Function{
+          arity: 1,
+          bodies: [
+            {:__block__, [],
+             [
+               {{:., [], [:erlang, :send]}, [line: 53],
+                [{:pid, [line: 53], nil}, {:{}, [line: 53], [:B]}]},
+               {:receive, [line: 55],
+                [
+                  [
+                    do: [
+                      {:->, [line: 56],
+                       [
+                         [Option1: {:atom, [line: 56], nil}],
+                         {:atom, [line: 57], nil}
+                       ]},
+                      {:->, [line: 59],
+                       [
+                         [{:{}, [line: 59], [:Option2]}],
+                         {:test_call, [line: 60], [{:pid, [line: 60], nil}]}
+                       ]}
+                    ]
+                  ]
+                ]}
+             ]}
+          ],
+          case_metas: [[line: 52]],
+          cases: 1,
+          def_p: :defp,
+          guards: [[]],
+          meta: [line: 52],
+          name: :test_call,
+          param_types: [:pid],
+          parameters: [[:pid]],
+          return_type: :atom,
+          types_known?: true
+        }
+      },
+      session_type: %ST.Terminate{},
+      state: :ok,
+      type: :atom,
+      variable_ctx: %{pid: :pid}
     }
-
-    result = typecheck(ast, env)
-    assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:Terminate]}
-    assert result[:session_type] == %ST.Terminate{}
-  end
-
-  test "if" do
-    ast =
-      quote do
-        x = 7
-
-        y =
-          if x do
-            :ok
-          end
-
-        y
-        # y is either an atom or nil
-      end
-
-    result = typecheck(ast)
-    assert result[:state] == :error
-
-    ast =
-      quote do
-        x = 7
-
-        if x do
-          :ok
-        else
-          :not_ok
-        end
-      end
-
-    result = typecheck(ast)
-    assert result[:type] == :atom
-    assert result[:state] == :ok
-    assert result[:session_type] == %ST.Terminate{}
   end
 
   test "function call - recursion" do
+    # test_call/1 has session type: rec X.(!B()&{?Option1(atom), ?Option2().X})
 
+    # @spec test_call(pid) :: :atom
+    # defp test_call(pid) do
+    #   send(pid, {:B})
+
+    #   receive do
+    #     {:Option1, atom} ->
+    #       atom
+
+    #     {:Option2} ->
+    #       test_call(pid)
+    #   end
+    # end
+
+    ast =
+      quote do
+        pid = self()
+
+        send(pid, {:A})
+
+        test_call(pid)
+      end
+
+    env = %{env_function_demo | session_type: ST.string_to_st("!A().rec X.(!B()&{?Option1(atom), ?Option2().X})")}
+    result = typecheck(ast, env)
+    assert result[:state] == :ok
+    assert result[:type] == :atom
+    assert result[:session_type] == %ST.Terminate{}
   end
 end
 

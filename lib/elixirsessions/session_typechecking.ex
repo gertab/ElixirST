@@ -78,7 +78,22 @@ defmodule ElixirSessions.SessionTypechecking do
         :function_session_type_ctx => function_session_type
       }
 
-      session_typecheck_by_function(function, env)
+      result_env = session_typecheck_by_function(function, env)
+
+      IO.puts("Results for: #{name}/#{arity}")
+
+      %{
+        state: result_env[:state],
+        error_data: result_env[:error_data],
+        variable_ctx: result_env[:variable_ctx],
+        session_type: ST.st_to_string(result_env[:session_type]),
+        type: result_env[:type],
+        functions: result_env[:functions],
+        function_session_type_ctx: result_env[:function_session_type_ctx]
+      }
+      |> IO.inspect()
+
+      result_env
     end
   end
 
@@ -98,22 +113,16 @@ defmodule ElixirSessions.SessionTypechecking do
         # Initialize the variable context with the parameters and their types
         variable_ctx =
           Enum.zip(parameters, param_types)
-          # Remove any nils
-          |> Enum.filter(fn
-            {nil, _} -> false
-            _ -> true
-          end)
+          |> remove_nils()
           |> Enum.into(%{})
 
         env = %{env | variable_ctx: variable_ctx}
 
         {_ast, res_env} = Macro.prewalk(ast, env, &typecheck/2)
 
-        IO.puts("Results for: #{name}/#{arity}")
         res_env
       end
 
-    res =
       Enum.reduce_while(all_results, hd(all_results), fn result, _acc ->
         case result[:state] do
           :error ->
@@ -146,18 +155,7 @@ defmodule ElixirSessions.SessionTypechecking do
         end
       end)
 
-    %{
-      state: res[:state],
-      error_data: res[:error_data],
-      variable_ctx: res[:variable_ctx],
-      session_type: ST.st_to_string(res[:session_type]),
-      type: res[:type]
-      # functions: res[:functions],
-      # function_session_type_ctx: res[:function_session_type_ctx]
-    }
-    |> IO.inspect()
 
-    res
   end
 
   @spec typecheck(ast(), map()) :: {ast(), map()}
@@ -302,8 +300,8 @@ defmodule ElixirSessions.SessionTypechecking do
     end
   end
 
-   # Case
-   def typecheck({:case, meta, [expr, body | _]}, env) do
+  # Case
+  def typecheck({:case, meta, [expr, body | _]}, env) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
     node = {:case, meta, []}
     cases = process_cases(body[:do])
@@ -473,8 +471,7 @@ defmodule ElixirSessions.SessionTypechecking do
           if branches_session_types[head] do
             %ST.Recv{types: expected_types, next: remaining_st} = branches_session_types[head]
 
-            pattern_vars =
-              ElixirSessions.TypeOperations.var_pattern([lhs], [{:tuple, [:atom] ++ expected_types}]) || %{}
+            pattern_vars = ElixirSessions.TypeOperations.var_pattern([lhs], [{:tuple, [:atom] ++ expected_types}]) || %{}
 
             case pattern_vars do
               {:error, msg} ->
@@ -572,13 +569,13 @@ defmodule ElixirSessions.SessionTypechecking do
         end
       else
         # Function with unknown session type (i.e. defp)
-        env = %{
+        new_env = %{
           env
           | variable_ctx: %{},
             function_session_type_ctx: Map.merge(env[:function_session_type_ctx], %{name_arity => env[:session_type]})
         }
 
-        new_env = session_typecheck_by_function(function, env)
+        new_env = session_typecheck_by_function(function, new_env)
 
         cond do
           new_env[:state] == :error ->
@@ -610,7 +607,7 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        a = 4
+        a = p
 
         receive do
           {:hello, value} ->
@@ -785,6 +782,16 @@ defmodule ElixirSessions.SessionTypechecking do
 
   defp tuple_to_list({:{}, _, args}) do
     args
+  end
+
+  defp remove_nils(list) do
+    Enum.filter(
+      list,
+      fn
+        {nil, _} -> false
+        _ -> true
+      end
+    )
   end
 
   # @doc """
@@ -1356,59 +1363,59 @@ defmodule ElixirSessions.SessionTypechecking do
     line <> message
   end
 
-  @doc false
-  # Takes case of :-> and returns the label and number of values as ':any' type.
-  # e.g. {:label, value1, value2} -> do_something()
-  # or   {:label, value1, value2} when is_number(value1) -> do_something()
-  # returns {:label, [value1, value2]}
-  def parse_options(x) do
-    x =
-      case x do
-        {:when, _, data} ->
-          # throw("Problem while typechecking: 'when' not implemented yet")
-          hd(data)
+  # @doc false
+  # # Takes case of :-> and returns the label and number of values as ':any' type.
+  # # e.g. {:label, value1, value2} -> do_something()
+  # # or   {:label, value1, value2} when is_number(value1) -> do_something()
+  # # returns {:label, [value1, value2]}
+  # def parse_options(x) do
+  #   x =
+  #     case x do
+  #       {:when, _, data} ->
+  #         # throw("Problem while typechecking: 'when' not implemented yet")
+  #         hd(data)
 
-        x ->
-          x
-      end
+  #       x ->
+  #         x
+  #     end
 
-    {label, types} =
-      case x do
-        # Size 0, e.g. {:do_something}
-        {:{}, _, [label]} ->
-          {label, []}
+  #   {label, types} =
+  #     case x do
+  #       # Size 0, e.g. {:do_something}
+  #       {:{}, _, [label]} ->
+  #         {label, []}
 
-        # Size 1, e.g. {:value, 545}
-        {label, type} ->
-          {label, [Macro.to_string(type)]}
+  #       # Size 1, e.g. {:value, 545}
+  #       {label, type} ->
+  #         {label, [Macro.to_string(type)]}
 
-        # Size > 2, e.g. {:add, 3, 5}
-        {:{}, _, [label | types]} ->
-          {label, Enum.map(types, fn x -> String.to_atom(Macro.to_string(x)) end)}
+  #       # Size > 2, e.g. {:add, 3, 5}
+  #       {:{}, _, [label | types]} ->
+  #         {label, Enum.map(types, fn x -> String.to_atom(Macro.to_string(x)) end)}
 
-        x ->
-          throw(
-            "Needs to be a tuple contain at least a label. E.g. {:do_something} or {:value, 54}. " <>
-              "Found #{inspect(x)}."
-          )
-      end
+  #       x ->
+  #         throw(
+  #           "Needs to be a tuple contain at least a label. E.g. {:do_something} or {:value, 54}. " <>
+  #             "Found #{inspect(x)}."
+  #         )
+  #     end
 
-    case is_atom(label) do
-      true ->
-        :ok
+  #   case is_atom(label) do
+  #     true ->
+  #       :ok
 
-      false ->
-        throw("First item in tuple needs to be a label/atom. (#{inspect(label)})")
-    end
+  #     false ->
+  #       throw("First item in tuple needs to be a label/atom. (#{inspect(label)})")
+  #   end
 
-    {label, types}
-  end
+  #   {label, types}
+  # end
 
   defp lookup_function(all_functions, {name, arity}) do
     try do
       {:ok, lookup_function!(all_functions, {name, arity})}
     catch
-      x -> {:error, x}
+      {:error, x} -> {:error, x}
     end
   end
 
