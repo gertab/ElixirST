@@ -50,23 +50,51 @@ defmodule ElixirSessions.SessionTypechecking do
     # IO.puts("Starting session type checking #{inspect(function_session_type)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
-      function = lookup_function!(all_functions, name, arity)
+      function = lookup_function!(all_functions, {name, arity})
 
-      session_typecheck_by_function(function, expected_session_type, all_functions, function_session_type)
+      %ST.Function{
+        name: name,
+        arity: arity,
+        return_type: return_type,
+        types_known?: types_known?
+      } = function
+
+      if not types_known? do
+        throw("Function #{name}/#{arity} has unknown return type. Use @spec to set parameter and return types.")
+      end
+
+      env = %{
+        # :ok or :error or :warning
+        :state => :ok,
+        # error message
+        :error_data => nil,
+        # :x => :atom
+        :variable_ctx => %{},
+        # Expected session type
+        # rec X.(!A().X)
+        :session_type => expected_session_type,
+        # Expected type
+        :type => return_type,
+        # {name, arity} => %ST.Function
+        :functions => all_functions,
+        # {name, arity} => rec X.(!A().X)
+        :function_session_type_ctx => function_session_type
+      }
+
+      session_typecheck_by_function(function, env)
+      :ok
     end
   end
 
-  @spec session_typecheck_by_function(ST.Function.t(), session_type(), %{{atom, number} => ST.Function.t()}, %{
-          {ST.label(), non_neg_integer()} => session_type()
-        }) :: %{}
-  def session_typecheck_by_function(%ST.Function{} = function, expected_session_type, functions, function_session_type) do
+  @spec session_typecheck_by_function(ST.Function.t(), map()) :: map()
+  def session_typecheck_by_function(%ST.Function{} = function, env) do
     %ST.Function{
-      bodies: bodies,
-      return_type: return_type,
-      parameters: parameters,
-      param_types: param_types,
       name: name,
-      arity: arity
+      arity: arity,
+      bodies: bodies,
+      # return_type: return_type,
+      parameters: parameters,
+      param_types: param_types
     } = function
 
     all_results =
@@ -81,33 +109,14 @@ defmodule ElixirSessions.SessionTypechecking do
           end)
           |> Enum.into(%{})
 
-        # IO.warn(inspect(variable_ctx))
+        env = %{env | variable_ctx: variable_ctx}
 
-        env = %{
-          # :ok or :error or :warning
-          :state => :ok,
-          # error message
-          :error_data => nil,
-          # :x => :atom
-          :variable_ctx => variable_ctx,
-          # Expected session type
-          # rec X.(!A().X)
-          :session_type => expected_session_type,
-          # Expected type
-          :type => return_type,
-          # {name, arity} => %ST.Function
-          :functions => functions,
-          # {name, arity} => rec X.(!A().X)
-          :function_session_type_ctx => function_session_type
-        }
-
-        res =
-          Macro.prewalk(ast, env, &typecheck/2)
-          |> elem(1)
+        {_ast, res_env} = Macro.prewalk(ast, env, &typecheck/2)
 
         IO.puts("Results for: #{name}/#{arity}")
 
-        res
+        # todo check return type
+        res_env
       end
 
     res =
@@ -126,7 +135,7 @@ defmodule ElixirSessions.SessionTypechecking do
       error_data: res[:error_data],
       variable_ctx: res[:variable_ctx],
       session_type: ST.st_to_string(res[:session_type]),
-      type: res[:type],
+      type: res[:type]
       # functions: res[:functions],
       # function_session_type_ctx: res[:function_session_type_ctx]
     }
@@ -569,7 +578,7 @@ defmodule ElixirSessions.SessionTypechecking do
         end
 
       if not function.types_known? do
-        throw({:error, "Function #{name}/#{length(args)} has unknown return type. Uuse @spec to set parameter and return types."})
+        throw({:error, "Function #{name}/#{length(args)} has unknown return type. Use @spec to set parameter and return types."})
       end
 
       if env[:function_session_type_ctx][name_arity] do
@@ -589,6 +598,8 @@ defmodule ElixirSessions.SessionTypechecking do
       else
         # Function with unknown session type (i.e. defp)
         # Map.merge(env[:function_session_type_ctx][name_arity], %{name_arity => env[:session_type]})
+        # session_typecheck_by_function(%ST.Function{} = function, expected_session_type, functions, function_session_type)
+
         throw({:error, "todo: Need to implement."})
         {node, env}
       end
@@ -1405,15 +1416,15 @@ defmodule ElixirSessions.SessionTypechecking do
     {label, types}
   end
 
-  # defp lookup_function(all_functions, name, arity) do
-  #   try do
-  #     {:ok, lookup_function!(all_functions, name, arity)}
-  #   catch
-  #     _ -> :error
-  #   end
-  # end
+  defp lookup_function(all_functions, {name, arity}) do
+    try do
+      {:ok, lookup_function!(all_functions, {name, arity})}
+    catch
+      _ -> :error
+    end
+  end
 
-  defp lookup_function!(all_functions, name, arity) do
+  defp lookup_function!(all_functions, {name, arity}) do
     res = Map.get(all_functions, {name, arity}, nil)
 
     if is_nil(res) do
@@ -1421,22 +1432,6 @@ defmodule ElixirSessions.SessionTypechecking do
     end
 
     res
-
-    # matches =
-    #   Enum.map(
-    #     all_functions,
-    #     fn
-    #       %ST.Function{name: ^name, arity: ^arity} = function -> function
-    #       _ -> nil
-    #     end
-    #   )
-    #   |> Enum.filter(fn elem -> !is_nil(elem) end)
-
-    # case length(matches) do
-    #   0 -> throw("Function #{name}/#{arity} was not found.")
-    #   1 -> hd(matches)
-    #   _ -> throw("Multiple function with the name #{name}/#{arity}.")
-    # end
   end
 
   # recompile && ElixirSessions.SessionTypechecking.run

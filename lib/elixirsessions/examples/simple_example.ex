@@ -62,10 +62,10 @@ defmodule ElixirSessions.SmallExample do
     end
   end
 
-  @spec call() :: :ok
+  @spec call :: no_return
   defp call() do
     send(self(), {:D})
-
+    call()
   end
 
   # @dual &ElixirSessions.SmallExample.example4/1
