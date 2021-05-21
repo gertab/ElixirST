@@ -1,4 +1,6 @@
 defmodule ElixirSessions.Retriever do
+  require Logger
+
   @moduledoc """
   Retrieves bytecode and (session) typechecks it
   """
@@ -8,59 +10,60 @@ defmodule ElixirSessions.Retriever do
   and forwards it to the typechecker/s.
   """
   # todo fix: if called using mix session_check SmallExample, then process/2 is reached twice (in task and after_compile)
+  # todo remove throws
   @spec process(binary, list) :: list
   def process(bytecode, options \\ []) do
-    # Gets debug_info chunk from BEAM file
-    chunks =
-      case :beam_lib.chunks(bytecode, [:debug_info]) do
-        {:ok, {_mod, chunks}} -> chunks
-        {:error, _, error} -> throw("Error: #{inspect(error)}")
-      end
+    try do
+      # Gets debug_info chunk from BEAM file
+      chunks =
+        case :beam_lib.chunks(bytecode, [:debug_info]) do
+          {:ok, {_mod, chunks}} -> chunks
+          {:error, _, error} -> throw({:error, inspect(error)})
+        end
 
-    # Gets the (extended) Elixir abstract syntax tree from debug_info chunk
-    dbgi_map =
-      case chunks[:debug_info] do
-        {:debug_info_v1, :elixir_erl, metadata} ->
-          case metadata do
-            {:elixir_v1, map, _} ->
-              # Erlang extended AST available
-              map
+      # Gets the (extended) Elixir abstract syntax tree from debug_info chunk
+      dbgi_map =
+        case chunks[:debug_info] do
+          {:debug_info_v1, :elixir_erl, metadata} ->
+            case metadata do
+              {:elixir_v1, map, _} ->
+                # Erlang extended AST available
+                map
 
-            {version, _, _} ->
-              throw("Found version #{version} but expected :elixir_v1.")
-          end
+              {version, _, _} ->
+                throw({:error, "Found version #{version} but expected :elixir_v1."})
+            end
 
-        x ->
-          throw("Error: #{inspect(x)}")
-      end
+          x ->
+            throw({:error, inspect(x)})
+        end
 
-    # Gets the list of session types, which were stored as attributes in the module
-    session_types = Keyword.get_values(dbgi_map[:attributes], :session_marked)
+      # Gets the list of session types, which were stored as attributes in the module
+      session_types = Keyword.get_values(dbgi_map[:attributes], :session_marked)
 
-    session_types_parsed =
-      session_types
-      |> Enum.map(fn {{name, arity}, session_type_string} ->
-        {{name, arity}, ST.string_to_st(session_type_string)}
-      end)
+      session_types_parsed =
+        session_types
+        |> Enum.map(fn {{name, arity}, session_type_string} ->
+          {{name, arity}, ST.string_to_st(session_type_string)}
+        end)
 
-    all_functions = get_all_functions!(dbgi_map)
+      function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
-    # dbgi_map[:attributes]
-    # |> IO.inspect()
+      all_functions =
+        get_all_functions!(dbgi_map)
+        |> add_types_to_functions(to_map(function_types))
 
-    # dbgi_map
-    # |> IO.inspect()
-
-    function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
-
-    all_functions = add_types_to_functions(all_functions, to_map(function_types))
-
-    ElixirSessions.SessionTypechecking.session_typecheck_module(
-      all_functions,
-      to_map(session_types_parsed),
-      dbgi_map[:module],
-      options
-    )
+      ElixirSessions.SessionTypechecking.session_typecheck_module(
+        all_functions,
+        to_map(session_types_parsed),
+        dbgi_map[:module],
+        options
+      )
+    catch
+      {:error, message} ->
+        Logger.error("Error while reading BEAM files: " <> message)
+        # x -> Logger.error(x)
+    end
   end
 
   # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile), e.g. kinda similar to ExUnit
@@ -107,7 +110,7 @@ defmodule ElixirSessions.Retriever do
          }}
 
       x ->
-        throw("Unknown info for #{inspect(x)}")
+        throw({:error, "Unknown info for #{inspect(x)}"})
     end)
     |> to_map()
   end

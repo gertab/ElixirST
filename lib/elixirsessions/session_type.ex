@@ -149,6 +149,11 @@ defmodule ST do
   @type label() :: atom()
 
   @typedoc """
+  Type for name and arity keys.
+  """
+  @type name_arity() :: {label(), non_neg_integer()}
+
+  @typedoc """
   Native types accepted in the send/receive statements.
   E.g. !Ping(integer)
   """
@@ -300,7 +305,7 @@ defmodule ST do
     @type session_type() :: ST.session_type()
     @type label() :: ST.label()
     @type ast() :: ST.ast()
-    @type func_name_arity() :: {label(), non_neg_integer()}
+    @type func_name_arity() :: ST.name_arity()
     @type t :: %__MODULE__{
             functions: [ST.Function.t()],
             function_st_context: %{func_name_arity() => session_type()},

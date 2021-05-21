@@ -40,7 +40,7 @@ defmodule ElixirSessions.SmallExample do
   # end
 
   # Types of branches
-  @session "!A().rec X.(!B()&{?Option1(atom), ?Option2().X})"
+  @session "!A().rec X.(!B().&{?Option1(atom), ?Option2().X})"
   @spec example4(pid()) :: atom()
   def example4(pid) do
     send(pid, {:A})
@@ -59,6 +59,31 @@ defmodule ElixirSessions.SmallExample do
       {:Option2} ->
         test_call(pid)
     end
+  end
+
+  @dual &ElixirSessions.SmallExample.example4/1
+  @spec example4dual(pid()) :: atom()
+  def example4dual(pid) do
+
+    receive do
+      {:A} ->
+        :ok
+    end
+    receive do
+      {:B} ->
+        :ok
+    end
+
+    send(pid, {:Option2})
+
+    receive do
+      {:B} ->
+        :ok
+    end
+
+    send(pid, {:Option1, :hello})
+
+    :ok
   end
 
   # @dual &ElixirSessions.SmallExample.example4/1

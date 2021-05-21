@@ -27,15 +27,10 @@ defmodule ElixirSessions.SessionTypechecking do
   ### todo remaining: tuple
   ### todo remaining: if/unless
 
-  @typedoc false
-  @type ast :: ST.ast()
-  @typedoc false
-  @type session_type :: ST.session_type()
-
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
   @spec session_typecheck_module(
-          %{{ST.label(), non_neg_integer()} => ST.Function.t()},
-          %{{ST.label(), non_neg_integer()} => session_type()},
+          %{ST.name_arity() => ST.Function.t()},
+          %{ST.name_arity() => ST.session_type()},
           atom(),
           list
         ) :: list
@@ -78,8 +73,6 @@ defmodule ElixirSessions.SessionTypechecking do
 
       result_env = session_typecheck_by_function(function, env)
 
-      Logger.info("Results for: #{name}/#{arity}")
-
       %{
         state: result_env[:state],
         error_data: result_env[:error_data],
@@ -89,7 +82,18 @@ defmodule ElixirSessions.SessionTypechecking do
         # functions: result_env[:functions],
         # function_session_type_ctx: result_env[:function_session_type_ctx]
       }
-      |> IO.inspect()
+      |> inspect()
+      |> Logger.debug()
+
+      case result_env[:state] do
+        :ok ->
+          Logger.info("Session typechecking for #{name}/#{arity} terminated successfully")
+
+        :error ->
+          Logger.error("Session typechecking for #{name}/#{arity} found an error. ")
+          Logger.error(result_env[:error_data])
+          throw(result_env[:error_data])
+      end
 
       result_env
     end
@@ -144,7 +148,7 @@ defmodule ElixirSessions.SessionTypechecking do
                %{
                  result
                  | state: :error,
-                   error_data: "Return type for #{name}/#{arity} is #{inspect(result[:type])} but expected" <> inspect(expected_return_type)
+                   error_data: "Return type for #{name}/#{arity} is #{inspect(result[:type])} but expected " <> inspect(expected_return_type)
                }}
 
             true ->
@@ -154,12 +158,12 @@ defmodule ElixirSessions.SessionTypechecking do
     end)
   end
 
-  @spec typecheck(ast(), map()) :: {ast(), map()}
+  @spec typecheck(ST.ast(), map()) :: {ST.ast(), map()}
   def typecheck(
-        node,
+        _node,
         %{
           state: :error,
-          error_data: error_data,
+          error_data: _error_data,
           variable_ctx: _,
           session_type: _,
           type: _,
@@ -167,9 +171,8 @@ defmodule ElixirSessions.SessionTypechecking do
           function_session_type_ctx: _
         } = env
       ) do
-    Logger.error("ElixirSessions Error! " <> error_data)
-    # throw("ERROR" <> inspect(error_data))
-    {node, env}
+    # Logger.error("ElixirSessions Error! " <> error_data)
+    {nil, env}
   end
 
   # Block
