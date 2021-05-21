@@ -40,10 +40,10 @@ defmodule ElixirSessions.SmallExample do
   # end
 
   # Types of branches
-  @session "rec X.(&{?A(boolean, number).!C().X,?B().X})"
+  @session "rec X.(&{?A(boolean, number).!C().rec Y.(!D().Y),?B().X})"
   @spec example4(number()) :: atom()
   def example4(aaaaa) do
-    b =
+    _b =
       case aaaaa do
         5 -> :ok
         _ -> :not_ok

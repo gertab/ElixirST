@@ -53,8 +53,6 @@ defmodule ElixirSessions.SessionTypechecking do
       function = lookup_function!(all_functions, {name, arity})
 
       %ST.Function{
-        name: name,
-        arity: arity,
         return_type: return_type,
         types_known?: types_known?
       } = function
@@ -74,7 +72,7 @@ defmodule ElixirSessions.SessionTypechecking do
         # rec X.(!A().X)
         :session_type => expected_session_type,
         # Expected type
-        :type => return_type,
+        :type => :any,
         # {name, arity} => %ST.Function
         :functions => all_functions,
         # {name, arity} => rec X.(!A().X)
@@ -82,7 +80,6 @@ defmodule ElixirSessions.SessionTypechecking do
       }
 
       session_typecheck_by_function(function, env)
-      :ok
     end
   end
 
@@ -92,7 +89,7 @@ defmodule ElixirSessions.SessionTypechecking do
       name: name,
       arity: arity,
       bodies: bodies,
-      # return_type: return_type,
+      return_type: expected_return_type,
       parameters: parameters,
       param_types: param_types
     } = function
@@ -114,8 +111,6 @@ defmodule ElixirSessions.SessionTypechecking do
         {_ast, res_env} = Macro.prewalk(ast, env, &typecheck/2)
 
         IO.puts("Results for: #{name}/#{arity}")
-
-        # todo check return type
         res_env
       end
 
@@ -126,7 +121,15 @@ defmodule ElixirSessions.SessionTypechecking do
             {:halt, result}
 
           _ ->
-            {:cont, result}
+            # Check return type
+            common_type = ElixirSessions.TypeOperations.greatest_lower_bound(result[:type], expected_return_type)
+
+            if common_type == :error do
+              {:halt, %{result | state: :error, error_data: "Return type found is #{inspect(result[:type])} but expected #{inspect(expected_return_type)}"}}
+            else
+              {:cont, result}
+            end
+
         end
       end)
 
@@ -140,8 +143,11 @@ defmodule ElixirSessions.SessionTypechecking do
       # function_session_type_ctx: res[:function_session_type_ctx]
     }
     |> IO.inspect()
+
+    res
   end
 
+  @spec typecheck(ast(), map()) :: {ast(), map()}
   def typecheck(
         node,
         %{
@@ -570,11 +576,13 @@ defmodule ElixirSessions.SessionTypechecking do
 
     try do
       function =
-        if env[:functions][name_arity] do
-          env[:functions][name_arity]
-        else
-          # Function does not exist in current module
-          throw({:error, "Function #{name}/#{length(args)} does not exist in current module."})
+        case lookup_function(env[:functions], name_arity) do
+          {:error, message} ->
+            # Function does not exist in current module
+            throw({:error, message})
+
+          {:ok, function} ->
+            function
         end
 
       if not function.types_known? do
@@ -597,11 +605,24 @@ defmodule ElixirSessions.SessionTypechecking do
         end
       else
         # Function with unknown session type (i.e. defp)
-        # Map.merge(env[:function_session_type_ctx][name_arity], %{name_arity => env[:session_type]})
-        # session_typecheck_by_function(%ST.Function{} = function, expected_session_type, functions, function_session_type)
+        env = %{
+          env
+          | variable_ctx: %{},
+            function_session_type_ctx: Map.merge(env[:function_session_type_ctx], %{name_arity => env[:session_type]})
+        }
 
-        throw({:error, "todo: Need to implement."})
-        {node, env}
+        new_env = session_typecheck_by_function(function, env)
+
+        cond do
+          new_env[:state] == :error ->
+            throw({:error, new_env[:error_data]})
+
+          new_env[:session_type] != %ST.Terminate{} ->
+            throw({:error, "Function #{name}/#{length(args)} does not match the session type " <> ST.st_to_string(env[:session_type])})
+
+          true ->
+            {node, %{env | session_type: new_env[:session_type], type: new_env[:type]}}
+        end
       end
     catch
       {:error, _} = error ->
@@ -1420,18 +1441,17 @@ defmodule ElixirSessions.SessionTypechecking do
     try do
       {:ok, lookup_function!(all_functions, {name, arity})}
     catch
-      _ -> :error
+      x -> {:error, x}
     end
   end
 
   defp lookup_function!(all_functions, {name, arity}) do
-    res = Map.get(all_functions, {name, arity}, nil)
-
-    if is_nil(res) do
-      throw("Function #{name}/#{arity} was not found.")
+    if all_functions[{name, arity}] do
+      all_functions[{name, arity}]
+    else
+      # Function does not exist in current module
+      throw({:error, "Function #{name}/#{arity} was not found in the current module."})
     end
-
-    res
   end
 
   # recompile && ElixirSessions.SessionTypechecking.run

@@ -185,6 +185,8 @@ defmodule ElixirSessions.TypeOperations do
   def greatest_lower_bound(:float, :integer), do: :float
   def greatest_lower_bound(:float, :number), do: :number
   def greatest_lower_bound(:number, :float), do: :number
+  def greatest_lower_bound(type, :no_return), do: type
+  def greatest_lower_bound(:no_return, type), do: type
 
   def greatest_lower_bound({:tuple, type1}, {:tuple, type2}) do
     case greatest_lower_bound(type1, type2) do
