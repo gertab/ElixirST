@@ -703,6 +703,10 @@ defmodule SessionTypecheckingTest do
     assert result[:state] == :ok
     assert result[:session_type] == %ST.Terminate{}
   end
+
+  test "function call - recursion" do
+
+  end
 end
 
 # defmodule SessionTypecheckingTest do
