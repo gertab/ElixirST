@@ -380,7 +380,7 @@ defmodule ElixirSessions.SessionTypechecking do
       end
 
       # Unfold if session type starts with rec X.
-      session_type = ST.unfold_current(env[:session_type])
+      session_type = ST.unfold(env[:session_type])
 
       %ST.Send{label: expected_label, types: expected_types, next: remaining_session_types} =
         case session_type do
@@ -446,7 +446,7 @@ defmodule ElixirSessions.SessionTypechecking do
       # In case of one receive branch, it should match with a %ST.Recv{}
       # In case of more than one receive branch, it should match with a %ST.Branch{}
       # Unfold if session type starts with rec X.(...)
-      session_type = ST.unfold_current(env[:session_type])
+      session_type = ST.unfold(env[:session_type])
 
       branches_session_types =
         case session_type do
