@@ -117,83 +117,17 @@ defmodule TypeOperationsTest do
     assert return_type == :number
   end
 
-  test "subtype? atom 1" do
-    type1 = :atom
-    type2 = :atom
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
-  end
-
-  test "subtype? atom 2" do
-    type1 = :atom
-    type2 = :atom
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
-  end
-
-  test "subtype? number" do
-    type1 = :number
-    type2 = :number
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :number
-  end
-
-  test "subtype? tuple" do
-    type1 = {:tuple, [:atom, :integer, :atom]}
-    type2 = {:tuple, [:atom, :integer, :atom]}
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
-
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) ===
-             {:tuple, [:atom, :integer, :atom]}
-  end
-
-  test "subtype? list" do
+  test "equal list" do
     type1 = {:list, [:number]}
     type2 = {:list, [:number]}
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === {:list, [:number]}
+    assert ElixirSessions.TypeOperations.equal?(type1, type2) === true
+    assert ElixirSessions.TypeOperations.equal?(type2, type1) === true
   end
 
-  test "subtype? list - maybe todo remove" do
-    type1 = {:list, [:atom, :integer, :atom]}
-    type2 = {:list, [:atom, :integer, :atom]}
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
-
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) ===
-             {:list, [:atom, :integer, :atom]}
-  end
-
-  test "subtype? bad" do
-    assert ElixirSessions.TypeOperations.subtype?(:abc, :number) === false
-    assert ElixirSessions.TypeOperations.subtype?({:tuple, [:atom]}, {:list, [:abc]}) === false
-    assert ElixirSessions.TypeOperations.subtype?(:float, :atom) === false
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(:abc, :number) === :error
-
-    assert ElixirSessions.TypeOperations.greatest_lower_bound({:tuple, [:atom]}, {:list, [:abc]}) ===
-             :error
-
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(:float, :atom) === :error
-  end
-
-  test "greatest lower bound list" do
-    assert ElixirSessions.TypeOperations.greatest_lower_bound([:number, :number, :number]) ==
-             :number
-
-    assert ElixirSessions.TypeOperations.greatest_lower_bound([
-             {:number, :atom, :number},
-             {:number, :number, :number}
-           ]) == :error
-
-    assert ElixirSessions.TypeOperations.greatest_lower_bound([
-             {:tuple, [:number, :number, :number]},
-             {:tuple, [:number, :number, :number]}
-           ]) == {:tuple, [:number, :number, :number]}
+  test "equal bad" do
+    assert ElixirSessions.TypeOperations.equal?(:abc, :number) === false
+    assert ElixirSessions.TypeOperations.equal?({:tuple, [:atom]}, {:list, [:abc]}) === false
+    assert ElixirSessions.TypeOperations.equal?(:float, :atom) === false
   end
 
   test "var_pattern" do

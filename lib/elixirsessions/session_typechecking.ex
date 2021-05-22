@@ -132,7 +132,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
         _ ->
           # Check return type
-          common_type = ElixirSessions.TypeOperations.greatest_lower_bound(result[:type], expected_return_type)
+          same_type = ElixirSessions.TypeOperations.equal?(result[:type], expected_return_type)
 
           cond do
             result[:session_type] != %ST.Terminate{} ->
@@ -143,7 +143,7 @@ defmodule ElixirSessions.SessionTypechecking do
                    error_data: "Function #{name}/#{arity} terminates with remaining session type " <> ST.st_to_string(result[:session_type])
                }}
 
-            common_type == :error ->
+            same_type == false ->
               {:halt,
                %{
                  result
@@ -362,19 +362,20 @@ defmodule ElixirSessions.SessionTypechecking do
         throw({:error, send_body_env[:error_data]})
       end
 
-      if ElixirSessions.TypeOperations.subtype?(send_destination_env[:type], :pid) == false do
+      if ElixirSessions.TypeOperations.equal?(send_destination_env[:type], :pid) == false do
         throw({:error, "Expected pid in send statement, but found #{inspect(send_destination_env[:type])}"})
       end
 
-      if ElixirSessions.TypeOperations.subtype?(send_body_env[:type], {:tuple, :any}) == false do
-        throw({:error, "Expected a tuple in send statement containing {:label, ...}"})
+      case send_body_env[:type] do
+        {:tuple, _} -> :ok
+        _ -> throw({:error, "Expected a tuple in send statement containing {:label, ...}"})
       end
 
       {:tuple, [label_type | parameter_types]} = send_body_env[:type]
 
       [label | parameters] = tuple_to_list(send_body)
 
-      if ElixirSessions.TypeOperations.subtype?(label_type, :atom) == false do
+      if ElixirSessions.TypeOperations.equal?(label_type, :atom) == false do
         throw({:error, "First item in tuple should be a literal/atom"})
       end
 
@@ -415,7 +416,7 @@ defmodule ElixirSessions.SessionTypechecking do
         )
       end
 
-      if ElixirSessions.TypeOperations.subtype?(parameter_types, expected_types) == false do
+      if ElixirSessions.TypeOperations.equal?(parameter_types, expected_types) == false do
         throw(
           {:error,
            "Incorrect parameter types. Expected " <>
@@ -607,16 +608,7 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        a = 5
-
-        receive do
-          {:hello, value} ->
-            x = not value
-            a = a < 4
-            send(self(), {:abc, a, x})
-        end
-
-        a
+        7.6 + true
       end
 
     st = ST.string_to_st("?hello(boolean).!abc(number, boolean)")
@@ -657,16 +649,16 @@ defmodule ElixirSessions.SessionTypechecking do
           {:halt, {:error, message}}
 
         _ ->
-          common_type = ElixirSessions.TypeOperations.greatest_lower_bound(curr_case[:type], acc[:type])
+          common_type = ElixirSessions.TypeOperations.equal?(curr_case[:type], acc[:type])
 
-          if common_type == :error do
+          if common_type == false do
             {:halt,
              {:error,
               "Types #{inspect(curr_case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
                 "cases should have end up with the same type."}}
           else
             if ST.equal?(curr_case[:session_type], acc[:session_type]) do
-              {:cont, %{curr_case | type: common_type}}
+              {:cont, %{curr_case | type: curr_case[:type]}}
             else
               {:halt,
                {:error,
@@ -687,7 +679,7 @@ defmodule ElixirSessions.SessionTypechecking do
     %{env | state: :error, error_data: error_message(message, meta)}
   end
 
-  defp process_binary_operations(node, meta, operator, arg1, arg2, max_type, is_comparison, env) do
+  defp process_binary_operations(node, meta, operator, arg1, arg2, allowed_type, is_comparison, env) do
     {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
     {_op2_ast, op2_env} = Macro.prewalk(arg2, env, &typecheck/2)
 
@@ -708,9 +700,9 @@ defmodule ElixirSessions.SessionTypechecking do
              variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
          }}
       else
-        common_type = ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], op2_env[:type])
+        same_type = ElixirSessions.TypeOperations.equal?(op1_env[:type], op2_env[:type])
 
-        if common_type == :error do
+        if same_type == false do
           {node,
            %{
              op1_env
@@ -721,21 +713,21 @@ defmodule ElixirSessions.SessionTypechecking do
                    meta
                  )
            }}
-        end
-
-        if ElixirSessions.TypeOperations.subtype?(common_type, max_type) do
-          {node,
-           %{
-             op1_env
-             | type: common_type,
-               variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
-           }}
         else
-          throw(
-            {:error,
-             "Operator type problem in #{inspect(operator)}: #{inspect(op1_env[:type])}, " <>
-               "#{inspect(op2_env[:type])} is not of type #{inspect(max_type)}"}
-          )
+          if ElixirSessions.TypeOperations.equal?(op1_env[:type], allowed_type) do
+            {node,
+             %{
+               op1_env
+               | type: op1_env[:type],
+                 variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
+             }}
+          else
+            throw(
+              {:error,
+               "Operator type problem in #{inspect(operator)}: #{inspect(op1_env[:type])}, " <>
+                 "#{inspect(op2_env[:type])} is not of type #{inspect(allowed_type)}"}
+            )
+          end
         end
       end
     catch
@@ -747,7 +739,7 @@ defmodule ElixirSessions.SessionTypechecking do
     end
   end
 
-  defp process_unary_operations(node, meta, arg1, max_type, env) do
+  defp process_unary_operations(node, meta, arg1, expected_type, env) do
     {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
 
     case op1_env[:state] do
@@ -755,23 +747,21 @@ defmodule ElixirSessions.SessionTypechecking do
         {node, op1_env}
 
       _ ->
-        expected_type = ElixirSessions.TypeOperations.greatest_lower_bound(op1_env[:type], max_type)
+        same_type = ElixirSessions.TypeOperations.equal?(op1_env[:type], expected_type)
 
-        case expected_type do
-          :error ->
-            {node,
-             %{
-               op1_env
-               | state: :error,
-                 error_data:
-                   error_message(
-                     "Type problem: Found expression of type #{inspect(op1_env[:type])} but expected a #{inspect(max_type)}",
-                     meta
-                   )
-             }}
-
-          _ ->
-            {node, op1_env}
+        if same_type do
+          {node, op1_env}
+        else
+          {node,
+           %{
+             op1_env
+             | state: :error,
+               error_data:
+                 error_message(
+                   "Type problem: Found expression of type #{inspect(op1_env[:type])} but expected a #{inspect(expected_type)}",
+                   meta
+                 )
+           }}
         end
     end
   end

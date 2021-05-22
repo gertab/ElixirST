@@ -14,8 +14,6 @@ defmodule ElixirSessions.TypeOperations do
     :string,
     :no_return,
     nil
-    # :float,
-    # :integer,
   ]
 
   @doc """
@@ -93,10 +91,9 @@ defmodule ElixirSessions.TypeOperations do
   def get_type(type, env) when is_tuple(type),
     do: {:tuple, Enum.map(Tuple.to_list(type), &get_type(&1, env))}
 
-  def get_type(type, _env) when is_binary(type), do: :binary # or string
+  # or string
+  def get_type(type, _env) when is_binary(type), do: :binary
   def get_type(type, _env) when is_boolean(type), do: :boolean
-  # def get_type(type, _env) when is_float(type), do: :float
-  # def get_type(type, _env) when is_integer(type), do: :integer
   def get_type(type, _env) when is_nil(type), do: nil
   def get_type(type, _env) when is_number(type), do: :number
   def get_type(type, _env) when is_pid(type), do: :pid
@@ -121,106 +118,43 @@ defmodule ElixirSessions.TypeOperations do
     nil
   end
 
+  @spec typeof(atom | binary | boolean | :error | nil | number | pid) :: :atom | :binary | :boolean | :error | nil | :number | :pid
   def typeof(value) when is_nil(value), do: nil
   def typeof(value) when is_boolean(value), do: :boolean
-  # def typeof(value) when is_integer(value), do: :integer
-  # def typeof(value) when is_float(value), do: :float
   def typeof(value) when is_number(value), do: :number
   def typeof(value) when is_pid(value), do: :pid
   def typeof(value) when is_binary(value), do: :binary
   def typeof(value) when is_atom(value), do: :atom
   def typeof(_), do: :error
 
-  def subtype?(type1, type2)
-  def subtype?(type, type), do: true
+  @spec equal?(any, any) :: boolean
+  def equal?(type, type), do: true
+  def equal?(_, _), do: false
+
   # def subtype?(:integer, :number), do: true
   # def subtype?(:integer, :float), do: true
   # def subtype?(:float, :number), do: true
 
-  def subtype?({:tuple, type1}, {:tuple, type2}) do
-    subtype?(type1, type2)
-  end
+  # def subtype?({:tuple, type1}, {:tuple, type2}) do
+  #   subtype?(type1, type2)
+  # end
 
-  def subtype?({:list, type1}, {:list, type2})
-      when is_list(type1) and is_list(type2) do
-    # todo: either t or [t]; [t1, t2] is not a valid type
-    subtype?(type1, type2)
-  end
+  # def subtype?({:list, type1}, {:list, type2})
+  #     when is_list(type1) and is_list(type2) do
+  #   # todo: either t or [t]; [t1, t2] is not a valid type
+  #   subtype?(type1, type2)
+  # end
 
-  def subtype?(type1, type2) when is_list(type1) and is_list(type2) do
-    result =
-      Enum.zip(type1, type2)
-      |> Enum.map(fn {left, right} -> subtype?(left, right) end)
+  # def subtype?(type1, type2) when is_list(type1) and is_list(type2) do
+  #   result =
+  #     Enum.zip(type1, type2)
+  #     |> Enum.map(fn {left, right} -> subtype?(left, right) end)
 
-    not Enum.member?(result, false)
-  end
+  #   not Enum.member?(result, false)
+  # end
 
-  def subtype?(_, :any), do: true
-  def subtype?(_, _), do: false
-
-  def greatest_lower_bound(types) when is_list(types) do
-    Enum.reduce_while(types, hd(types), fn type, acc ->
-      case greatest_lower_bound(type, acc) do
-        :error -> {:halt, :error}
-        x -> {:cont, x}
-      end
-    end)
-  end
-
-  # todo add any
-
-  def greatest_lower_bound(type1, type2)
-  def greatest_lower_bound(type, type), do: type
-  # def greatest_lower_bound(:integer, :number), do: :number
-  # def greatest_lower_bound(:number, :integer), do: :number
-  # def greatest_lower_bound(:integer, :float), do: :float
-  # def greatest_lower_bound(:float, :integer), do: :float
-  # def greatest_lower_bound(:float, :number), do: :number
-  # def greatest_lower_bound(:number, :float), do: :number
-  def greatest_lower_bound(type, :no_return), do: type
-  def greatest_lower_bound(:no_return, type), do: type
-
-  def greatest_lower_bound({:tuple, type1}, {:tuple, type2}) do
-    case greatest_lower_bound(type1, type2) do
-      :error ->
-        :error
-
-      inner ->
-        {:tuple, inner}
-    end
-  end
-
-  def greatest_lower_bound({:list, type1}, {:list, type2})
-      when is_list(type1) and is_list(type2) do
-    # todo: either t or [t]; [t1, t2] is not a valid type
-    case greatest_lower_bound(type1, type2) do
-      :error ->
-        :error
-
-      inner ->
-        {:list, inner}
-    end
-  end
-
-  def greatest_lower_bound(type1, type2) when is_list(type1) and is_list(type2) do
-    result =
-      Enum.zip(type1, type2)
-      |> Enum.map(fn {left, right} -> greatest_lower_bound(left, right) end)
-
-    if Enum.member?(result, :error) do
-      :error
-    else
-      result
-    end
-  end
-
-  def greatest_lower_bound(type1, type2)
-      when is_atom(type1) and is_atom(type2) and type1 not in @types and type2 not in @types,
-      do: :atom
-
-  def greatest_lower_bound(type, :any), do: type
-  def greatest_lower_bound(:any, type), do: type
-  def greatest_lower_bound(_, _), do: :error
+  # def subtype?(_, :any), do: true
+  # def subtype?(_, _), do: false
 
   @spec type_to_guard(binary) :: :error | binary
   def type_to_guard(type) when is_binary(type) do
@@ -316,11 +250,11 @@ defmodule ElixirSessions.TypeOperations do
   defp get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
 
   defp get_vars(value, type) when type in @types or is_atom(type) do
+    # (is_integer(value) and type == :integer) or
+    # (is_float(value) and type == :float) or
     literal =
       (is_nil(value) and type == nil) or
         (is_boolean(value) and type == :boolean) or
-        # (is_integer(value) and type == :integer) or
-        # (is_float(value) and type == :float) or
         (is_number(value) and type == :number) or
         (is_pid(value) and type == :pid) or
         (is_binary(value) and type == :binary) or
