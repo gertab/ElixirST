@@ -5,7 +5,7 @@ defmodule TypeOperationsTest do
   test "small example" do
     {:@, _, [spec]} =
       quote do
-        @spec function(integer, integer()) :: number
+        @spec function(integer(), integer()) :: number
       end
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
@@ -13,7 +13,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:integer, :integer]}
+    assert args_types == {:list, [:number, :number]}
     assert return_type == :number
   end
 
@@ -25,8 +25,6 @@ defmodule TypeOperationsTest do
                 atom,
                 binary,
                 boolean,
-                float,
-                integer,
                 nil,
                 number,
                 pid,
@@ -40,7 +38,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:any, :atom, :binary, :boolean, :float, :integer, nil, :number, :pid, :string, :no_return]}
+    assert args_types == {:list, [:any, :atom, :binary, :boolean, nil, :number, :pid, :string, :no_return]}
     assert return_type == :any
   end
 
@@ -55,7 +53,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:integer, {:list, [:integer]}]}
+    assert args_types == {:list, [:number, {:list, [:number]}]}
     assert return_type == {:tuple, [:number]}
   end
 
@@ -70,7 +68,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:integer, nil, :atom, :binary]}
+    assert args_types == {:list, [:number, nil, :atom, :binary]}
     assert return_type == :atom
   end
 
@@ -85,14 +83,14 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:float, :boolean, :boolean, :integer, nil, :pid, :binary]}
+    assert args_types == {:list, [:number, :boolean, :boolean, :number, nil, :pid, :binary]}
     assert return_type == :atom
   end
 
   test "edge tuple example" do
     {:@, _, [spec]} =
       quote do
-        @spec function({number, integer, :ok}) :: :ok
+        @spec function({number, number, :ok}) :: :ok
       end
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
@@ -100,7 +98,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [{:tuple, [:number, :integer, :atom]}]}
+    assert args_types == {:list, [{:tuple, [:number, :number, :atom]}]}
     assert return_type == :atom
   end
 
@@ -135,27 +133,11 @@ defmodule TypeOperationsTest do
     assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :atom
   end
 
-  test "subtype? number 1" do
-    type1 = :integer
+  test "subtype? number" do
+    type1 = :number
     type2 = :number
     assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :number
-  end
-
-  test "subtype? number 2" do
-    type1 = :integer
-    type2 = :float
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
-    assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :float
-  end
-
-  test "subtype? number 3" do
-    type1 = :float
-    type2 = :number
-    assert ElixirSessions.TypeOperations.subtype?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === false
+    assert ElixirSessions.TypeOperations.subtype?(type2, type1) === true
     assert ElixirSessions.TypeOperations.greatest_lower_bound(type2, type1) === :number
   end
 
@@ -200,18 +182,18 @@ defmodule TypeOperationsTest do
   end
 
   test "greatest lower bound list" do
-    assert ElixirSessions.TypeOperations.greatest_lower_bound([:integer, :number, :float]) ==
+    assert ElixirSessions.TypeOperations.greatest_lower_bound([:number, :number, :number]) ==
              :number
 
     assert ElixirSessions.TypeOperations.greatest_lower_bound([
-             {:integer, :number, :float},
-             {:number, :integer, :integer}
+             {:number, :atom, :number},
+             {:number, :number, :number}
            ]) == :error
 
     assert ElixirSessions.TypeOperations.greatest_lower_bound([
-             {:tuple, [:integer, :number, :float]},
-             {:tuple, [:number, :integer, :integer]}
-           ]) == {:tuple, [:number, :number, :float]}
+             {:tuple, [:number, :number, :number]},
+             {:tuple, [:number, :number, :number]}
+           ]) == {:tuple, [:number, :number, :number]}
   end
 
   test "var_pattern" do

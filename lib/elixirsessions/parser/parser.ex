@@ -69,7 +69,7 @@ end
 
 defmodule Helpers do
   @moduledoc false
-  def extract_token({_token, _line, value}), do: value
+  # def extract_token({_token, _line, value}), do: value
   @spec to_atom([char, ...]) :: atom
   def to_atom(':' ++ atom), do: List.to_atom(atom)
 end

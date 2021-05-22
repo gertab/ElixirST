@@ -12,7 +12,7 @@ defmodule ElixirSessions.Operations do
   @spec validate(session_type()) :: :ok | {:error, any()}
   def validate(session_type) do
     try do
-      ElixirSessions.Operations.validate!(session_type)
+      validate!(session_type)
       :ok
     catch
       x -> {:error, x}
@@ -119,6 +119,7 @@ defmodule ElixirSessions.Operations do
   def convert_to_structs({:send, label, types, next}, recurse_var) do
     accepted_types = ElixirSessions.TypeOperations.accepted_types()
 
+    types = Enum.map(types, fn t -> if t in [:integer, :float], do: :number, else: t end)
     invalid_type = Enum.filter(types, fn t -> t not in accepted_types end)
 
     if length(invalid_type) > 0 do
@@ -131,6 +132,7 @@ defmodule ElixirSessions.Operations do
   def convert_to_structs({:recv, label, types, next}, recurse_var) do
     accepted_types = ElixirSessions.TypeOperations.accepted_types()
 
+    types = Enum.map(types, fn t -> if t in [:integer, :float], do: :number, else: t end)
     invalid_type = Enum.filter(types, fn t -> t not in accepted_types end)
 
     if length(invalid_type) > 0 do

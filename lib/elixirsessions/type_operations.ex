@@ -9,17 +9,17 @@ defmodule ElixirSessions.TypeOperations do
     :atom,
     :binary,
     :boolean,
-    :float,
-    :integer,
-    nil,
     :number,
     :pid,
     :string,
-    :no_return
+    :no_return,
+    nil
+    # :float,
+    # :integer,
   ]
 
   @doc """
-  Returns a list of all accepted types, including :number, :integer, :atom, ...
+  Returns a list of all accepted types, including :number, :atom, ...
   """
   @spec accepted_types :: [atom]
   def accepted_types() do
@@ -56,8 +56,8 @@ defmodule ElixirSessions.TypeOperations do
 
   @doc """
     Give types in @spec format, returns usable types.
-    Accepts: any, atom, binary, boolean, float, integer, nil, number, pid, string, no_return, [] and {}
-    The type of variables is returned if the environment is configured.
+    Accepts: any, atom, binary, boolean, nil, number, pid, string, no_return, list and tuple
+    The type of variables is returned if the environment is contains the corresponding type of variable.
   """
   @spec get_type(any) :: atom | {:list, list} | {:tuple, list}
   def get_type(type) do
@@ -67,6 +67,11 @@ defmodule ElixirSessions.TypeOperations do
   @spec get_type(any, %{}) :: atom | {:list, list} | {:tuple, list}
   def get_type({type, _, _}, _env) when type in @types do
     type
+  end
+
+  def get_type({type, _, _}, _env) when type in [:integer, :float] do
+    # todo maybe warn
+    :number
   end
 
   def get_type({:{}, _, types}, env), do: {:tuple, Enum.map(types, &get_type(&1, env))}
@@ -88,10 +93,10 @@ defmodule ElixirSessions.TypeOperations do
   def get_type(type, env) when is_tuple(type),
     do: {:tuple, Enum.map(Tuple.to_list(type), &get_type(&1, env))}
 
-  def get_type(type, _env) when is_binary(type), do: :binary
+  def get_type(type, _env) when is_binary(type), do: :binary # or string
   def get_type(type, _env) when is_boolean(type), do: :boolean
-  def get_type(type, _env) when is_float(type), do: :float
-  def get_type(type, _env) when is_integer(type), do: :integer
+  # def get_type(type, _env) when is_float(type), do: :float
+  # def get_type(type, _env) when is_integer(type), do: :integer
   def get_type(type, _env) when is_nil(type), do: nil
   def get_type(type, _env) when is_number(type), do: :number
   def get_type(type, _env) when is_pid(type), do: :pid
@@ -118,8 +123,8 @@ defmodule ElixirSessions.TypeOperations do
 
   def typeof(value) when is_nil(value), do: nil
   def typeof(value) when is_boolean(value), do: :boolean
-  def typeof(value) when is_integer(value), do: :integer
-  def typeof(value) when is_float(value), do: :float
+  # def typeof(value) when is_integer(value), do: :integer
+  # def typeof(value) when is_float(value), do: :float
   def typeof(value) when is_number(value), do: :number
   def typeof(value) when is_pid(value), do: :pid
   def typeof(value) when is_binary(value), do: :binary
@@ -128,9 +133,9 @@ defmodule ElixirSessions.TypeOperations do
 
   def subtype?(type1, type2)
   def subtype?(type, type), do: true
-  def subtype?(:integer, :number), do: true
-  def subtype?(:integer, :float), do: true
-  def subtype?(:float, :number), do: true
+  # def subtype?(:integer, :number), do: true
+  # def subtype?(:integer, :float), do: true
+  # def subtype?(:float, :number), do: true
 
   def subtype?({:tuple, type1}, {:tuple, type2}) do
     subtype?(type1, type2)
@@ -166,12 +171,12 @@ defmodule ElixirSessions.TypeOperations do
 
   def greatest_lower_bound(type1, type2)
   def greatest_lower_bound(type, type), do: type
-  def greatest_lower_bound(:integer, :number), do: :number
-  def greatest_lower_bound(:number, :integer), do: :number
-  def greatest_lower_bound(:integer, :float), do: :float
-  def greatest_lower_bound(:float, :integer), do: :float
-  def greatest_lower_bound(:float, :number), do: :number
-  def greatest_lower_bound(:number, :float), do: :number
+  # def greatest_lower_bound(:integer, :number), do: :number
+  # def greatest_lower_bound(:number, :integer), do: :number
+  # def greatest_lower_bound(:integer, :float), do: :float
+  # def greatest_lower_bound(:float, :integer), do: :float
+  # def greatest_lower_bound(:float, :number), do: :number
+  # def greatest_lower_bound(:number, :float), do: :number
   def greatest_lower_bound(type, :no_return), do: type
   def greatest_lower_bound(:no_return, type), do: type
 
@@ -314,13 +319,14 @@ defmodule ElixirSessions.TypeOperations do
     literal =
       (is_nil(value) and type == nil) or
         (is_boolean(value) and type == :boolean) or
-        (is_integer(value) and type == :integer) or
-        (is_float(value) and type == :float) or
+        # (is_integer(value) and type == :integer) or
+        # (is_float(value) and type == :float) or
         (is_number(value) and type == :number) or
         (is_pid(value) and type == :pid) or
         (is_binary(value) and type == :binary) or
         (is_atom(value) and type == :atom)
-        # (is_atom(value) and subtype?(type, :atom))
+
+    # (is_atom(value) and subtype?(type, :atom))
 
     if literal do
       []

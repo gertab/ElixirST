@@ -58,9 +58,9 @@ defmodule ST do
 
   #### Simple example
 
-      iex> s = "!Hello(Integer)"
+      iex> s = "!Hello(Number)"
       ...> ST.string_to_st(s)
-      %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:integer]}
+      %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:number]}
 
   #### Another example
 
@@ -106,16 +106,16 @@ defmodule ST do
   For example, the dual of `!Hello()` becomes `?Hello()`. The dual of `&{?Option1(), ?Option2()}` becomes `+{!Option1(), !Option2()}`.
 
   #### Usage example
-      iex> st_string = "!Ping(Integer).?Pong(String)"
+      iex> st_string = "!Ping(Number).?Pong(String)"
       ...> st = ST.string_to_st(st_string)
       ...> st_dual = ST.dual(st)
       %ST.Recv{
         label: :Ping,
         next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: [:string]},
-        types: [:integer]
+        types: [:number]
       }
       ...> ST.st_to_string(st_dual)
-      "?Ping(integer).!Pong(string)"
+      "?Ping(number).!Pong(string)"
 
   """
 
@@ -422,16 +422,16 @@ defmodule ST do
   -  Branch  <-> Choice
 
   ## Examples
-      iex> st_string = "!Ping(Integer).?Pong(String)"
+      iex> st_string = "!Ping(Number).?Pong(String)"
       ...> st = ElixirSessions.Parser.parse(st_string)
       ...> st_dual = ST.dual(st)
       %ST.Recv{
         label: :Ping,
         next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: [:string]},
-        types: [:integer]
+        types: [:number]
       }
       ...> ST.st_to_string(st_dual)
-      "?Ping(integer).!Pong(string)"
+      "?Ping(number).!Pong(string)"
 
   """
   @spec dual(session_type()) :: session_type()

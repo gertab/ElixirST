@@ -58,11 +58,11 @@ defmodule ParserTest do
   end
 
   test "send receive choicde session type" do
-    source = "!Hello(Integer).+{!neg(number, pid).?Num(Number)}"
+    source = "!Hello(Number).+{!neg(number, pid).?Num(Number)}"
 
     expected = %ST.Send{
       label: :Hello,
-      types: [:integer],
+      types: [:number],
       next: %ST.Choice{
         choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}
       }
