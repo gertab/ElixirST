@@ -44,6 +44,7 @@ defmodule ElixirSessions.Checking do
     ElixirSessions.Retriever.process(bytecode)
   end
 
+  # todo throws -> Logger
   # Processes @session attribute - gets the function and session type details
   defp session_attribute(session, name, arity, kind, env) do
     if not is_nil(session) do
@@ -126,7 +127,7 @@ defmodule ElixirSessions.Checking do
 
       if args_types_converted == :error or return_type_converted == :error do
         throw(
-          "Problem with @spec for #{spec_name}/#{length(args_types)}" <>
+          "Problem with @spec for #{spec_name}/#{length(args_types)} " <>
             inspect(args_types) <> " " <> inspect(return_type)
         )
       end

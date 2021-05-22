@@ -40,7 +40,7 @@ defmodule SessionTypecheckingTest do
         :hello3
       end
 
-    assert typecheck(ast)[:type] == :hello3
+    assert typecheck(ast)[:type] == :atom
     assert typecheck(ast)[:state] == :ok
   end
 
@@ -223,7 +223,7 @@ defmodule SessionTypecheckingTest do
 
     result = typecheck(ast)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:integer, :integer, :boolean, :abc, :float]}
+    assert result[:type] == {:tuple, [:integer, :integer, :boolean, :atom, :float]}
 
     ast =
       quote do
@@ -276,7 +276,7 @@ defmodule SessionTypecheckingTest do
     env = %{env() | session_type: ST.string_to_st("!hello(boolean, boolean)")}
     result = typecheck(ast, env)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:hello, :boolean, :boolean]}
+    assert result[:type] == {:tuple, [:atom, :boolean, :boolean]}
     assert result[:session_type] == %ST.Terminate{}
 
     ast =
@@ -334,7 +334,7 @@ defmodule SessionTypecheckingTest do
     env = %{env() | session_type: ST.string_to_st("!A(number).!B(atom)")}
     result = typecheck(ast, env)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:B, :abc]}
+    assert result[:type] == {:tuple, [:atom, :atom]}
     assert result[:session_type] == %ST.Terminate{}
   end
 
@@ -357,7 +357,7 @@ defmodule SessionTypecheckingTest do
     env = %{env() | session_type: ST.string_to_st("+{!hello(boolean, boolean)}")}
     result = typecheck(ast, env)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:hello, :boolean, :boolean]}
+    assert result[:type] == {:tuple, [:atom, :boolean, :boolean]}
     assert result[:session_type] == %ST.Terminate{}
 
     ast =
@@ -415,7 +415,7 @@ defmodule SessionTypecheckingTest do
     env = %{env() | session_type: ST.string_to_st("+{!A(number).!B(atom), !C(atom)}")}
     result = typecheck(ast, env)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:B, :abc]}
+    assert result[:type] == {:tuple, [:atom, :atom]}
     assert result[:session_type] == %ST.Terminate{}
   end
 
@@ -567,7 +567,7 @@ defmodule SessionTypecheckingTest do
     env = %{env() | session_type: ST.string_to_st("?hello(boolean).!abc(boolean, boolean, number)")}
     result = typecheck(ast, env)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:abc, :boolean, :boolean, :float]}
+    assert result[:type] == {:tuple, [:atom, :boolean, :boolean, :float]}
     assert result[:session_type] == %ST.Terminate{}
 
     ast =
@@ -672,7 +672,7 @@ defmodule SessionTypecheckingTest do
 
     result = typecheck(ast, env)
     assert result[:state] == :ok
-    assert result[:type] == {:tuple, [:Terminate]}
+    assert result[:type] == {:tuple, [:atom]}
     assert result[:session_type] == %ST.Terminate{}
   end
 

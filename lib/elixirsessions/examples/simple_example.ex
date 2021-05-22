@@ -48,7 +48,7 @@ defmodule ElixirSessions.SmallExample do
     test_call(pid)
   end
 
-  @spec test_call(pid) :: :atom
+  @spec test_call(pid) :: :ok
   defp test_call(pid) do
     send(pid, {:B})
 

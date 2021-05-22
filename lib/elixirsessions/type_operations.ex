@@ -95,7 +95,7 @@ defmodule ElixirSessions.TypeOperations do
   def get_type(type, _env) when is_nil(type), do: nil
   def get_type(type, _env) when is_number(type), do: :number
   def get_type(type, _env) when is_pid(type), do: :pid
-  def get_type(type, _env) when is_atom(type), do: type
+  def get_type(type, _env) when is_atom(type), do: :atom
   def get_type(_, _), do: :error
 
   @doc """
@@ -123,21 +123,11 @@ defmodule ElixirSessions.TypeOperations do
   def typeof(value) when is_number(value), do: :number
   def typeof(value) when is_pid(value), do: :pid
   def typeof(value) when is_binary(value), do: :binary
-  def typeof(value) when is_atom(value), do: value
+  def typeof(value) when is_atom(value), do: :atom
   def typeof(_), do: :error
-
-  # Is type1 a subtype of type2, type1 <: type2?
-  # def subtype?(type1, type2) do
-  #   case greatest_lower_bound(type1, type2) do
-  #     :error -> false
-  #     _ -> true
-  #   end
-  # end
 
   def subtype?(type1, type2)
   def subtype?(type, type), do: true
-  def subtype?(type1, :atom) when is_atom(type1) and type1 not in @types, do: true
-  # def subtype?(type1, :atom) when is_atom(type1), do: true # todo not sure
   def subtype?(:integer, :number), do: true
   def subtype?(:integer, :float), do: true
   def subtype?(:float, :number), do: true
@@ -176,9 +166,6 @@ defmodule ElixirSessions.TypeOperations do
 
   def greatest_lower_bound(type1, type2)
   def greatest_lower_bound(type, type), do: type
-  def greatest_lower_bound(type1, :atom) when is_atom(type1) and type1 not in @types, do: :atom
-  def greatest_lower_bound(:atom, type2) when is_atom(type2) and type2 not in @types, do: :atom
-  # def greatest_lower_bound(type1, :atom) when is_atom(type1), do: true # todo not sure
   def greatest_lower_bound(:integer, :number), do: :number
   def greatest_lower_bound(:number, :integer), do: :number
   def greatest_lower_bound(:integer, :float), do: :float
@@ -324,7 +311,6 @@ defmodule ElixirSessions.TypeOperations do
   defp get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
 
   defp get_vars(value, type) when type in @types or is_atom(type) do
-    # (is_atom(value) and type == :atom)
     literal =
       (is_nil(value) and type == nil) or
         (is_boolean(value) and type == :boolean) or
@@ -333,7 +319,8 @@ defmodule ElixirSessions.TypeOperations do
         (is_number(value) and type == :number) or
         (is_pid(value) and type == :pid) or
         (is_binary(value) and type == :binary) or
-        (is_atom(value) and subtype?(type, :atom))
+        (is_atom(value) and type == :atom)
+        # (is_atom(value) and subtype?(type, :atom))
 
     if literal do
       []
