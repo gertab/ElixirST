@@ -520,8 +520,14 @@ defmodule ElixirSessions.SessionTypechecking do
     {node, %{env | type: :pid}}
   end
 
-  def typecheck({{:., _meta, _}, meta2, _}, env) do
-    Logger.debug("Typechecking: Remote function call")
+  def typecheck({{:., _meta, [IO, :puts]}, meta2, _}, env) do
+    Logger.debug("Typechecking: IO.puts")
+    node = {nil, meta2, []}
+    {node, %{env | type: :atom}}
+  end
+
+  def typecheck({{:., _meta, call}, meta2, _}, env) do
+    Logger.debug("Typechecking: Remote function call (#{inspect call})")
     node = {nil, meta2, []}
 
     {node, %{env | state: :error, error_data: error_message("Remote functions not allowed.", meta2)}}

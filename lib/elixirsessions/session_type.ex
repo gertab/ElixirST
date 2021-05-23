@@ -496,6 +496,80 @@ defmodule ST do
     end
   end
 
+  # defmacro merge_args(function, pid, args) do
+  #   all_args =
+  #     quote do
+  #       [unquote(pid)] ++ unquote(args)
+  #     end
+
+  #   #   IO.warn(all_args)
+  #   # call =
+  #   #   Macro.postwalk(function, fn
+  #   #     {{:., meta1, [{f_name, meta2, module}]}, meta3, _args} -> {{:., meta1, [{f_name, meta2, module}]}, meta3, unquote}
+  #   #     expr -> expr
+  #   #   end)
+
+  #   quote do
+  #     unquote(function).(unquote_splicing(args))
+
+  #   end
+
+  #   # quote do
+  #   #   if length(unquote(args)) > 0 do
+  #   #     :notok
+  #   #     all_args = [unquote(pid)] ++ unquote(args)
+  #   #     unquote(function).(unquote(pid), 0)
+  #   #     # IO.puts(inspect unquote(function_name))
+  #   #     # IO.inspect(quote do: unquote(function_name).(unquote(pid), 0))
+  #   #   else
+  #   #     :ok
+  #   #     # IO.puts(inspect  unquote(function_name))
+  #   #     unquote(function).(unquote(pid))
+  #   #   end
+  #   # end
+  # end
+
+  # # defmacro merge_args(function_name, pid, args) do
+  # #   quote do
+  # #     if length(unquote(args)) > 0 do
+  # #       IO.puts(inspect unquote(function_name))
+  # #       all_args = [unquote(pid)] ++ unquote(args)
+  # #       IO.inspect(quote do: unquote(function_name).(unquote(pid), 0))
+  # #     else
+  # #       IO.puts(inspect  unquote(function_name))
+  # #       unquote(function_name).(unquote(pid))
+  # #     end
+  # #   end
+  # # end
+
+  # def spawn(server_fn, server_args, client_fn, client_args)
+  #     when is_function(server_fn) and is_list(server_args) and
+  #            is_function(client_fn) and is_list(client_args) do
+  #   server =
+  #     spawn(fn ->
+  #       receive do
+  #         {:pid, pid} ->
+  #           send(pid, {:pid, self()})
+  #           IO.inspect(merge_args(server_fn, pid, server_args))
+  #           # IO.inspect merge_args(server_fn, pid: pid, args: server_args)
+  #           # IO.inspect(quote do: server_fn.(pid, 0))
+  #       end
+  #     end)
+
+  #   client =
+  #     spawn(fn ->
+  #       send(server, {:pid, self()})
+
+  #       receive do
+  #         {:pid, pid} ->
+  #           # client_fn.(pid)
+  #           IO.inspect(merge_args(client_fn, pid, server_args))
+  #       end
+  #     end)
+
+  #   [server: server, client: client]
+  # end
+
   @doc """
   Returns the dual of the fiven session type.
 
@@ -831,29 +905,29 @@ defmodule ST do
   defp session_subtraction!(session_type, rec_var1, header_session_type, rec_var2)
 
   defp session_subtraction!(
-        %ST.Send{label: label, types: types, next: next1},
-        rec_var1,
-        %ST.Send{label: label, types: types, next: next2},
-        rec_var2
-      ) do
+         %ST.Send{label: label, types: types, next: next1},
+         rec_var1,
+         %ST.Send{label: label, types: types, next: next2},
+         rec_var2
+       ) do
     session_subtraction!(next1, rec_var1, next2, rec_var2)
   end
 
   defp session_subtraction!(
-        %ST.Recv{label: label, types: types, next: next1},
-        rec_var1,
-        %ST.Recv{label: label, types: types, next: next2},
-        rec_var2
-      ) do
+         %ST.Recv{label: label, types: types, next: next1},
+         rec_var1,
+         %ST.Recv{label: label, types: types, next: next2},
+         rec_var2
+       ) do
     session_subtraction!(next1, rec_var1, next2, rec_var2)
   end
 
   defp session_subtraction!(
-        %ST.Choice{choices: choices1},
-        rec_var1,
-        %ST.Choice{choices: choices2},
-        rec_var2
-      ) do
+         %ST.Choice{choices: choices1},
+         rec_var1,
+         %ST.Choice{choices: choices2},
+         rec_var2
+       ) do
     # Sorting is done (automatically) by the map
     choices2
     |> Enum.map(fn
@@ -880,11 +954,11 @@ defmodule ST do
   end
 
   defp session_subtraction!(
-        %ST.Branch{branches: branches1},
-        rec_var1,
-        %ST.Branch{branches: branches2},
-        rec_var2
-      ) do
+         %ST.Branch{branches: branches1},
+         rec_var1,
+         %ST.Branch{branches: branches2},
+         rec_var2
+       ) do
     # Sorting is done (automatically) by the map
 
     if map_size(branches1) != map_size(branches2) do
@@ -913,11 +987,11 @@ defmodule ST do
   end
 
   defp session_subtraction!(
-        %ST.Choice{choices: choices1},
-        rec_var1,
-        %ST.Send{label: label} = choice2,
-        rec_var2
-      ) do
+         %ST.Choice{choices: choices1},
+         rec_var1,
+         %ST.Send{label: label} = choice2,
+         rec_var2
+       ) do
     case Map.fetch(choices1, label) do
       {:ok, choice1_value} ->
         session_subtraction!(choice1_value, rec_var1, choice2, rec_var2)
@@ -928,11 +1002,11 @@ defmodule ST do
   end
 
   defp session_subtraction!(
-        %ST.Branch{branches: branches1} = b1,
-        rec_var1,
-        %ST.Recv{label: label} = branch2,
-        rec_var2
-      ) do
+         %ST.Branch{branches: branches1} = b1,
+         rec_var1,
+         %ST.Recv{label: label} = branch2,
+         rec_var2
+       ) do
     if map_size(branches1) != 1 do
       throw("Cannot match #{ST.st_to_string(branch2)} with #{ST.st_to_string(b1)}.")
     end
@@ -947,11 +1021,11 @@ defmodule ST do
   end
 
   defp session_subtraction!(
-        %ST.Recurse{label: label1, body: body1} = rec1,
-        rec_var1,
-        %ST.Recurse{label: label2, body: body2} = rec2,
-        rec_var2
-      ) do
+         %ST.Recurse{label: label1, body: body1} = rec1,
+         rec_var1,
+         %ST.Recurse{label: label2, body: body2} = rec2,
+         rec_var2
+       ) do
     rec_var1 = Map.put(rec_var1, label1, rec1)
     rec_var2 = Map.put(rec_var2, label2, rec2)
 
@@ -959,11 +1033,11 @@ defmodule ST do
   end
 
   defp session_subtraction!(
-        %ST.Recurse{label: label1, body: body1} = rec1,
-        rec_var1,
-        %ST.Call_Recurse{label: label2},
-        rec_var2
-      ) do
+         %ST.Recurse{label: label1, body: body1} = rec1,
+         rec_var1,
+         %ST.Call_Recurse{label: label2},
+         rec_var2
+       ) do
     rec_var1 = Map.put(rec_var1, label1, rec1)
 
     case Map.fetch(rec_var2, label2) do
@@ -973,11 +1047,11 @@ defmodule ST do
   end
 
   defp session_subtraction!(
-        %ST.Call_Recurse{label: label1},
-        rec_var1,
-        %ST.Call_Recurse{label: label2},
-        rec_var2
-      ) do
+         %ST.Call_Recurse{label: label1},
+         rec_var1,
+         %ST.Call_Recurse{label: label2},
+         rec_var2
+       ) do
     rec1 = Map.fetch!(rec_var1, label1)
     rec2 = Map.fetch!(rec_var2, label2)
 

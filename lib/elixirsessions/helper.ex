@@ -54,15 +54,13 @@ defmodule ElixirSessions.Helper do
 
   def ast() do
     quote do
-      case aaaaa do
-        5 -> :ok
-        _ -> :not_ok
-      end
+    IO.puts("Client")
 
-      receive do
-        x when (is_number(x) and is_atom(x)) or x in [4, 5] -> :ok
-        _ -> :not_ok
-      end
+    as = [1,2,3,4]
+    with a <- as do
+      a + 1
+    end
+
     end
 
     # type1 has to be of type boolean

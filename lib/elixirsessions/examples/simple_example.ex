@@ -2,6 +2,65 @@ defmodule ElixirSessions.SmallExample do
   use ElixirSessions.Checking
   # @dialyzer {:nowarn_function, ['example/0', 'example2/0', 'example3/1', 'example4/0']}
 
+  # recompile && ElixirSessions.SmallExample.run
+  def run() do
+    # ST.spawn(&server/2, [0], &client/1, [])
+    server =
+      spawn(fn ->
+        receive do
+          {:pid, pid} ->
+            send(pid, {:pid, self()})
+            server(pid, 0)
+        end
+      end)
+
+    spawn(fn ->
+      send(server, {:pid, self()})
+
+      receive do
+        {:pid, pid} ->
+          client(pid)
+      end
+    end)
+  end
+
+  @session "rec X.(&{?num(number).X, ?result().!total(number)})"
+  @spec server(pid(), number()) :: :ok
+  def server(pid, acc) do
+    # IO.puts("Server")
+
+    receive do
+      {:num, value} ->
+        server(pid, acc + value)
+
+      {:result} ->
+        send(pid, {:total, acc})
+        :ok
+    end
+  end
+
+  @dual &ElixirSessions.SmallExample.server/2
+  @spec client(pid()) :: atom()
+  def client(pid) do
+    # IO.puts("Client")
+    send(pid, {:num, 2})
+    send(pid, {:num, 3})
+    send(pid, {:num, 4})
+    send(pid, {:result})
+
+    total =
+      receive do
+        {:total, value} ->
+          value
+      end
+
+    IO.puts("Total value = " <> inspect(total))
+  end
+
+
+
+
+
   @moduledoc false
   # iex -S mix
   # mix session_check SmallExample
@@ -64,11 +123,11 @@ defmodule ElixirSessions.SmallExample do
   @dual &ElixirSessions.SmallExample.example4/1
   @spec example4dual(pid()) :: atom()
   def example4dual(pid) do
-
     receive do
       {:A} ->
         :ok
     end
+
     receive do
       {:B} ->
         :ok
