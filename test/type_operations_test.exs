@@ -148,4 +148,21 @@ defmodule TypeOperationsTest do
     b = [{:tuple, [:atom, :number, :float]}]
     assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{y: :number, z: :float}
   end
+
+  test "to string" do
+    types = {:tuple, [:atom, :boolean, :number]}
+    string = "{atom, boolean, number}"
+
+    assert ElixirSessions.TypeOperations.string(types) == string
+
+    types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
+    string = "{atom, boolean, {atom, boolean, number}}"
+
+    assert ElixirSessions.TypeOperations.string(types) == string
+
+    types = {:list, [{:tuple, [:atom, {:tuple, [:atom, :boolean, :number]}, :number]}, :boolean, {:tuple, [:atom, :boolean, :number]}]}
+    string = "[{atom, {atom, boolean, number}, number}, boolean, {atom, boolean, number}]"
+
+    assert ElixirSessions.TypeOperations.string(types) == string
+  end
 end

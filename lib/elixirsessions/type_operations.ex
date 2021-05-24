@@ -276,4 +276,36 @@ defmodule ElixirSessions.TypeOperations do
       do: Enum.zip(ops, type_list) |> Enum.map(fn {var, type} -> get_vars(var, type) end),
       else: {:error, "The number of parameters in tuple does not match the number of types"}
   end
+
+  def string({:list, types}) when is_list(types) do
+    types = Enum.map(types, &string/1)
+    "[" <> Enum.join(types, ", ") <> "]"
+  end
+
+  def string({:tuple, types}) when is_list(types) do
+    types = Enum.map(types, &string/1)
+    "{" <> Enum.join(types, ", ") <> "}"
+  end
+
+  def string(type) when type in @types do
+    Atom.to_string(type)
+  end
+
+  def string(type) when is_atom(type) do
+    "?" <> Atom.to_string(type)
+  end
+
+  # defimpl String.Chars do
+  #   def to_string({:list, types}) when is_list(types) do
+  #     "[" <> Enum.join(to_string(types), ", ") <> "]"
+  #   end
+
+  #   def to_string({:tuple, types}) when is_list(types) do
+  #     "{" <> Enum.join(to_string(types), ", ") <> "}"
+  #   end
+
+  #   def to_string(type) when is_atom(type) do
+  #     Atom.to_string(type)
+  #   end
+  # end
 end

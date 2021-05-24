@@ -1,7 +1,8 @@
 defmodule ElixirSessions.SmallExample do
   use ElixirSessions.Checking
-  # @dialyzer {:nowarn_function, ['example/0', 'example2/0', 'example3/1', 'example4/0']}
+  @dialyzer {:nowarn_function, ['server/2', 'client/1']}
 
+  # iex -S mix
   # recompile && ElixirSessions.SmallExample.run
   def run() do
     # ST.spawn(&server/2, [0], &client/1, [])
@@ -24,10 +25,12 @@ defmodule ElixirSessions.SmallExample do
     end)
   end
 
+  # add lists
+
   @session "rec X.(&{?num(number).X, ?result().!total(number)})"
   @spec server(pid(), number()) :: :ok
   def server(pid, acc) do
-    # IO.puts("Server")
+    IO.puts("Server")
 
     receive do
       {:num, value} ->
@@ -42,10 +45,15 @@ defmodule ElixirSessions.SmallExample do
   @dual &ElixirSessions.SmallExample.server/2
   @spec client(pid()) :: atom()
   def client(pid) do
-    # IO.puts("Client")
+    IO.puts("Client")
     send(pid, {:num, 2})
+    send(pid, {:num, 5})
     send(pid, {:num, 3})
-    send(pid, {:num, 4})
+    send(pid, {:num, 3})
+    send(pid, {:num, 3})
+    send(pid, {:num, 3})
+    send(pid, {:num, 3})
+    send(pid, {:num, 3})
     send(pid, {:result})
 
     total =
@@ -98,52 +106,52 @@ defmodule ElixirSessions.SmallExample do
   #   :ok
   # end
 
-  # Types of branches
-  @session "!A().rec X.(!B().&{?Option1(atom), ?Option2().X})"
-  @spec example4(pid()) :: atom()
-  def example4(pid) do
-    send(pid, {:A})
+  # # Types of branches
+  # @session "!A().rec X.(!B().&{?Option1(atom), ?Option2().X})"
+  # @spec example4(pid()) :: atom()
+  # def example4(pid) do
+  #   send(pid, {:A})
 
-    test_call(pid)
-  end
+  #   test_call(pid)
+  # end
 
-  @spec test_call(pid) :: :ok
-  defp test_call(pid) do
-    send(pid, {:B})
+  # @spec test_call(pid) :: :ok
+  # defp test_call(pid) do
+  #   send(pid, {:B})
 
-    receive do
-      {:Option1, atom} ->
-        atom
+  #   receive do
+  #     {:Option1, atom} ->
+  #       atom
 
-      {:Option2} ->
-        test_call(pid)
-    end
-  end
+  #     {:Option2} ->
+  #       test_call(pid)
+  #   end
+  # end
 
-  @dual &ElixirSessions.SmallExample.example4/1
-  @spec example4dual(pid()) :: atom()
-  def example4dual(pid) do
-    receive do
-      {:A} ->
-        :ok
-    end
+  # @dual &ElixirSessions.SmallExample.example4/1
+  # @spec example4dual(pid()) :: atom()
+  # def example4dual(pid) do
+  #   receive do
+  #     {:A} ->
+  #       :ok
+  #   end
 
-    receive do
-      {:B} ->
-        :ok
-    end
+  #   receive do
+  #     {:B} ->
+  #       :ok
+  #   end
 
-    send(pid, {:Option2})
+  #   send(pid, {:Option2})
 
-    receive do
-      {:B} ->
-        :ok
-    end
+  #   receive do
+  #     {:B} ->
+  #       :ok
+  #   end
 
-    send(pid, {:Option1, :hello})
+  #   send(pid, {:Option1, :hello})
 
-    :ok
-  end
+  #   :ok
+  # end
 
   # @dual &ElixirSessions.SmallExample.example4/1
   # def other() do
