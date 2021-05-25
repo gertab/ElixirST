@@ -1,8 +1,8 @@
 Nonterminals
-session choice_label_sessions branch_label_sessions types_list sequences sessions. 
+session choice_label_sessions branch_label_sessions types_list types  sequences sessions. 
 
 Terminals
-send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')'.
+send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')' '[' ']'.
 
 Rootsymbol session.
 
@@ -27,16 +27,32 @@ sequences -> sequences sequence                            : nil.
 sessions -> session                                        : '$1'.
 sessions -> sequences session                              : '$2'.
 
-choice_label_sessions -> session ',' choice_label_sessions : ['$1' | '$3' ].
+choice_label_sessions -> session ',' choice_label_sessions : ['$1' | '$3'].
 choice_label_sessions -> session                           : ['$1'].
 
-branch_label_sessions -> session ',' branch_label_sessions : ['$1' | '$3' ].
+branch_label_sessions -> session ',' branch_label_sessions : ['$1' | '$3'].
 branch_label_sessions -> session                           : ['$1'].
 
-types_list -> label ':' label                              : [lowercase_atom(unwrap('$3'))].
+% types_list -> label ':' diff_types                         : ['$3'].
+types_list -> diff_types                                   : ['$1'].
+% types_list -> label ':' diff_types ',' types_list          : ['$3' | '$5' ].
+types_list -> diff_types ',' types_list                    : ['$1' | '$3' ].
+
 types_list -> label                                        : [lowercase_atom(unwrap('$1'))].
-types_list -> label ':' label ',' types_list               : [lowercase_atom(unwrap('$3')) | '$5' ].
 types_list -> label ',' types_list                         : [lowercase_atom(unwrap('$1')) | '$3' ].
+types_list -> '{' types '}'                                : [lowercase_atom({tuple, ['$2']}].
+types_list -> '{' types '}' ',' types_list                 : [lowercase_atom({tuple, ['$2']} | '$5' ].
+types_list -> '[' types ']'                                : [lowercase_atom({list, ['$2']}].
+types_list -> '[' types ']' ',' types_list                 : [lowercase_atom({list, ['$2']} | '$5' ].
+
+% diff_types -> types
+% diff_types -> label                                        : lowercase_atom(unwrap('$1')).
+% diff_types -> '{' types '}'                                : {tuple, ['$2']}.
+% diff_types -> '[' types ']'                                : {list, ['$2']}.
+
+types -> label : '$1'.
+% types -> diff_types                                        : ['$1'].
+% types -> diff_types ',' diff_types                         : ['$1' | '$3'].
 
 Erlang code.
 

@@ -1,6 +1,6 @@
 defmodule ElixirSessions.SmallExample do
   use ElixirSessions.Checking
-  @dialyzer {:nowarn_function, ['server/2', 'client/1']}
+  # @dialyzer {:nowarn_function, ['server/2', 'client/1']}
 
   # iex -S mix
   # recompile && ElixirSessions.SmallExample.run
@@ -48,11 +48,6 @@ defmodule ElixirSessions.SmallExample do
     IO.puts("Client")
     send(pid, {:num, 2})
     send(pid, {:num, 5})
-    send(pid, {:num, 3})
-    send(pid, {:num, 3})
-    send(pid, {:num, 3})
-    send(pid, {:num, 3})
-    send(pid, {:num, 3})
     send(pid, {:num, 3})
     send(pid, {:result})
 

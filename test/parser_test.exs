@@ -72,6 +72,36 @@ defmodule ParserTest do
     assert expected == result
   end
 
+  test "send tuples / lists" do
+    source = "!Hello(atom, {Number}, [boolean]).+{!neg(number, pid).?Num(Number)}"
+
+    expected = %ST.Send{
+      label: :Hello,
+      types: [:atom, {:tuple, [:number]}, {:list, [:boolean]}],
+      next: %ST.Choice{
+        choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}
+      }
+    }
+
+    result = Parser.parse(source)
+    assert expected == result
+  end
+
+  test "send tuples within lists" do
+    source = "!Hello(atom, {Number, atom, atom})"
+
+    expected = %ST.Send{
+      label: :Hello,
+      types: [:atom, {:tuple, [:number]}, {:list, [:boolean]}],
+      next: %ST.Choice{
+        choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}
+      }
+    }
+
+    result = Parser.parse(source)
+    assert expected == result
+  end
+
   # todo fix
   test "complex session type" do
     source = "!ABC(any).rec X.(!Hello(any) . ?HelloBack(any) . rec Y.(!Num(number).rec Z.(Z)))"
@@ -149,6 +179,26 @@ defmodule ParserTest do
 
     try do
       ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+  end
+
+  test "validation error - tuple/lists" do
+    source = "!Hello(atom, {}, [abc]).+{!neg(number, pid).?Num(Number)}"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+
+    source = "!Hello(atom, {boolean}, [abc]).+{!neg(number, pid).?Num(Number)}"
+
+    try do
+      assert false == ElixirSessions.Parser.parse(source)
       assert false
     catch
       _ -> assert true

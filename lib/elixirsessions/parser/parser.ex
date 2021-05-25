@@ -5,6 +5,11 @@ defmodule ElixirSessions.Parser do
   require Logger
   require ST
 
+  def run do
+    session = "!Hello({atom, atom, atom})"
+    parse(session)
+  end
+
   @typedoc false
   @type session_type :: ST.session_type()
   @typep session_type_tuple() :: ST.session_type_tuple()
@@ -24,11 +29,15 @@ defmodule ElixirSessions.Parser do
         # Empty input
         %ST.Terminate{}
       else
-        {:ok, session_type} = :parser.parse(tokens)
+        case :parser.parse(tokens) do
+          {:ok, session_type} ->
+            convert_to_structs(session_type, [])
+
+          {:error, errors} ->
+            throw("Error while parsing session type #{inspect(string)}: " <> inspect(errors))
+        end
 
         # YeccRet = {ok, Parserfile} | {ok, Parserfile, Warnings} | error | {error, Errors, Warnings}
-
-        convert_to_structs(session_type, [])
 
         # todo convert branches with one option to receive statements
         # and choices with one choice to send
@@ -36,7 +45,7 @@ defmodule ElixirSessions.Parser do
     else
       err ->
         # todo: cuter error message needed
-        _ = Logger.error(err)
+        _ = Logger.error(inspect(err))
         []
     end
   end
@@ -175,30 +184,21 @@ defmodule ElixirSessions.Parser do
     %ST.Terminate{}
   end
 
-  def convert_to_structs({:send, label, types, next}, recurse_var) do
-    accepted_types = ElixirSessions.TypeOperations.accepted_types()
+  def convert_to_structs({send_recv, label, types, next}, recurse_var) when send_recv in [:send, :recv] do
+    checked_types = Enum.map(types, &type_valid/1)
 
-    types = Enum.map(types, fn t -> if t in [:integer, :float], do: :number, else: t end)
-    invalid_type = Enum.filter(types, fn t -> t not in accepted_types end)
+    Enum.each(checked_types, fn
+      {:error, incorrect_types} -> throw("Invalid type/s: #{inspect(incorrect_types)}")
+      _ -> :ok
+    end)
 
-    if length(invalid_type) > 0 do
-      throw("Invalid type/s: #{inspect(invalid_type)}")
+    case send_recv do
+      :send ->
+        %ST.Send{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
+
+      :recv ->
+        %ST.Recv{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
     end
-
-    %ST.Send{label: label, types: types, next: convert_to_structs(next, recurse_var)}
-  end
-
-  def convert_to_structs({:recv, label, types, next}, recurse_var) do
-    accepted_types = ElixirSessions.TypeOperations.accepted_types()
-
-    types = Enum.map(types, fn t -> if t in [:integer, :float], do: :number, else: t end)
-    invalid_type = Enum.filter(types, fn t -> t not in accepted_types end)
-
-    if length(invalid_type) > 0 do
-      throw("Invalid type/s: #{inspect(invalid_type)}")
-    end
-
-    %ST.Recv{label: label, types: types, next: convert_to_structs(next, recurse_var)}
   end
 
   def convert_to_structs({:choice, choices}, recurse_var) do
@@ -264,11 +264,51 @@ defmodule ElixirSessions.Parser do
   defp label(_) do
     throw("Following a branch/choice, a send or receive statement is required.")
   end
-end
 
-defmodule Helpers do
-  @moduledoc false
-  # def extract_token({_token, _line, value}), do: value
-  @spec to_atom([char, ...]) :: atom
-  def to_atom(':' ++ atom), do: List.to_atom(atom)
+  # Returns {:ok, correct_type} or {:error, incorrect_type}
+  defp type_valid(type) when is_atom(type) do
+    accepted_types = ElixirSessions.TypeOperations.accepted_types()
+
+    type = if type in [:integer, :float], do: :number, else: type
+
+    if type not in accepted_types do
+      throw(type)
+      {:error, type}
+    else
+      type
+    end
+  end
+
+  defp type_valid({:tuple, types}) when is_list(types) do
+    try do
+      checked_types = Enum.map(types, fn x -> type_valid(x) end)
+
+      Enum.each(checked_types, fn
+        {:error, incorrect_types} -> throw({:error, incorrect_types})
+        _ -> :ok
+      end)
+
+      {:tuple, checked_types}
+    catch
+      {:error, _} = error ->
+        throw(error)
+        error
+    end
+  end
+
+  defp type_valid({:list, [type]}) do
+    case type_valid(type) do
+      {:error, _} = error ->
+        throw(error)
+        error
+
+      type ->
+        {:list, [type]}
+    end
+  end
+
+  defp type_valid(type) do
+    throw(type)
+    {:error, type}
+  end
 end
