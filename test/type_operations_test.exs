@@ -165,4 +165,50 @@ defmodule TypeOperationsTest do
 
     assert ElixirSessions.TypeOperations.string(types) == string
   end
+
+  test "valid_type" do
+    types = {:tuple, [:atom, :boolean, :number]}
+
+    case ElixirSessions.TypeOperations.valid_type(types) do
+      {:error, _} -> assert false
+      valid_type -> assert valid_type == types
+    end
+
+    types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
+
+    case ElixirSessions.TypeOperations.valid_type(types) do
+      {:error, _} -> assert false
+      valid_type -> assert valid_type == types
+    end
+
+    types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}]}]}
+
+    case ElixirSessions.TypeOperations.valid_type(types) do
+      {:error, _} -> assert false
+      valid_type -> assert valid_type == types
+    end
+  end
+
+  test "valid_type invalid" do
+    types = {:tuple, [:abc, :boolean, :number]}
+
+    case ElixirSessions.TypeOperations.valid_type(types) do
+      {:error, _} -> assert true
+      _ -> assert false
+    end
+
+    types = {:list, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
+
+    case ElixirSessions.TypeOperations.valid_type(types) do
+      {:error, _} -> assert true
+      _ -> assert false
+    end
+
+    types = {:abc, [:number]}
+
+    case ElixirSessions.TypeOperations.valid_type(types) do
+      {:error, _} -> assert true
+      _ -> assert false
+    end
+  end
 end

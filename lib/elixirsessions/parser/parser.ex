@@ -5,11 +5,6 @@ defmodule ElixirSessions.Parser do
   require Logger
   require ST
 
-  def run do
-    session = "!Hello({atom, atom, atom})"
-    parse(session)
-  end
-
   @typedoc false
   @type session_type :: ST.session_type()
   @typep session_type_tuple() :: ST.session_type_tuple()
@@ -185,7 +180,7 @@ defmodule ElixirSessions.Parser do
   end
 
   def convert_to_structs({send_recv, label, types, next}, recurse_var) when send_recv in [:send, :recv] do
-    checked_types = Enum.map(types, &type_valid/1)
+    checked_types = Enum.map(types, &ElixirSessions.TypeOperations.valid_type/1)
 
     Enum.each(checked_types, fn
       {:error, incorrect_types} -> throw("Invalid type/s: #{inspect(incorrect_types)}")
@@ -263,52 +258,5 @@ defmodule ElixirSessions.Parser do
 
   defp label(_) do
     throw("Following a branch/choice, a send or receive statement is required.")
-  end
-
-  # Returns {:ok, correct_type} or {:error, incorrect_type}
-  defp type_valid(type) when is_atom(type) do
-    accepted_types = ElixirSessions.TypeOperations.accepted_types()
-
-    type = if type in [:integer, :float], do: :number, else: type
-
-    if type not in accepted_types do
-      throw(type)
-      {:error, type}
-    else
-      type
-    end
-  end
-
-  defp type_valid({:tuple, types}) when is_list(types) do
-    try do
-      checked_types = Enum.map(types, fn x -> type_valid(x) end)
-
-      Enum.each(checked_types, fn
-        {:error, incorrect_types} -> throw({:error, incorrect_types})
-        _ -> :ok
-      end)
-
-      {:tuple, checked_types}
-    catch
-      {:error, _} = error ->
-        throw(error)
-        error
-    end
-  end
-
-  defp type_valid({:list, [type]}) do
-    case type_valid(type) do
-      {:error, _} = error ->
-        throw(error)
-        error
-
-      type ->
-        {:list, [type]}
-    end
-  end
-
-  defp type_valid(type) do
-    throw(type)
-    {:error, type}
   end
 end

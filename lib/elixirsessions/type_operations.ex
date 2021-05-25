@@ -295,17 +295,47 @@ defmodule ElixirSessions.TypeOperations do
     "?" <> Atom.to_string(type)
   end
 
-  # defimpl String.Chars do
-  #   def to_string({:list, types}) when is_list(types) do
-  #     "[" <> Enum.join(to_string(types), ", ") <> "]"
-  #   end
+  # Checks if a type is valid
+  # Returns correct_type or {:error, incorrect_type}
+  def valid_type(type) when is_atom(type) do
+    accepted_types = ElixirSessions.TypeOperations.accepted_types()
 
-  #   def to_string({:tuple, types}) when is_list(types) do
-  #     "{" <> Enum.join(to_string(types), ", ") <> "}"
-  #   end
+    type = if type in [:integer, :float], do: :number, else: type
 
-  #   def to_string(type) when is_atom(type) do
-  #     Atom.to_string(type)
-  #   end
-  # end
+    if type not in accepted_types do
+      {:error, type}
+    else
+      type
+    end
+  end
+
+  def valid_type({:tuple, types}) when is_list(types) do
+    try do
+      checked_types = Enum.map(types, fn x -> valid_type(x) end)
+
+      Enum.each(checked_types, fn
+        {:error, incorrect_types} -> throw({:error, incorrect_types})
+        _ -> :ok
+      end)
+
+      {:tuple, checked_types}
+    catch
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  def valid_type({:list, [type]}) do
+    case valid_type(type) do
+      {:error, _} = error ->
+        error
+
+      type ->
+        {:list, [type]}
+    end
+  end
+
+  def valid_type(type) do
+    {:error, type}
+  end
 end

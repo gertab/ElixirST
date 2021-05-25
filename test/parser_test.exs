@@ -90,19 +90,23 @@ defmodule ParserTest do
   test "send tuples within lists" do
     source = "!Hello(atom, {Number, atom, atom})"
 
+    expected = %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:atom, {:tuple, [:number, :atom, :atom]}]}
+
+    result = Parser.parse(source)
+    assert expected == result
+
+    source = "!Hello([{atom, atom, atom}], {atom, [Number], {atom, atom, atom}})"
+
     expected = %ST.Send{
       label: :Hello,
-      types: [:atom, {:tuple, [:number]}, {:list, [:boolean]}],
-      next: %ST.Choice{
-        choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}
-      }
+      types: [{:list, [{:tuple, [:atom, :atom, :atom]}]}, {:tuple, [:atom, {:list, [:number]}, {:tuple, [:atom, :atom, :atom]}]}],
+      next: %ST.Terminate{}
     }
 
     result = Parser.parse(source)
     assert expected == result
   end
 
-  # todo fix
   test "complex session type" do
     source = "!ABC(any).rec X.(!Hello(any) . ?HelloBack(any) . rec Y.(!Num(number).rec Z.(Z)))"
 
