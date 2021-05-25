@@ -77,7 +77,7 @@ defmodule ParserTest do
 
     expected = %ST.Send{
       label: :Hello,
-      types: [:atom, {:tuple, [:number]}, {:list, [:boolean]}],
+      types: [:atom, {:tuple, [:number]}, {:list, :boolean}],
       next: %ST.Choice{
         choices: %{neg: %ST.Send{label: :neg, next: %ST.Recv{label: :Num, next: %ST.Terminate{}, types: [:number]}, types: [:number, :pid]}}
       }
@@ -99,7 +99,7 @@ defmodule ParserTest do
 
     expected = %ST.Send{
       label: :Hello,
-      types: [{:list, [{:tuple, [:atom, :atom, :atom]}]}, {:tuple, [:atom, {:list, [:number]}, {:tuple, [:atom, :atom, :atom]}]}],
+      types: [{:list, {:tuple, [:atom, :atom, :atom]}}, {:tuple, [:atom, {:list, :number}, {:tuple, [:atom, :atom, :atom]}]}],
       next: %ST.Terminate{}
     }
 

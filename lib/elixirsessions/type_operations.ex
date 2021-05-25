@@ -57,24 +57,32 @@ defmodule ElixirSessions.TypeOperations do
     Accepts: any, atom, binary, boolean, nil, number, pid, string, no_return, list and tuple
     The type of variables is returned if the environment is contains the corresponding type of variable.
   """
-  @spec get_type(any) :: atom | {:list, list} | {:tuple, list}
+  @spec get_type(any) :: atom | {:list, any} | {:tuple, list} | list
   def get_type(type) do
     get_type(type, %{})
   end
 
-  @spec get_type(any, %{}) :: atom | {:list, list} | {:tuple, list}
-  def get_type({type, _, _}, _env) when type in @types do
+  @spec get_type(any, %{}) :: atom | {:list, any} | {:tuple, list} | list
+  def get_type(types, env) when is_list(types) do
+    Enum.map(types, &get_type_internal(&1, env))
+  end
+
+  def get_type(types, env) do
+    get_type_internal(types, env)
+  end
+
+  defp get_type_internal({type, _, _}, _env) when type in @types do
     type
   end
 
-  def get_type({type, _, _}, _env) when type in [:integer, :float] do
+  defp get_type_internal({type, _, _}, _env) when type in [:integer, :float] do
     # todo maybe warn
     :number
   end
 
-  def get_type({:{}, _, types}, env), do: {:tuple, Enum.map(types, &get_type(&1, env))}
+  defp get_type_internal({:{}, _, types}, env), do: {:tuple, Enum.map(types, &get_type(&1, env))}
 
-  def get_type({variable, _, args}, env) when is_atom(variable) and is_atom(args) do
+  defp get_type_internal({variable, _, args}, env) when is_atom(variable) and is_atom(args) do
     if env[:variable_ctx][variable] do
       env[:variable_ctx][variable]
     else
@@ -82,23 +90,25 @@ defmodule ElixirSessions.TypeOperations do
     end
   end
 
-  def get_type({type, _, _}, _env) when type not in @types do
+  defp get_type_internal({type, _, _}, _env) when type not in @types do
     :error
   end
 
-  def get_type(type, env) when is_list(type), do: {:list, Enum.map(type, &get_type(&1, env))}
+  defp get_type_internal([], _env), do: {:list, nil}
+  defp get_type_internal([type], env), do: {:list, get_type(type, env)}
+  # defp get_type_internal(type, env) when is_list(type), do: {:list, Enum.map(type, &get_type(&1, env))}
 
-  def get_type(type, env) when is_tuple(type),
+  defp get_type_internal(type, env) when is_tuple(type),
     do: {:tuple, Enum.map(Tuple.to_list(type), &get_type(&1, env))}
 
   # or string
-  def get_type(type, _env) when is_binary(type), do: :binary
-  def get_type(type, _env) when is_boolean(type), do: :boolean
-  def get_type(type, _env) when is_nil(type), do: nil
-  def get_type(type, _env) when is_number(type), do: :number
-  def get_type(type, _env) when is_pid(type), do: :pid
-  def get_type(type, _env) when is_atom(type), do: :atom
-  def get_type(_, _), do: :error
+  defp get_type_internal(type, _env) when is_binary(type), do: :binary
+  defp get_type_internal(type, _env) when is_boolean(type), do: :boolean
+  defp get_type_internal(type, _env) when is_nil(type), do: nil
+  defp get_type_internal(type, _env) when is_number(type), do: :number
+  defp get_type_internal(type, _env) when is_pid(type), do: :pid
+  defp get_type_internal(type, _env) when is_atom(type), do: :atom
+  defp get_type_internal(_, _), do: :error
 
   @doc """
   Returns the name of the quoted variable or nil in case of an underscore at the beginning.
@@ -277,10 +287,14 @@ defmodule ElixirSessions.TypeOperations do
       else: {:error, "The number of parameters in tuple does not match the number of types"}
   end
 
-  def string({:list, types}) when is_list(types) do
-    types = Enum.map(types, &string/1)
-    "[" <> Enum.join(types, ", ") <> "]"
+  def string({:list, types}) when not is_list(types) do
+    types = string(types)
+    "[" <> types <> "]"
   end
+  # def string({:list, types}) when is_list(types) do
+  #   types = Enum.map(types, &string/1)
+  #   "[" <> Enum.join(types, ", ") <> "]"
+  # end
 
   def string({:tuple, types}) when is_list(types) do
     types = Enum.map(types, &string/1)
@@ -325,13 +339,13 @@ defmodule ElixirSessions.TypeOperations do
     end
   end
 
-  def valid_type({:list, [type]}) do
+  def valid_type({:list, type}) when not is_list(type) do
     case valid_type(type) do
       {:error, _} = error ->
         error
 
       type ->
-        {:list, [type]}
+        {:list, type}
     end
   end
 

@@ -40,7 +40,7 @@ types_list -> label ':' diff_types ',' types_list          : ['$3' | '$5' ].
 
 diff_types -> label                                        : lowercase_atom(unwrap('$1')).
 diff_types -> '{' types '}'                                : {tuple, '$2'}.
-diff_types -> '[' diff_types ']'                           : {list, ['$2']}.
+diff_types -> '[' diff_types ']'                           : {list, '$2'}.
 
 types -> diff_types                                        : ['$1'].
 types -> diff_types ',' types                              : ['$1' | '$3'].

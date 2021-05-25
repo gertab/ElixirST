@@ -218,6 +218,35 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   # List
+
+  def typecheck([], env) do
+    {[], %{env | type: {:list, []}}}
+  end
+
+  # defp process([{:|, [line: line], [operand1, operand2]}], env) do
+  #   elem = {:|, [line: line], []}
+  #   binary_operator_process(elem, env, line, :|, operand1, operand2, {:list, :any}, false)
+  # end
+
+  # defp process(elem, env) when is_list(elem) do
+  #   {type, result} =
+  #     Enum.map(elem, fn t -> elem(Macro.prewalk(t, env, &process(&1, &2)), 1) end)
+  #     |> Enum.reduce_while({:any, env}, fn result, {type_acc, env_acc} ->
+  #         result = Utils.prepare_result_data(result)
+
+  #         case result[:state] do
+  #           :error -> {:halt, {:any, result}}
+  #           _ ->
+  #             case TypeComparator.supremum(result[:type], type_acc) do
+  #               :error -> {:halt, Utils.return_error(elem, env, {"", "Malformed type list"})} # line? :(
+  #               type -> {:cont, {type, elem(Utils.return_merge_vars([], env_acc, result[:vars]), 1)}}
+  #             end
+  #         end
+  #       end)
+
+  #   {[], %{result | type: {:list, type}}}
+  # end
+
   def typecheck(node, env) when is_list(node) do
     Logger.debug("Typechecking: List")
 
@@ -225,7 +254,16 @@ defmodule ElixirSessions.SessionTypechecking do
     {node, env}
   end
 
-  # Operations
+  # # List operations
+  # def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
+  #     when operator in [:++, :--] do
+  #   Logger.debug("Typechecking: Erlang #{operator}")
+  #   node = {{:., meta1, []}, meta2, []}
+
+  #   process_binary_operations(node, meta2, operator, arg1, arg2, :number, false, env)
+  # end
+
+  # Arithmetic operations
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:+, :-, :*, :/] do
     Logger.debug("Typechecking: Erlang #{operator}")
@@ -527,7 +565,7 @@ defmodule ElixirSessions.SessionTypechecking do
   end
 
   def typecheck({{:., _meta, call}, meta2, _}, env) do
-    Logger.debug("Typechecking: Remote function call (#{inspect call})")
+    Logger.debug("Typechecking: Remote function call (#{inspect(call)})")
     node = {nil, meta2, []}
 
     {node, %{env | state: :error, error_data: error_message("Remote functions not allowed.", meta2)}}
@@ -614,7 +652,10 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        7.6 + true
+        a = []
+        a = [1]
+        b = [2, 3, 4]
+        # c = a ++ b
       end
 
     st = ST.string_to_st("?hello(boolean).!abc(number, boolean)")

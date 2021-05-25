@@ -128,7 +128,8 @@ defmodule ElixirSessions.Checking do
       if args_types_converted == :error or return_type_converted == :error do
         throw(
           "Problem with @spec for #{spec_name}/#{length(args_types)} " <>
-            inspect(args_types) <> " " <> inspect(return_type)
+            inspect(args_types) <> " :: " <> inspect(return_type) <> " ## " <>
+            inspect(args_types_converted) <> " :: " <> inspect(return_type_converted)
         )
       end
 

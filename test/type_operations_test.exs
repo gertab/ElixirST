@@ -13,7 +13,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:number, :number]}
+    assert args_types == [:number, :number]
     assert return_type == :number
   end
 
@@ -38,7 +38,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:any, :atom, :binary, :boolean, nil, :number, :pid, :string, :no_return]}
+    assert args_types == [:any, :atom, :binary, :boolean, nil, :number, :pid, :string, :no_return]
     assert return_type == :any
   end
 
@@ -53,7 +53,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:number, {:list, [:number]}]}
+    assert args_types == [:number, {:list, :number}]
     assert return_type == {:tuple, [:number]}
   end
 
@@ -68,7 +68,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:number, nil, :atom, :binary]}
+    assert args_types == [:number, nil, :atom, :binary]
     assert return_type == :atom
   end
 
@@ -83,7 +83,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:number, :boolean, :boolean, :number, nil, :pid, :binary]}
+    assert args_types == [:number, :boolean, :boolean, :number, nil, :pid, :binary]
     assert return_type == :atom
   end
 
@@ -98,7 +98,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [{:tuple, [:number, :number, :atom]}]}
+    assert args_types == [{:tuple, [:number, :number, :atom]}]
     assert return_type == :atom
   end
 
@@ -113,7 +113,7 @@ defmodule TypeOperationsTest do
     args_types = ElixirSessions.TypeOperations.get_type(args_types)
     return_type = ElixirSessions.TypeOperations.get_type(return_type)
 
-    assert args_types == {:list, [:error]}
+    assert args_types == [:error]
     assert return_type == :number
   end
 
@@ -152,17 +152,14 @@ defmodule TypeOperationsTest do
   test "to string" do
     types = {:tuple, [:atom, :boolean, :number]}
     string = "{atom, boolean, number}"
-
     assert ElixirSessions.TypeOperations.string(types) == string
 
     types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
     string = "{atom, boolean, {atom, boolean, number}}"
-
     assert ElixirSessions.TypeOperations.string(types) == string
 
-    types = {:list, [{:tuple, [:atom, {:tuple, [:atom, :boolean, :number]}, :number]}, :boolean, {:tuple, [:atom, :boolean, :number]}]}
-    string = "[{atom, {atom, boolean, number}, number}, boolean, {atom, boolean, number}]"
-
+    types = {:list, {:tuple, [:atom, {:tuple, [:atom, :boolean, :number]}, :number]}}
+    string = "[{atom, {atom, boolean, number}, number}]"
     assert ElixirSessions.TypeOperations.string(types) == string
   end
 

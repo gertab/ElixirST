@@ -120,7 +120,7 @@ defmodule ElixirSessions.Retriever do
       types = Map.get(function_types, {name, arity}, nil)
 
       if not is_nil(types) do
-        {{:list, param_types}, return_type} = types
+        {param_types, return_type} = types
         {{name, arity}, %{function | types_known?: true, return_type: return_type, param_types: param_types}}
       else
         {{name, arity}, function}

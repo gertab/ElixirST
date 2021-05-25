@@ -58,7 +58,9 @@ defmodule ElixirSessions.Helper do
 
     as = [1,2,3,4]
     with a <- as do
-      a + 1
+      a = [1]
+      b = [2,3,4]
+      c = a -- b
     end
 
     end
