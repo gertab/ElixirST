@@ -248,13 +248,13 @@ defmodule SessionTypecheckingTest do
     result = typecheck(ast)
 
     assert result[:state] == :ok
+
     assert result[:type] ==
              {:tuple,
               [
                 tuple: [:number, :boolean, :number, :number],
                 tuple: [{:tuple, [:number, :boolean, :number, :number]}, :boolean]
               ]}
-
   end
 
   test "send" do
@@ -789,6 +789,194 @@ defmodule SessionTypecheckingTest do
     assert result[:state] == :ok
     assert result[:type] == :atom
     assert result[:session_type] == %ST.Terminate{}
+  end
+
+  describe "session type with tuples and lists" do
+    test "tuples" do
+      ast =
+        quote do
+          receive do
+            {:A, {a, b}} -> a + b
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A({number, number}), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :ok
+      assert result[:type] == :number
+      assert result[:session_type] == %ST.Terminate{}
+    end
+
+    test "tuples 2" do
+      ast =
+        quote do
+          receive do
+            {:A, {a, {b, {c, d}}}} -> a + b + c + d
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A({number, {number, {number, number}}}), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :ok
+      assert result[:type] == :number
+      assert result[:session_type] == %ST.Terminate{}
+    end
+
+    test "lists" do
+      ast =
+        quote do
+          receive do
+            {:A, a} -> 9
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A([number]), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :ok
+      assert result[:type] == :number
+      assert result[:session_type] == %ST.Terminate{}
+    end
+
+    test "lists + tuples" do
+      ast =
+        quote do
+          receive do
+            {:A, {a, b}} -> a + 2
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A({number, [number]}), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :ok
+      assert result[:type] == :number
+      assert result[:session_type] == %ST.Terminate{}
+    end
+
+    test "tuples (send)" do
+      ast =
+        quote do
+          a = 4
+          send(self(), {:A, {a, 44}})
+          :ok
+        end
+
+      env = %{env() | session_type: ST.string_to_st("!A({number, number})")}
+      result = typecheck(ast, env)
+      assert result[:state] == :ok
+      assert result[:type] == :atom
+      assert result[:session_type] == %ST.Terminate{}
+    end
+
+    test "tuples 2 (send)" do
+      ast =
+        quote do
+          a = 5
+          b = 9
+          c = 12
+          d = 3.3
+          send(self(), {:A, {a, {b, {c, d}}}})
+          :ok
+        end
+
+      env = %{env() | session_type: ST.string_to_st("!A({number, {number, {number, number}}})")}
+      result = typecheck(ast, env)
+      assert result[:state] == :ok
+      assert result[:type] == :atom
+      assert result[:session_type] == %ST.Terminate{}
+    end
+
+    # test "lists (send)" do
+    #   ast =
+    #     quote do
+    #       a = [1]
+    #       send(self(), {:A, a})
+    #       :ok
+    #     end
+
+    #   env = %{env() | session_type: ST.string_to_st("!A([number])")}
+    #   result = typecheck(ast, env)
+    #   assert result[:error_data] == nil
+    #   assert result[:state] == :ok
+    #   assert result[:type] == :atom
+    #   assert result[:session_type] == %ST.Terminate{}
+    # end
+
+    # test "lists + tuples (send)" do
+    #   ast =
+    #     quote do
+    #       send(self(), {:A, {a, b}})
+    #       :ok
+    #     end
+
+    #   env = %{env() | session_type: ST.string_to_st("!A({number, [number]})")}
+    #   result = typecheck(ast, env)
+    #   assert result[:error_data] == nil
+    #   assert result[:state] == :ok
+    #   assert result[:type] == :atom
+    #   assert result[:session_type] == %ST.Terminate{}
+    # end
+  end
+
+  describe "session type with tuples and lists - failure" do
+    test "tuples" do
+      ast =
+        quote do
+          receive do
+            {:A, a, b} -> a + b
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A({number, number}), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :error
+    end
+
+    test "tuples 2" do
+      ast =
+        quote do
+          receive do
+            {:A, {a, {b, {c, d}}}} -> a + b + c + d
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A({number, {number, number}}), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :error
+    end
+
+    test "lists" do
+      ast =
+        quote do
+          receive do
+            {:A, {a}} -> 9
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A([number]), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :error
+    end
+
+    test "lists + tuples" do
+      ast =
+        quote do
+          receive do
+            {:A, {[a], b}} -> 2
+            {:B} -> 7
+          end
+        end
+
+      env = %{env() | session_type: ST.string_to_st("&{?A({number, [number]}), ?B()}")}
+      result = typecheck(ast, env)
+      assert result[:state] == :error
+    end
   end
 end
 

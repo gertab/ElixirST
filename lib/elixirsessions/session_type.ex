@@ -334,7 +334,7 @@ defmodule ST do
   end
 
   def st_to_string_internal(%ST.Send{label: label, types: types, next: next}) do
-    types_string = types |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
 
@@ -346,7 +346,7 @@ defmodule ST do
   end
 
   def st_to_string_internal(%ST.Recv{label: label, types: types, next: next}) do
-    types_string = types |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
 
@@ -405,13 +405,13 @@ defmodule ST do
   defp st_to_string_current_internal(session_type)
 
   defp st_to_string_current_internal(%ST.Send{label: label, types: types}) do
-    types_string = types |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
 
     "!#{label}(#{types_string})"
   end
 
   defp st_to_string_current_internal(%ST.Recv{label: label, types: types}) do
-    types_string = types |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
 
     "?#{label}(#{types_string})"
   end
