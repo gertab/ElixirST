@@ -6,7 +6,6 @@ WHITESPACE  = [\s\t\n\r]
 SEND        = send|\!
 RECEIVE     = receive|\?
 CHOICE      = choice|select|\+
-% todo replace choice w/ select
 BRANCH      = branch|\&
 SEQUENCE    = \.
 REC         = rec

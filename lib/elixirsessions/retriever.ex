@@ -9,8 +9,6 @@ defmodule ElixirSessions.Retriever do
   Input as bytecode from a BEAM file, takes the Elixir AST from the debug_info
   and forwards it to the typechecker/s.
   """
-  # todo fix: if called using mix session_check SmallExample, then process/2 is reached twice (in task and after_compile)
-  # todo remove throws
   @spec process(binary, list) :: list
   def process(bytecode, options \\ []) do
     try do
@@ -66,7 +64,6 @@ defmodule ElixirSessions.Retriever do
     end
   end
 
-  # todo add call to session typecheck a module explicitly from beam (rather than rely on @after_compile), e.g. kinda similar to ExUnit
 
   defp to_map(list) do
     list

@@ -15,7 +15,6 @@ defmodule ElixirSessions.Checking do
       Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
-      # todo change to option
       @session_typing true
       @compile :debug_info
 
@@ -44,7 +43,6 @@ defmodule ElixirSessions.Checking do
     ElixirSessions.Retriever.process(bytecode)
   end
 
-  # todo throws -> Logger
   # Processes @session attribute - gets the function and session type details
   defp session_attribute(session, name, arity, kind, env) do
     if not is_nil(session) do
@@ -70,7 +68,7 @@ defmodule ElixirSessions.Checking do
       end
 
       # Ensure that the session type is valid
-      :ok = ST.validate!(session)
+      ST.string_to_st(session)
 
       Module.put_attribute(env.module, :session_marked, {{name, arity}, session})
       Module.delete_attribute(env.module, :session)
@@ -89,7 +87,6 @@ defmodule ElixirSessions.Checking do
       # dual_module = function[:module] # todo should be the same as current module
       dual_name = function[:name]
       dual_arity = function[:arity]
-      # dual_type = function[:type] # should be :external (not :local = anon)
 
       dual_session =
         Module.get_attribute(env.module, :session_marked)

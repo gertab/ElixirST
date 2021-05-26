@@ -325,7 +325,6 @@ defmodule ST do
       ...> ST.st_to_string(st)
       "rec x.(&{?Hello(number), ?Retry().X})"
   """
-  # todo should you include '.end'?
   @spec st_to_string(session_type()) :: String.t()
   def st_to_string(%ST.Terminate{}), do: "end"
 
@@ -466,34 +465,6 @@ defmodule ST do
   @spec string_to_st_no_validations(String.t()) :: session_type()
   def string_to_st_no_validations(st_string) do
     ElixirSessions.Parser.parse_no_validations(st_string)
-  end
-
-  @doc """
-  Performs validations on the session type.
-  Throws an error if the structure of the session type is incorrect or there are any illegal operations.
-
-  Ensures the following:
-    1) All branches have a `receive` statement as the first statement.
-    2) All choices have a `send` statement as the first statement.
-    3) todo: check if similar checks are needed for `rec`
-  """
-  # todo examples
-  # todo (confirm before implement) branches need more than one branch
-  # todo confirm if sorted
-  # todo maybe defp (no external use?)
-  @spec validate!(String.t()) :: :ok
-  def validate!(session_type_string) do
-    _ = ST.string_to_st(session_type_string)
-    :ok
-  end
-
-  @spec validate(String.t()) :: :ok | {:error, any()}
-  def validate(session_type_string) do
-    try do
-      validate!(session_type_string)
-    catch
-      x -> {:error, x}
-    end
   end
 
   # defmacro merge_args(function, pid, args) do
@@ -704,7 +675,6 @@ defmodule ST do
 
   # Equality, takes into consideration that recursions with a different variable name are equal
   # Pattern matching with ST.session_type()
-  # todo remove? use == instead
   # ! = +{l} and & = &{l}
   @spec equal?(session_type(), session_type()) :: boolean()
   def equal?(session_type1, session_type2) do

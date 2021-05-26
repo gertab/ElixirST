@@ -7,17 +7,6 @@ defmodule ElixirSessions.SessionTypechecking do
   Given a session type and Elixir code, the Elixir code is typechecked against the session type.
   """
 
-  # todo correctly print atoms in error messages
-  # todo improve error messages
-  # todo do logger levels w/ options!
-  # todo ignore variable type starting with _
-  # todo use aliases
-  # todo unfold multiple
-  # todo erlang <=> elixir converter for custom operators
-  # todo force session_check regardless of previous results
-  # todo maybe ^x
-  # todo match labels with receive (allow multiple pattern matching cases)
-
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
   @spec session_typecheck_module(
           %{ST.name_arity() => ST.Function.t()},
@@ -298,7 +287,7 @@ defmodule ElixirSessions.SessionTypechecking do
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :>=] do
     node = {{:., meta1, []}, meta2, []}
-    # todo convert operator from extened elixir to elixir
+    # improve: convert operator from extended elixir to elixir
     process_binary_operations(node, meta2, operator, arg1, arg2, :any, false, true, env)
   end
 

@@ -31,16 +31,11 @@ defmodule ElixirSessions.Parser do
           {:error, errors} ->
             throw("Error while parsing session type #{inspect(string)}: " <> inspect(errors))
         end
-
-        # YeccRet = {ok, Parserfile} | {ok, Parserfile, Warnings} | error | {error, Errors, Warnings}
-
-        # todo convert branches with one option to receive statements
-        # and choices with one choice to send
       end
     else
-      err ->
+      {:error, {_line, :lexer, error}, 1} ->
         # todo: cuter error message needed
-        _ = Logger.error(inspect(err))
+        throw("Error in syntax of the session type " <> inspect(string) <> ". Found " <> inspect(error))
         []
     end
   end
@@ -58,7 +53,6 @@ defmodule ElixirSessions.Parser do
   end
 
   # Performs validations on the session type.
-  # todo get rid of unused and infinite (empty) recursion e.g.: rec Y.rec X.Y
   @spec validate(session_type()) :: :ok | {:error, any()}
   def validate(session_type) do
     try do
@@ -161,7 +155,6 @@ defmodule ElixirSessions.Parser do
   # Convert session types from Erlang records (tuples) to Elixir Structs.
   # throws error in case of branches/choices with same labels, or
   # if the types are not valid
-  # todo remove validations and put them in validate!
   @spec convert_to_structs(
           # should be { , , [atom], }
           {:send, atom, any, session_type_tuple()}

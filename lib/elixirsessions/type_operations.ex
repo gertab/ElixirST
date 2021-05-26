@@ -3,7 +3,6 @@ defmodule ElixirSessions.TypeOperations do
   Operations related to expression typing
   """
   # List of accepted types in session types
-  # todo maybe add maps, list
   @types [
     :any,
     :atom,
@@ -76,7 +75,7 @@ defmodule ElixirSessions.TypeOperations do
   end
 
   defp get_type_internal({type, _, _}, _env) when type in [:integer, :float] do
-    # todo maybe warn
+    # warn
     :number
   end
 

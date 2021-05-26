@@ -47,7 +47,6 @@ types -> diff_types ',' types                              : ['$1' | '$3'].
 
 Erlang code.
 
-%todo give default
 -record(send, {label, types, next}).
 -record(recv, {label, types, next}).
 -record(choice, {choices}).
