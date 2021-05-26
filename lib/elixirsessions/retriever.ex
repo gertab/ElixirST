@@ -127,7 +127,7 @@ defmodule ElixirSessions.Retriever do
   end
 
   # Given a list of lists, returns the names of the variables. If no variable is present, nil is used
-  def process_parameters(parameters) do
+  defp process_parameters(parameters) do
     for parameter <- parameters do
       for variable <- parameter do
         # Change any variables starting with _ to nils

@@ -305,38 +305,6 @@ defmodule STTest do
     assert actual == expected
   end
 
-  test "convert to structs semi complex" do
-    input =
-      {:recurse, :X,
-       {:branch,
-        [
-          {:recv, :Ping, [], {:send, :Pong, [], {:call, :X}}},
-          {:recv, :Quit, [], {:terminate}}
-        ]}}
-
-    expected = %ST.Recurse{
-      body: %ST.Branch{
-        branches: %{
-          Ping: %ST.Recv{
-            label: :Ping,
-            next: %ST.Send{
-              label: :Pong,
-              next: %ST.Call_Recurse{label: :X},
-              types: []
-            },
-            types: []
-          },
-          Quit: %ST.Recv{label: :Quit, next: %ST.Terminate{}, types: []}
-        }
-      },
-      label: :X
-    }
-
-    result = ElixirSessions.Parser.convert_to_structs(input, [])
-
-    assert result == expected
-  end
-
   test "Comparing session types simple" do
     s1 = "!Hello2(atom, number).!Hello(atom, number).?H11()"
 

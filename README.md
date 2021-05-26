@@ -1,6 +1,6 @@
 # ElixirSessions
 
-![Elixir CI](https://github.com/gertab/ElixirSessions/workflows/Elixir%20CI/badge.svg)
+[![Elixir CI](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml)
 
 ElixirSessions uses *Session Types* to check statically that the Elixir modules use the expected communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
@@ -251,11 +251,13 @@ defmodule LargeExample do
 ```
 
 In the next example, session type checking fails because the session type `!Hello()` expected to find a send action with `{:Hello}` but found `{:Yo}`:
+
 ```elixir
 defmodule Module2 do
   use ElixirSessions
 
   @session "!Hello()"
+  @spec do_something(pid) :: {:Yo}
   def do_something(pid) do
     send(pid, {:Yo})
   end
@@ -265,21 +267,19 @@ end
 Output:
 ```
 $ mix compile
-...
 == Compilation error in file example.ex ==
 ** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
-    ...
 ```
 
-Other examples can be found in the [`lib/elixirsessions/examples`](/lib/elixirsessions/examples) folder.
-
+Other examples can be found in the [`examples`](/lib/elixirsessions/examples) folder.
+<!-- 
 ### Features
 
 ElixirSessions implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
  - session type parsing ([`lib/elixirsessions/parser/parser.ex`](/lib/elixirsessions/parser/parser.ex)),
- - session type comparison (e.g. equality) and manipulation (e.g. duality).
+ - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
 ### Acknowledgements
 
-Some code related to Elixir expression typing was adapted from [typelixir](github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).
+Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).

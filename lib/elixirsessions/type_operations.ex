@@ -46,15 +46,17 @@ defmodule ElixirSessions.TypeOperations do
     :string
   ]
 
+  @doc false
   @spec all_types :: [atom]
   def all_types() do
     @all_types
   end
 
   @doc """
-    Give types in @spec format, returns usable types.
+    Process types in @spec format and returns usable types.
+
     Accepts: any, atom, binary, boolean, nil, number, pid, string, no_return, list and tuple
-    The type of variables is returned if the environment is contains the corresponding type of variable.
+    The type of variables is returned if the environment contains the corresponding type of variable.
   """
   @spec get_type(any) :: atom | {:list, any} | {:tuple, list} | list
   def get_type(type) do

@@ -1,8 +1,6 @@
 defmodule ST do
   @moduledoc """
-  ST = SessionType
-
-  This module allows the following operations: [parser](#module-parser), [generator](#module-generator) and [duality](#module-duality).
+  Manipulate Session Type data
 
   Session type definitions:
       ! = send
@@ -79,43 +77,6 @@ defmodule ST do
           }
         }
       }
-
-  # ### Generator
-  # Given a session type, `generate_quoted/1` generates the quoted Elixir code (or AST) automatically.
-
-  # For example, setting the session type to `!hello(number).?hello_ret(number)`, `generate_to_string/1` automatically synthesizes the
-  # equivalent Elixir code, as shown below.
-
-  # #### Synthesizer usage
-  # s = "!hello(number).?hello_ret(number)"
-  # st = ST.string_to_st(s)
-  # ST.generate_to_string(st)
-
-  # #### Synthesizer output
-  # def func() do
-  #   send(self(), {:hello})
-  #   receive do
-  #     {:hello_ret, var1} when is_number(var1) ->
-  #       :ok
-  #   end
-  # end
-
-  ### Duality
-
-  Given a session type, `dual/1` returns its dual session type.
-  For example, the dual of `!Hello()` becomes `?Hello()`. The dual of `&{?Option1(), ?Option2()}` becomes `+{!Option1(), !Option2()}`.
-
-  #### Usage example
-      iex> st_string = "!Ping(Number).?Pong(String)"
-      ...> st = ST.string_to_st(st_string)
-      ...> st_dual = ST.dual(st)
-      %ST.Recv{
-        label: :Ping,
-        next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: [:string]},
-        types: [:number]
-      }
-      ...> ST.st_to_string(st_dual)
-      "?Ping(number).!Pong(string)"
 
   """
 
@@ -462,11 +423,6 @@ defmodule ST do
     ElixirSessions.Parser.parse(st_string)
   end
 
-  @spec string_to_st_no_validations(String.t()) :: session_type()
-  def string_to_st_no_validations(st_string) do
-    ElixirSessions.Parser.parse_no_validations(st_string)
-  end
-
   # defmacro merge_args(function, pid, args) do
   #   all_args =
   #     quote do
@@ -759,21 +715,6 @@ defmodule ST do
 
   defp equal?(_, _, _) do
     false
-  end
-
-  # Subtype
-  @spec subtype?(session_type(), session_type()) :: boolean()
-  def subtype?(session_type1, session_type2) do
-    case session_subtraction(session_type1, session_type2) do
-      {:ok, remaining} ->
-        remaining == %ST.Terminate{}
-
-      {:error, _} ->
-        case session_subtraction(session_type2, session_type1) do
-          {:ok, remaining} -> remaining == %ST.Terminate{}
-          {:error, _} -> false
-        end
-    end
   end
 
   @doc """
