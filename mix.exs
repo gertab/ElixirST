@@ -9,12 +9,13 @@ defmodule ElixirSessions.MixProject do
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      package: package(),
 
       # Docs
       name: "ElixirSessions",
       source_url: "https://github.com/gertab/ElixirSessions",
       # The main page in the docs
-      docs: [main: "ElixirSessions", extras: ["README.md"]],
+      docs: [main: "README", extras: ["README.md"]],
 
       # Leex/Yecc options
       # leex_options: [],
@@ -34,6 +35,15 @@ defmodule ElixirSessions.MixProject do
     [
       {:ex_doc, "~> 0.22.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      maintainers: ["Gerard Tabone"],
+      licenses: ["GPL-3.0"],
+      links: %{"GitHub" => "https://github.com/gertab/ElixirSessions"},
+      description: "Session types for Elixir"
     ]
   end
 
