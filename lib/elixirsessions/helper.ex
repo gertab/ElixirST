@@ -54,14 +54,13 @@ defmodule ElixirSessions.Helper do
 
   def ast() do
     quote do
-    IO.puts("Client")
+      x = 7
 
-    as = [1,2,3,4]
-    with a <- as do
-      a = [1]
-      b = [2,3,4]
-      c = a -- b
-    end
+      if x do
+        :ok
+      else
+        :not_ok
+      end
 
     end
 
