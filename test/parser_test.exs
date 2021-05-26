@@ -217,15 +217,4 @@ defmodule ParserTest do
 
     assert ST.st_to_string(st) == source
   end
-
-  # test "todo: branches with same label" do
-  #   source = "&{!neg(number, pid), ?neg(number, pid)}"
-
-  #   try do
-  #     ElixirSessions.Parser.parse(source)
-  #     assert false
-  #   catch
-  #     _ -> assert true
-  #   end
-  # end
 end

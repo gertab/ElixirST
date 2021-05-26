@@ -2,7 +2,6 @@ defmodule STTest do
   use ExUnit.Case
   doctest ST
 
-
   test "equal simple rec" do
     s1 = "rec X . (X)"
     s2 = "rec X . (X)"
@@ -240,7 +239,6 @@ defmodule STTest do
     actual = ST.unfold(session1)
 
     assert ST.st_to_string(actual) == ST.st_to_string(session_result)
-
   end
 
   # todo fix multiple unfolds; unfold
@@ -415,22 +413,6 @@ defmodule STTest do
     end
   end
 
-  # test "Comparing session types recursion - but equal" do
-  #   s1 = "!ok().rec Y.(&{?option1().rec ZZ.(!ok().rec Y.(&{?option1().ZZ, ?option2().Y})), ?option2().Y})"
-
-  #   s2 = "rec XXX.(!ok().rec Y.(&{?option1().XXX, ?option2().Y}))"
-
-  #   case ST.session_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
-  #     {:ok, remaining_st} ->
-  #       expected_remaining_st = ST.string_to_st("end")
-  #       # throw("#{ST.st_to_string(remaining_st)}")
-  #       assert expected_remaining_st == remaining_st
-
-  #     {:error, _} ->
-  #       assert false
-  #   end
-  # end
-
   test "Tail subtract session types simple" do
     s1 = "!Hello2(atom, number).!Hello(atom, number).?H11()"
     s2 = "?H11()"
@@ -547,7 +529,6 @@ defmodule STTest do
     case ST.session_tail_subtraction(ST.string_to_st(s1), ST.string_to_st(s2)) do
       {:ok, remaining_st} ->
         expected_remaining_st = ST.string_to_st("end")
-        # throw("#{ST.st_to_string(remaining_st)}")
         assert ST.st_to_string(expected_remaining_st) == ST.st_to_string(remaining_st)
 
       {:error, _} ->
@@ -555,103 +536,104 @@ defmodule STTest do
     end
   end
 
-  ## Duality
-  test "send dual" do
-    s = "!Hello(any)"
-    expected = "?Hello(any)"
+  describe "Duality" do
+    test "send dual" do
+      s = "!Hello(any)"
+      expected = "?Hello(any)"
 
-    session = ST.string_to_st(s)
+      session = ST.string_to_st(s)
 
-    dual = ST.dual(session)
-    assert ST.st_to_string(dual) == expected
-  end
+      dual = ST.dual(session)
+      assert ST.st_to_string(dual) == expected
+    end
 
-  test "receive dual" do
-    s = "?Hello(any)"
-    expected = "!Hello(any)"
+    test "receive dual" do
+      s = "?Hello(any)"
+      expected = "!Hello(any)"
 
-    session = ST.string_to_st(s)
+      session = ST.string_to_st(s)
 
-    dual = ST.dual(session)
-    assert ST.st_to_string(dual) == expected
-  end
+      dual = ST.dual(session)
+      assert ST.st_to_string(dual) == expected
+    end
 
-  test "sequence dual" do
-    s = "?Hello(any).?Hello2(any).!Hello3(any)"
-    expected = "!Hello(any).!Hello2(any).?Hello3(any)"
+    test "sequence dual" do
+      s = "?Hello(any).?Hello2(any).!Hello3(any)"
+      expected = "!Hello(any).!Hello2(any).?Hello3(any)"
 
-    session = ST.string_to_st(s)
+      session = ST.string_to_st(s)
 
-    dual = ST.dual(session)
-    assert ST.st_to_string(dual) == expected
-  end
+      dual = ST.dual(session)
+      assert ST.st_to_string(dual) == expected
+    end
 
-  test "branching choice dual" do
-    s = "&{?Neg(number, pid).?Hello(number)}"
-    expected = "+{!Neg(number, pid).!Hello(number)}"
+    test "branching choice dual" do
+      s = "&{?Neg(number, pid).?Hello(number)}"
+      expected = "+{!Neg(number, pid).!Hello(number)}"
 
-    session = ST.string_to_st(s)
+      session = ST.string_to_st(s)
 
-    dual = ST.dual(session)
-    assert ST.st_to_string(dual) == expected
-  end
+      dual = ST.dual(session)
+      assert ST.st_to_string(dual) == expected
+    end
 
-  test "sequence and branching choice dual = all need to match (incorrect) dual" do
-    s = "!Hello().+{!Neg(number, pid).!Hello(number)}"
-    expected = "?Hello().&{?Neg(number, pid).?Hello(number)}"
+    test "sequence and branching choice dual = all need to match (incorrect) dual" do
+      s = "!Hello().+{!Neg(number, pid).!Hello(number)}"
+      expected = "?Hello().&{?Neg(number, pid).?Hello(number)}"
 
-    session = ST.string_to_st(s)
+      session = ST.string_to_st(s)
 
-    dual = ST.dual(session)
-    assert ST.st_to_string(dual) == expected
-  end
+      dual = ST.dual(session)
+      assert ST.st_to_string(dual) == expected
+    end
 
-  test "sequence and branching choice dual = all need to match (correct) dual" do
-    s = "!Hello().&{?Neg(number, pid).!Hello(number), ?Neg2(number, pid).!Hello(number)}"
-    expected = "?Hello().+{!Neg(number, pid).?Hello(number), !Neg2(number, pid).?Hello(number)}"
+    test "sequence and branching choice dual = all need to match (correct) dual" do
+      s = "!Hello().&{?Neg(number, pid).!Hello(number), ?Neg2(number, pid).!Hello(number)}"
+      expected = "?Hello().+{!Neg(number, pid).?Hello(number), !Neg2(number, pid).?Hello(number)}"
 
-    session = ST.string_to_st(s)
+      session = ST.string_to_st(s)
 
-    dual = ST.dual(session)
-    assert ST.st_to_string(dual) == expected
-  end
+      dual = ST.dual(session)
+      assert ST.st_to_string(dual) == expected
+    end
 
-  test "dual?" do
-    s1 = "rec X . (?Hello() . +{!Hello(). X, !Hello2(). X})"
-    s2 = "rec X . (!Hello() . &{?Hello(). X})"
+    test "dual?" do
+      s1 = "rec X . (?Hello() . +{!Hello(). X, !Hello2(). X})"
+      s2 = "rec X . (!Hello() . &{?Hello(). X})"
 
-    session1 = ST.string_to_st(s1)
-    session2 = ST.string_to_st(s2)
+      session1 = ST.string_to_st(s1)
+      session2 = ST.string_to_st(s2)
 
-    actual = ST.dual?(session1, session2)
-    expected = false
+      actual = ST.dual?(session1, session2)
+      expected = false
 
-    assert actual == expected
-  end
+      assert actual == expected
+    end
 
-  test "dual? 2" do
-    s1 = "rec X . (?Hello() . +{!Hello(). X})"
-    s2 = "rec X . (!Hello() . &{?Hello(). X, ?Hello2(). X})"
+    test "dual? 2" do
+      s1 = "rec X . (?Hello() . +{!Hello(). X})"
+      s2 = "rec X . (!Hello() . &{?Hello(). X, ?Hello2(). X})"
 
-    session1 = ST.string_to_st(s1)
-    session2 = ST.string_to_st(s2)
+      session1 = ST.string_to_st(s1)
+      session2 = ST.string_to_st(s2)
 
-    actual = ST.dual?(session1, session2)
-    expected = true
+      actual = ST.dual?(session1, session2)
+      expected = true
 
-    assert actual == expected
-  end
+      assert actual == expected
+    end
 
-  test "dual? complex" do
-    s1 =
-      "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
+    test "dual? complex" do
+      s1 =
+        "?M220(msg: String).+{ !Helo(hostname: String).?M250(msg: String). rec X.(+{ !MailFrom(addr: String). ?M250(msg: String) . rec Y.(+{ !RcptTo(addr: String).?M250(msg: String).Y, !Data().?M354(msg: String).!Content(txt: String).?M250(msg: String).X, !Quit().?M221(msg: String) }), !Quit().?M221(msg: String)}), !Quit().?M221(msg: String) }"
 
-    session1 = ST.string_to_st(s1)
-    session2 = ST.dual(session1)
+      session1 = ST.string_to_st(s1)
+      session2 = ST.dual(session1)
 
-    actual = ST.dual?(session1, session2)
-    expected = true
+      actual = ST.dual?(session1, session2)
+      expected = true
 
-    assert actual == expected
+      assert actual == expected
+    end
   end
 end

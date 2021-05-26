@@ -133,19 +133,6 @@ defmodule ElixirSessions.Checking do
         )
       end
 
-      # IO.warn(
-      #   "Checking: Found @spec: name " <>
-      #     inspect(spec_name) <>
-      #     ", args_types " <>
-      #     # inspect(args_types) <>
-      #     # " => " <>
-      #     inspect(args_types_converted) <>
-      #     ", return_type " <>
-      #     # inspect(return_type) <>
-      #     # " => " <>
-      #     inspect(return_type_converted)
-      # )
-
       types = {spec_name, length(args_types)}
 
       case types do

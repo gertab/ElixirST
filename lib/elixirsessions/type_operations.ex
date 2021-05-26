@@ -141,31 +141,6 @@ defmodule ElixirSessions.TypeOperations do
   def equal?(type, type), do: true
   def equal?(_, _), do: false
 
-  # def subtype?(:integer, :number), do: true
-  # def subtype?(:integer, :float), do: true
-  # def subtype?(:float, :number), do: true
-
-  # def subtype?({:tuple, type1}, {:tuple, type2}) do
-  #   subtype?(type1, type2)
-  # end
-
-  # def subtype?({:list, type1}, {:list, type2})
-  #     when is_list(type1) and is_list(type2) do
-  #   # todo: either t or [t]; [t1, t2] is not a valid type
-  #   subtype?(type1, type2)
-  # end
-
-  # def subtype?(type1, type2) when is_list(type1) and is_list(type2) do
-  #   result =
-  #     Enum.zip(type1, type2)
-  #     |> Enum.map(fn {left, right} -> subtype?(left, right) end)
-
-  #   not Enum.member?(result, false)
-  # end
-
-  # def subtype?(_, :any), do: true
-  # def subtype?(_, _), do: false
-
   @spec type_to_guard(binary) :: :error | binary
   def type_to_guard(type) when is_binary(type) do
     case type do
