@@ -915,7 +915,7 @@ defmodule SessionTypecheckingTest do
     test "lists fail" do
       ast =
         quote do
-          a = [1,2]
+          a = [1, 2]
           b = [true, false]
           c = a ++ b
           a
@@ -1031,6 +1031,77 @@ defmodule SessionTypecheckingTest do
       result = typecheck(ast, env)
       assert result[:state] == :error
     end
+  end
+
+  test "list operations" do
+    ast =
+      quote do
+        a = []
+        b = [1]
+        c = [1, 2]
+        d = [1, 2, 3]
+        [e | f] = d
+        g = [e | d]
+        h = [e > 5, true, false]
+        [i | [j | [k | l]]] = d
+      end
+
+    result = typecheck(ast)
+    assert result[:state] == :ok
+    assert result[:error_data] == nil
+    assert result[:type] == {:list, :number}
+    assert result[:session_type] == %ST.Terminate{}
+
+    assert result[:variable_ctx] == %{
+             a: {:list, :any},
+             b: {:list, :number},
+             c: {:list, :number},
+             d: {:list, :number},
+             e: :number,
+             f: {:list, :number},
+             g: {:list, :number},
+             h: {:list, :boolean},
+             i: :number,
+             j: :number,
+             k: :number,
+             l: {:list, :number}
+           }
+  end
+
+  test "list receive/send" do
+    ast =
+      quote do
+        receive do
+          {:A, [number1 | [number2 | _]]} ->
+            send(self(), {:B, [number1 > 5, (number2 * 4) >= (number1 + 4), true, false]})
+        end
+      end
+
+    env = %{env() | session_type: ST.string_to_st("?A([number]).!B([boolean])")}
+    result = typecheck(ast, env)
+    assert result[:error_data] == nil
+    assert result[:state] == :ok
+    assert result[:type] == {:tuple, [:atom, {:list, :boolean}]}
+    assert result[:session_type] == %ST.Terminate{}
+  end
+
+  test "send/receive and tuples/lists" do
+    ast =
+      quote do
+        receive do
+          {:A, [{number1, [atom1 | _]} | other]} ->
+            [{number2, [atom2 | _]} | _] = other
+            send(self(), {:B, number1 + number2, atom1})
+        end
+      end
+
+    env = %{env() | session_type: ST.string_to_st("?A([{number, [atom]}]).!B(number, atom)")}
+    result = typecheck(ast, env)
+    assert result[:error_data] == nil
+    assert result[:state] == :ok
+    assert result[:type] == {:tuple, [:atom, :number, :atom]}
+    assert result[:session_type] == %ST.Terminate{}
+
   end
 end
 

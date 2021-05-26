@@ -212,8 +212,8 @@ defmodule ElixirSessions.TypeOperations do
           end)
 
         message ->
-          # {:error, message}
-          {:error, message <> ": Expected " <> inspect(param_type_list) <> ", but found " <> Macro.to_string(params)}
+          param_type_list = Enum.map(param_type_list, &string/1)
+          {:error, message <> ": Expected " <> Enum.join(param_type_list, ", ") <> ", but found " <> Macro.to_string(params)}
       end
     end
   end
@@ -223,42 +223,24 @@ defmodule ElixirSessions.TypeOperations do
   defp get_vars(_, :any), do: []
   defp get_vars({op, _, _}, type) when op not in [:{}, :%{}, :=, :_, :|], do: {op, type}
   defp get_vars({:_, _, _}, _type), do: []
-
-  defp get_vars({:=, _, [_arg1, _arg2]}, _),
-    do: {:error, "'=' is not supported"}
-
+  defp get_vars({:=, _, [_arg1, _arg2]}, _), do: {:error, "'=' is not supported"}
   defp get_vars([], {:list, _type}), do: []
-
-  defp get_vars(op, {:list, type}) when is_list(op),
-    do: Enum.map(op, fn x -> get_vars(x, type) end)
-
-  defp get_vars({:|, _, [operand1, operand2]}, {:list, type}),
-    do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
-
+  defp get_vars([{:|, _, [operand1, operand2]}], {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+  defp get_vars({:|, _, [operand1, operand2]}, {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+  defp get_vars(op, {:list, type}) when is_list(op), do: Enum.map(op, fn x -> get_vars(x, type) end)
   defp get_vars(_, {:list, _}), do: {:error, "Incorrect type specification"}
-
   defp get_vars([], _), do: {:error, "Incorrect type specification"}
-
   defp get_vars({:|, _, _}, _), do: {:error, "Incorrect type specification"}
-
   defp get_vars({:%{}, _, op}, {:map, {_, value_types}}),
     do:
       Enum.zip(op, value_types)
       |> Enum.map(fn {{_, value}, value_type} -> get_vars(value, value_type) end)
-
   defp get_vars({:%{}, _, _}, _), do: {:error, "Incorrect type specification"}
-
   defp get_vars(_, {:map, {_, _}}), do: {:error, "Incorrect type specification"}
-
   defp get_vars({:{}, _, ops}, {:tuple, type_list}), do: get_vars_tuple(ops, type_list)
-
-  defp get_vars(ops, {:tuple, type_list}) when is_tuple(ops),
-    do: get_vars_tuple(Tuple.to_list(ops), type_list)
-
+  defp get_vars(ops, {:tuple, type_list}) when is_tuple(ops), do: get_vars_tuple(Tuple.to_list(ops), type_list)
   defp get_vars({:{}, _, _}, _), do: {:error, "Incorrect type specification"}
-
   defp get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
-
   defp get_vars(value, type) when type in @types or is_atom(type) do
     # (is_integer(value) and type == :integer) or
     # (is_float(value) and type == :float) or
@@ -270,17 +252,13 @@ defmodule ElixirSessions.TypeOperations do
         (is_binary(value) and type == :binary) or
         (is_atom(value) and type == :atom)
 
-    # (is_atom(value) and subtype?(type, :atom))
-
     if literal do
       []
     else
       {:error, "Incorrect type specification"}
     end
   end
-
   defp get_vars(_, _), do: {:error, "Incorrect type specification"}
-
   defp get_vars_tuple(ops, type_list) do
     if length(ops) === length(type_list),
       do: Enum.zip(ops, type_list) |> Enum.map(fn {var, type} -> get_vars(var, type) end),
@@ -291,10 +269,6 @@ defmodule ElixirSessions.TypeOperations do
     types = string(types)
     "[" <> types <> "]"
   end
-  # def string({:list, types}) when is_list(types) do
-  #   types = Enum.map(types, &string/1)
-  #   "[" <> Enum.join(types, ", ") <> "]"
-  # end
 
   def string({:tuple, types}) when is_list(types) do
     types = Enum.map(types, &string/1)

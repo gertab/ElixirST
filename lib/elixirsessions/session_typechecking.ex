@@ -230,10 +230,14 @@ defmodule ElixirSessions.SessionTypechecking do
     typecheck(node, env)
   end
 
-  # List
-
+  # Lists and List operations
   def typecheck([], env) do
     {[], %{env | type: {:list, :any}}}
+  end
+
+  def typecheck([{:|, meta, [operand1, operand2]}], env) do
+    node = {:|, meta, []}
+    process_binary_operations(node, meta, :|, operand1, operand2, {:list, nil}, false, false, env)
   end
 
   def typecheck(node, env) when is_list(node) do
@@ -262,12 +266,6 @@ defmodule ElixirSessions.SessionTypechecking do
     {[], %{result | type: {:list, result[:type]}}}
   end
 
-  # defp process([{:|, [line: line], [operand1, operand2]}], env) do
-  #   elem = {:|, [line: line], []}
-  #   binary_operator_process(elem, env, line, :|, operand1, operand2, {:list, :any}, false)
-  # end
-
-  # List operations
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:++, :--] do
     Logger.debug("Typechecking: Erlang #{operator}")
@@ -682,11 +680,8 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        a = 4
-        a = true
-        p = self()
-        send(p, {:hello, a, false})
-
+        # {:A, 5, s} = { :A, 4, [1,2,3,4]}
+        [a | [b | c]] = [1,2,3,4]
       end
 
     st = ST.string_to_st("+{!hello(boolean, boolean)}")
@@ -703,13 +698,12 @@ defmodule ElixirSessions.SessionTypechecking do
 
     ElixirSessions.Helper.expanded_quoted(ast)
     |> Macro.prewalk(env, &typecheck/2)
-
   end
 
   # Returns the lhs and rhs for all cases (i.e. lhs -> rhs)
   defp process_cases(cases) do
     Enum.map(cases, fn
-      {:->, _, [[{:when, _, [var, _cond | _]}] , rhs | _]} ->
+      {:->, _, [[{:when, _, [var, _cond | _]}], rhs | _]} ->
         {var, rhs}
 
       {:->, _, [[lhs], rhs | _]} ->
@@ -768,48 +762,74 @@ defmodule ElixirSessions.SessionTypechecking do
         throw({:error, {:inner_error, op2_env[:error_data]}})
       end
 
-      if is_comparison do
-        {node,
-         %{
-           op1_env
-           | type: :boolean,
-             variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
-         }}
-      else
-        same_type = ElixirSessions.TypeOperations.equal?(op1_env[:type], op2_env[:type])
-
-        if same_type == false do
+      cond do
+        is_comparison ->
           {node,
            %{
              op1_env
-             | state: :error,
-               error_data:
-                 error_message(
-                   "Operator type problem in #{Atom.to_string(operator)}: #{ElixirSessions.TypeOperations.string(op1_env[:type])}, " <>
-                     "#{ElixirSessions.TypeOperations.string(op2_env[:type])} are not of the same type",
-                   meta
-                 )
+             | type: :boolean,
+               variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
            }}
-        else
-          if any_type || ElixirSessions.TypeOperations.equal?(op1_env[:type], allowed_type) do
+
+        operator == :| ->
+          same_type = ElixirSessions.TypeOperations.equal?({:list, op1_env[:type]}, op2_env[:type])
+
+          if same_type do
             {node,
              %{
                op1_env
-               | type: op1_env[:type],
+               | type: {:list, op1_env[:type]},
                  variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
              }}
           else
-            throw(
-              {:error,
-               "Operator type problem in #{Atom.to_string(operator)}: #{ElixirSessions.TypeOperations.string(op1_env[:type])}, " <>
-                 "#{ElixirSessions.TypeOperations.string(op2_env[:type])} is not of type #{inspect(allowed_type)}"}
-            )
+            {node,
+             %{
+               op1_env
+               | state: :error,
+                 error_data:
+                   error_message(
+                     "Operator type problem in [a | b]: b should be a list of the type of a. Found " <>
+                       "#{ElixirSessions.TypeOperations.string(op1_env[:type])}, #{ElixirSessions.TypeOperations.string(op2_env[:type])}",
+                     meta
+                   )
+             }}
           end
-        end
+
+        true ->
+          same_type = ElixirSessions.TypeOperations.equal?(op1_env[:type], op2_env[:type])
+
+          if same_type == false do
+            {node,
+             %{
+               op1_env
+               | state: :error,
+                 error_data:
+                   error_message(
+                     "Operator type problem in #{Atom.to_string(operator)}: #{ElixirSessions.TypeOperations.string(op1_env[:type])}, " <>
+                       "#{ElixirSessions.TypeOperations.string(op2_env[:type])} are not of the same type",
+                     meta
+                   )
+             }}
+          else
+            if any_type || ElixirSessions.TypeOperations.equal?(op1_env[:type], allowed_type) do
+              {node,
+               %{
+                 op1_env
+                 | type: op1_env[:type],
+                   variable_ctx: Map.merge(op1_env[:variable_ctx], op2_env[:variable_ctx] || %{})
+               }}
+            else
+              throw(
+                {:error,
+                 "Operator type problem in #{Atom.to_string(operator)}: #{ElixirSessions.TypeOperations.string(op1_env[:type])}, " <>
+                   "#{ElixirSessions.TypeOperations.string(op2_env[:type])} is not of type #{inspect(allowed_type)}"}
+              )
+            end
+          end
       end
     catch
-      {:error, message} ->
-        {node, %{env | state: :error, error_data: error_message(message, meta)}}
+      {:error, _} = error ->
+        {node, append_error(env, error, meta)}
 
       x ->
         throw("Unknown error: " <> inspect(x))

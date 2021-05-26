@@ -4,6 +4,7 @@ defmodule ElixirSessions.SmallExample do
 
   # iex -S mix
   # recompile && ElixirSessions.SmallExample.run
+
   def run() do
     # ST.spawn(&server/2, [0], &client/1, [])
     server =
