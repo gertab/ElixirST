@@ -54,13 +54,16 @@ defmodule ElixirSessions.Helper do
 
   def ast() do
     quote do
-      x = 7
+        x = 7
 
-      if x do
-        :ok
-      else
-        :not_ok
-      end
+        case x do
+          z ->
+            :ok
+            :ok
+
+          _ ->
+            :jkjk
+        end
 
     end
 

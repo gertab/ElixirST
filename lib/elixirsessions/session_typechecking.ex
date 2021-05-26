@@ -178,20 +178,21 @@ defmodule ElixirSessions.SessionTypechecking do
   # Block
   def typecheck({:__block__, meta, args}, env) do
     Logger.debug("Typechecking: Block")
-    node = {:__block__, meta, args}
+    node = {:__block__, meta, nil}
 
-        # typechecked_nodes = Enum.map(args, fn t -> elem(Macro.prewalk(t, env, &typecheck/2), 1) end)
+    env =
+      Enum.reduce_while(args, env, fn current_node, env_acc ->
+        {_ast, new_env} = Macro.prewalk(current_node, env_acc, &typecheck/2)
 
-    # env = Enum.reduce_while(typechecked_nodes, hd(typechecked_nodes),
-    # fn result, env_acc ->
-    #   case result[:state] do
-    #     :error ->
-    #       {:halt, result}
-    #     _ ->
-    #       {:cont, %{result | variable_ctx: Map.merge(env_acc[:variable_ctx], result[:variable_ctx] || %{})}}
-    #   end
-    # end
-    #   )
+        case new_env[:state] do
+          :error ->
+            {:halt, new_env}
+
+          _ ->
+            {:cont, %{new_env | variable_ctx: Map.merge(env_acc[:variable_ctx], new_env[:variable_ctx])}}
+        end
+      end)
+
     {node, env}
   end
 
@@ -681,15 +682,14 @@ defmodule ElixirSessions.SessionTypechecking do
     # &{?hello1(boolean), ?hello2(number)}
     ast =
       quote do
-        a = [{44, :avv}]
-        # a = [1]
-        b = [{44, :avv}, {42, :a4}]
-        c = a ++ b
+        a = 4
+        a = true
+        p = self()
+        send(p, {:hello, a, false})
 
-        z = 5 + 7
       end
 
-    st = ST.string_to_st("?hello(boolean).!abc(number, boolean)")
+    st = ST.string_to_st("+{!hello(boolean, boolean)}")
 
     env = %{
       :state => :ok,
@@ -702,19 +702,17 @@ defmodule ElixirSessions.SessionTypechecking do
     }
 
     ElixirSessions.Helper.expanded_quoted(ast)
-    # |> IO.inspect()
     |> Macro.prewalk(env, &typecheck/2)
 
-    # |> elem(0)
   end
 
   # Returns the lhs and rhs for all cases (i.e. lhs -> rhs)
   defp process_cases(cases) do
     Enum.map(cases, fn
-      {:->, _, [[{:when, _, [var, _cond | _]}] | rhs]} ->
+      {:->, _, [[{:when, _, [var, _cond | _]}] , rhs | _]} ->
         {var, rhs}
 
-      {:->, _, [[lhs] | rhs]} ->
+      {:->, _, [[lhs], rhs | _]} ->
         {lhs, rhs}
     end)
   end
