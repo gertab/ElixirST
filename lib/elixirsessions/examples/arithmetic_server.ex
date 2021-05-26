@@ -1,5 +1,5 @@
 # defmodule ElixirSessions.ArithmeticServer do
-#   use ElixirSessions.Checking
+#   use ElixirSessions
 
 #   @moduledoc false
 

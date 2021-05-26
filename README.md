@@ -2,7 +2,7 @@
 
 ![Elixir CI](https://github.com/gertab/ElixirSessions/workflows/Elixir%20CI/badge.svg)
 
-**TODO: Add description**
+ElixirSessions uses *Session Types* to check statically that the Elixir modules use the expected communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Installation
 
@@ -12,31 +12,95 @@ by adding `elixirsessions` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:elixirsessions, "~> 0.1.0"}
+    {:elixirsessions, "~> 0.2.0"}
+  ]
+end
+```
+<!-- 
+```elixir
+def deps do
+  [
+    {:dep_from_git, git: "https://github.com/gertab/ElixirSessions.git"}
   ]
 end
 ```
 
+{:dep_from_git, git: "https://github.com/gertab/ElixirSessions.git", tag: "0.1.0"}
+-->
+
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/elixirsessions](https://hexdocs.pm/elixirsessions).
+
+
+## Example
+
+To session typecheck filex in Elixir, add `use ElixirSessions` and include any assertions using `@session` (or `@dual`) attributes preceeding any `def` functions. The following is a simple example ([`small_example.ex`](/lib/elixirsessions/examples/small_example.ex)):
+<!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
+
+```elixir
+defmodule SmallExample do
+  use ElixirSessions
+
+  @session "!Hello()"
+  @spec client(pid) :: {atom()}
+  def client(pid) do
+    send(pid, {:Hello})
+  end
+
+  @dual &SmallExample.client/1
+  @spec server() :: atom()
+  def server() do
+    receive do
+      {:Hello} ->
+        :ok
+    end
+  end
+end
+```
+
+ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix session_check (module)`):
+```
+$ mix session_check SmallExample
+[info]  Session typechecking for client/1 terminated successfully
+[info]  Session typechecking for server/0 terminated successfully
+```
+
+If the client were to send a different label (e.g. :Hi) instead of the one specified in the session type (i.e. @session "!Hello()"), ElixirSessions would complain with an error messages:
+
+```
+$ mix session_check SmallExample
+[error] Session typechecking for client/1 found an error. 
+[error] [Line 7] Expected send with label :Hello but found :Hi.
+```
 
 ## Session Types in Elixir
 
 Session types are used to ensure correct communication between concurrent programs. 
 Some session type definitions: `!` refers to a send action, `?` refers to a receive action, `&` refers to a branch (external choice), and `+` refers to an (internal) choice.
 
-Session types accept the following grammar:
+Session types accept the following grammar and types:
 
 ```
 S =
-    !label(types, ...).S
-  | ?label(types, ...).S
-  | &{?label(types, ...).S, ...}
-  | +{!label(types, ...).S, ...}
-  | rec X.(S)
-  | X
-  | end
+    !label(types, ...).S            (send)
+  | ?label(types, ...).S            (receive)
+  | &{?label(types, ...).S, ...}    (branch)
+  | +{!label(types, ...).S, ...}    (choice)
+  | rec X.(S)                       (recurse)
+  | X                               (recursion var)
+  | end                             (terminate)
+
+types =
+  atom
+  | boolean
+  | number
+  | pid
+  | nil
+  | string
+  | binary
+  | {types, types, ...}             (tuple)
+  | [types]                         (list)
 ```
 
 The following are some session type examples along with the equivalent Elixir code. 
@@ -69,7 +133,7 @@ Send one label <code>:Hello</code>.
 
 ```elixir
 receive do
-  {:Ping, value} -> # ...
+  {:Ping, value} -> value
 end
 ```
 </td>
@@ -130,9 +194,9 @@ If it receives <code>{:Retry}</code> it recurses back to the beginning.
 
 ## Using ElixirSessions
 
-To session type check a module, insert this line:
+To session type check a module, insert this line at the top:
 ```elixir
-use ElixirSessions.Checking
+use ElixirSessions
 ```
 
 Insert any checks using the `@session` attribute followed by a function that should be session type checked, such as:
@@ -141,19 +205,27 @@ Insert any checks using the `@session` attribute followed by a function that sho
 def function(), do: ...
 ```
 
-In the case of multiple function definitions with the name name and arity (for pattern matching), define only one session type for all functions.
+The `@dual` attribute checks the dual of the specified session type.
+```elixir
+@dual &function/0
+# Equivalent to: @session "?Ping().!Pong()"
+```
 
-## Example
+In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions.
 
-In the following example, `Module1` contains two functions that will be type checked. The first function is type checked with `@session "!Hello().end"` - it expects a single send action containing `{:Hello}`. The second function is type checked with `@session "rec X.(&{...})"` which expects a branching using the receive and a recursive call.
+## Another Example
+
+In the following example, the module `LargerExample` contains two functions that will be typechecked. The first function is typechecked with `@session "!Hello().end"` - it expects a single send action containing `{:Hello}`. The second function is typechecked with `@session "rec X.(&{...})"` which expects a branching using the receive and a recursive call. The `@spec` directives are needed to ensure type correctness for the parameters. This example is found in [`larger_example.ex`](/lib/elixirsessions/examples/larger_example.ex):
 
 ```elixir
-defmodule Module1 do
-  use ElixirSessions.Checking
+defmodule LargeExample do
+  use ElixirSessions
 
   @session "!Hello().end"
+  @spec do_something(pid) :: :ok
   def do_something(pid) do
     send(pid, {:Hello})
+    :ok
   end
 
   @session """
@@ -163,6 +235,7 @@ defmodule Module1 do
                         ?Option3()
                       })
            """
+  @spec do_something_else :: :ok
   def do_something_else() do
     receive do
       {:Option1, value} ->
@@ -175,13 +248,12 @@ defmodule Module1 do
         :ok
     end
   end
-end
 ```
 
 In the next example, session type checking fails because the session type `!Hello()` expected to find a send action with `{:Hello}` but found `{:Yo}`:
 ```elixir
 defmodule Module2 do
-  use ElixirSessions.Checking
+  use ElixirSessions
 
   @session "!Hello()"
   def do_something(pid) do
@@ -205,98 +277,9 @@ Other examples can be found in the [`lib/elixirsessions/examples`](/lib/elixirse
 
 ElixirSessions implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
- - string parsing ([`lib/elixirsessions/parser.ex`](/lib/elixirsessions/parser.ex)),
- <!-- - ~~code synthesizer from session types ([`lib/elixirsessions/generator.ex`](/lib/elixirsessions/generator.ex)),~~
- - ~~session type inference from code ([`lib/elixirsessions/inference.ex`](/lib/elixirsessions/inference.ex)),~~ -->
+ - session type parsing ([`lib/elixirsessions/parser/parser.ex`](/lib/elixirsessions/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality).
 
-#### Parsing
+### Acknowledgements
 
-To parse an input string to session types (as Elixir data), use the function `string_to_st/1` from module [`ST`](/lib/elixirsessions/session_type.ex) (stands for _Session Types_).
-      
-```elixir
-iex> s  = "!Hello(Integer)"
-...> st = ST.string_to_st(s)
-# Stored internally as a tree of Structs
-...> st
-%ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:integer]}
-```
-
-<!-- #### Generator (not updated)
-
-To synthesize (or generate) Elixir code from a session type use the functions `generate_quoted/1` or `generate_to_string/1`. 
-These automatically generate the quoted (i.e. AST) or stringified Elixir code respectively. 
-
-Example:
-
-```elixir
-iex> s         = "!hello(number).?hello_ret(number)"
-...> st        = ST.string_to_st(s)
-...> st_string = ST.generate_to_string(st)
-``` -->
-
-Generates the following automatically:
-
-```elixir
-iex> st_string
-def func() do
-  send(pid, {:hello})
-  receive do
-    {:hello_ret, var1} when is_number(var1) ->
-      :ok
-  end
-end
-```
-#### Duality
-
-Given a session type, `dual/1` returns its dual session type. 
-For example, the dual of a send is a receive (e.g. `!Hello()` becomes `?Hello()`), and vice versa. The dual of a branch is a choice (e.g. `&{?Option1(), ?Option2()}` becomes `+{!Option1(), !Option2()}`). 
-Recursive operations remain unaffected.
-
-Example:
-
-```elixir
-iex> st_string = "!Ping(Integer).?Pong(String)"
-...> st = ST.string_to_st(st_string)
-...> st_dual = ST.dual(st)
-...> ST.st_to_string(st_dual)
-"?Ping(integer).!Pong(string)"
-```
-
-<!-- #### Inference (Depreciated)
-
-Given quoted Elixir code, _ElixirSessions_ can infer the equivalent session type. To do so, use the function `ElixirSessions.Inference.infer_session_type/2`.
-
-The following shown an example which contains send/receive statements and branch/choice options:
-
-```elixir
-iex> ast = quote do
-...>   def ping(pid) do
-...>     send(pid, {:label})
-...>     receive do
-...>       {:do_something} -> :ok
-...>       {:do_something_else, value} -> send(pid, {:label2, value})
-...>     end
-...>     a = true
-...>     case a do
-...>       true -> send(pid, {:first_branch})
-...>       false -> send(pid, {:other_branch})
-...>     end
-...>   end
-...> end
-...> st = ElixirSessions.Inference.infer_session_type(:ping, ast)
-...> ST.st_to_string(st)
-"!label().
-  &{ 
-     ?do_something().+{!first_branch(), !other_branch()}, 
-     ?do_something_else(any).!label2(any).
-       +{ 
-          !first_branch(), 
-          !other_branch()
-        }
-   }"
-``` -->
-
-#### Session type-checking
-
-...
+Some code related to Elixir expression typing was adapted from [typelixir](github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).

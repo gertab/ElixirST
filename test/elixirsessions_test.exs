@@ -1,4 +1,4 @@
 defmodule ElixirSessionsTest do
   use ExUnit.Case
-  doctest ElixirSessions
+  doctest ES
 end

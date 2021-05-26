@@ -1,9 +1,9 @@
-defmodule ElixirSessions.SmallExample do
-  use ElixirSessions.Checking
+defmodule ElixirSessions.SimpleExample do
+  use ElixirSessions
   # @dialyzer {:nowarn_function, ['server/2', 'client/1']}
 
   # iex -S mix
-  # recompile && ElixirSessions.SmallExample.run
+  # recompile && ElixirSessions.SimpleExample.run
 
   def run() do
     # ST.spawn(&server/2, [0], &client/1, [])
@@ -43,7 +43,7 @@ defmodule ElixirSessions.SmallExample do
     end
   end
 
-  @dual &ElixirSessions.SmallExample.server/2
+  @dual &ElixirSessions.SimpleExample.server/2
   @spec client(pid()) :: atom()
   def client(pid) do
     IO.puts("Client")
@@ -67,7 +67,7 @@ defmodule ElixirSessions.SmallExample do
 
   @moduledoc false
   # iex -S mix
-  # mix session_check SmallExample
+  # mix session_check SimpleExample
 
   # @session ""
   # @spec example() :: :ok
@@ -124,7 +124,7 @@ defmodule ElixirSessions.SmallExample do
   #   end
   # end
 
-  # @dual &ElixirSessions.SmallExample.example4/1
+  # @dual &ElixirSessions.SimpleExample.example4/1
   # @spec example4dual(pid()) :: atom()
   # def example4dual(pid) do
   #   receive do
@@ -149,7 +149,7 @@ defmodule ElixirSessions.SmallExample do
   #   :ok
   # end
 
-  # @dual &ElixirSessions.SmallExample.example4/1
+  # @dual &ElixirSessions.SimpleExample.example4/1
   # def other() do
   #   send(self(), {:Bjsjds})
   # end

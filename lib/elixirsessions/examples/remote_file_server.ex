@@ -1,5 +1,5 @@
 # defmodule ElixirSessions.FileServer do
-#   use ElixirSessions.Checking
+#   use ElixirSessions
 #   @moduledoc false
 #   # iex -S mix
 #   # Modular session types for objects pg 37

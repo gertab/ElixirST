@@ -1,8 +1,7 @@
 # Future Improvements
 
-### ElixirSessions.Checking Module
-- [ ] Replace ElixirSessions.Checking by ElixirSessions
-- [ ] Add custom options  (e.g. use ElixirSessions.Checking)
+### ElixirSessions Module
+- [ ] Add custom options  (e.g. use ElixirSessions, logger: :warn)
 - [ ] Replace throws by Logger
 - [ ] allow `@dual &fun/1` instead of having to include the module (e.g. `@dual &Module.Submodule.fun/1`)
 

@@ -1,4 +1,4 @@
-defmodule ElixirSessions.Checking do
+defmodule ElixirSessions do
   require Logger
 
   @moduledoc false
@@ -8,7 +8,7 @@ defmodule ElixirSessions.Checking do
 
   defmacro __using__(_) do
     quote do
-      import ElixirSessions.Checking
+      import ElixirSessions
 
       Module.register_attribute(__MODULE__, :session_typing, accumulate: false, persist: true)
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
@@ -18,8 +18,8 @@ defmodule ElixirSessions.Checking do
       @session_typing true
       @compile :debug_info
 
-      @on_definition ElixirSessions.Checking
-      @after_compile ElixirSessions.Checking
+      @on_definition ElixirSessions
+      @after_compile ElixirSessions
 
       IO.puts("ElixirSession started in #{IO.inspect(__MODULE__)}")
     end

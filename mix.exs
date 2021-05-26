@@ -4,7 +4,7 @@ defmodule ElixirSessions.MixProject do
   def project do
     [
       app: :elixirsessions,
-      version: "0.1.2",
+      version: "0.2.0",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
@@ -34,15 +34,12 @@ defmodule ElixirSessions.MixProject do
     [
       {:ex_doc, "~> 0.22.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
   end
 
   defp dialyzer do
     [
       plt_core_path: "priv/plts",
-      # plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
       plt_local_path: "priv/plts",
       plt_add_apps: [:mix]
     ]

@@ -1,5 +1,5 @@
 # defmodule ElixirSessions.PingPong do
-#   use ElixirSessions.Checking
+#   use ElixirSessions
 
 #   def run() do
 #     IO.puts("Spawning process")

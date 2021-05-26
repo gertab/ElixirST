@@ -1,5 +1,5 @@
 # defmodule Ss do
-#   use ElixirSessions.Checking
+#   use ElixirSessions
 
 #   @session "!hello().!hello().!hello2()"
 #   def aaa(pid) do
