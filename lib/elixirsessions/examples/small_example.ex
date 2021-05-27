@@ -9,7 +9,7 @@ defmodule SmallExample do
   end
 
   @dual &SmallExample.client/1
-  @spec server() :: atom()
+  @spec server() :: :ok
   def server() do
     receive do
       {:Hello} ->

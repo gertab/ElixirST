@@ -2,7 +2,7 @@
 
 [![Elixir CI](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml)
 
-ElixirSessions uses *Session Types* to check statically that the Elixir modules use the expected communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
+ElixirSessions uses *Session Types* to statically check that Elixir programs use the correct communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Installation
 
@@ -35,7 +35,7 @@ be found at [https://hexdocs.pm/elixirsessions](https://hexdocs.pm/elixirsession
 
 ## Example
 
-To session typecheck filex in Elixir, add `use ElixirSessions` and include any assertions using `@session` (or `@dual`) attributes preceeding any `def` functions. The following is a simple example ([`small_example.ex`](/lib/elixirsessions/examples/small_example.ex)):
+To session typecheck files in Elixir, add `use ElixirSessions` and include any assertions using `@session` (or `@dual`) attributes preceding any `def` functions. The following is a [`simple example`](/lib/elixirsessions/examples/small_example.ex):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
@@ -49,7 +49,7 @@ defmodule SmallExample do
   end
 
   @dual &SmallExample.client/1
-  @spec server() :: atom()
+  @spec server() :: :ok
   def server() do
     receive do
       {:Hello} ->
@@ -66,7 +66,7 @@ $ mix session_check SmallExample
 [info]  Session typechecking for server/0 terminated successfully
 ```
 
-If the client were to send a different label (e.g. :Hi) instead of the one specified in the session type (i.e. @session "!Hello()"), ElixirSessions would complain with an error messages:
+If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), ElixirSessions will complain:
 
 ```
 $ mix session_check SmallExample
@@ -189,12 +189,13 @@ If it receives <code>{:Retry}</code> it recurses back to the beginning.
 </td>
 </tr>
 </table>
+<!-- !Hello().end = Hello() -->
 
 ----------
 
 ## Using ElixirSessions
 
-To session type check a module, insert this line at the top:
+To session typecheck a module, insert this line at the top:
 ```elixir
 use ElixirSessions
 ```
@@ -215,7 +216,7 @@ In the case of multiple function definitions with the name name and arity (e.g. 
 
 ## Another Example
 
-In the following example, the module `LargerExample` contains two functions that will be typechecked. The first function is typechecked with `@session "!Hello().end"` - it expects a single send action containing `{:Hello}`. The second function is typechecked with `@session "rec X.(&{...})"` which expects a branching using the receive and a recursive call. The `@spec` directives are needed to ensure type correctness for the parameters. This example is found in [`larger_example.ex`](/lib/elixirsessions/examples/larger_example.ex):
+In the following example, the module `LargerExample` contains two functions that will be typechecked. The first function is typechecked with the session type `!Hello().end` - it expects a single send action containing `{:Hello}`. The second function is typechecked with respect to `rec X.(&{...})` which expects a branch using the receive construct and a recursive call. The `@spec` directives are required to ensure type correctness for the parameters. This example is found in [`larger_example.ex`](/lib/elixirsessions/examples/larger_example.ex):
 
 ```elixir
 defmodule LargeExample do
@@ -250,7 +251,7 @@ defmodule LargeExample do
   end
 ```
 
-In the next example, session type checking fails because the session type `!Hello()` expected to find a send action with `{:Hello}` but found `{:Yo}`:
+In the next example, session typechecking fails because the session type `!Hello()` was expecting to find a send action with `{:Hello}` but found `{:Yo}`:
 
 ```elixir
 defmodule Module2 do
