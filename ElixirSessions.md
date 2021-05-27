@@ -1,7 +1,5 @@
 # ElixirSessions
 
-[![Elixir CI](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml)
-
 ElixirSessions uses *Session Types* to statically check that Elixir programs use the correct communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Installation
@@ -59,7 +57,7 @@ defmodule SmallExample do
 end
 ```
 
-ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix session_check (module)`):
+ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix session_check`):
 ```text
 $ mix session_check SmallExample
 [info]  Session typechecking for client/1 terminated successfully
@@ -105,90 +103,83 @@ types =
 
 The following are some session type examples along with the equivalent Elixir code. 
 
-<table>
-<tr>
-<td> Session Type </td> <td> Elixir </td> <td> Description </td>
-</tr>
-<tr>
-<td> 
 
-`!Hello()` 
-</td>
-<td>
+<!-- Session Type  Elixir  Description -->
+-   **Send**  
+    `!Hello()` - Sends label `:Hello`
+    
+    Equivalent Elixir code:
+    ```elixir
+    send(pid, {:Hello})
+    ```
 
-```elixir
-send(pid, {:Hello})
-```
-</td>
-<td>
-Send one label <code>:Hello</code>.
-</td>
-</tr>
-<tr>
-<td> 
+-   **Receive**
 
-`?Ping(number)` 
-</td>
-<td>
+    `?Ping(number)` - Receives a label `:Ping` with a value of type `number`.  
 
-```elixir
-receive do
-  {:Ping, value} -> value
-end
-```
-</td>
-<td>
-Receive a label <code>:Ping</code> with a value of type <code>number</code>.
-</td>
-</tr>
-<tr>
-<td> 
+    Equivalent Elixir code:
+    ```elixir
+    receive do
+      {:Ping, value} -> value
+    end
+    ```
 
-```
-&{ 
-  ?Option1().!Hello(number), 
-  ?Option2()
- }
-```
+-   **Branch**
 
-</td>
-<td>
+    ```text
+    &{ 
+      ?Option1().!Hello(number), 
+      ?Option2()
+    }
+    ```
+    The process can receive either `{:Option1}` or `{:Option2}`. 
+    If the process receives the former, then it has to send `{:Hello}`. 
+    If it receives `{:Option2}`, then it terminates.  
 
-```elixir
-receive do
-  {:Option1} -> send(pid, {:Hello, 55})
-                # ...
-  {:Option2} -> # ...
-end
-```
-</td>
-<td>
-The process can receive either <code>{:Option1}</code> or <code>{:Option2}</code>. 
-If the process receives the former, then it has to send <code>{:Hello}</code>. 
-If it receives <code>{:Option2}</code>, then it terminates.
-</td>
-</tr>
-<tr>
-<td> 
+    Equivalent Elixir code:
+    ```elixir
+    receive do
+      {:Option1} -> send(pid, {:Hello, 55})
+                    # ...
+      {:Option2} -> # ...
+    end
+    ```
 
-```rec X.(&{?Stop(), ?Retry().X})```
+-   **Choice**
 
-</td>
-<td>
+    ```text
+    +{ 
+      !Option1().!Hello(number), 
+      !Option2()
+    }
+    ```
+    The process can choose either `{:Option1}` or `{:Option2}`. 
+    If the process chooses the former, then it has to send `{:Hello}`. 
+    If it chooses `{:Option2}`, then it terminates.  
 
-```elixir
-receive do
-  {:Stop}  -> # ...
-  {:Retry} -> recurse()
-end
-```
-</td>
-<td>
-If the process receives <code>{:Stop}</code>, then it terminates. 
-If it receives <code>{:Retry}</code> it recurses back to the beginning.
-</td>
-</tr>
-</table>
+    Equivalent Elixir code:
+    ```elixir
+    send(pid, {:Option1})
+    send(pid, {:Hello, 55})
+    # or
+    send(pid, {:Option2})
+    ```
+
+-   **Recurse**
+
+    ```rec X.(&{?Stop(), ?Retry().X})``` - 
+    If the process receives `{:Stop}`, it terminates. 
+    If it receives `{:Retry}` it recurses back to the beginning.  
+    
+    Equivalent Elixir code:
+    ```elixir
+    receive do
+      {:Stop}  -> # ...
+      {:Retry} -> recurse()
+    end
+    ```
+
+
 <!-- !Hello().end = Hello() -->
 
 ----------
@@ -267,12 +258,12 @@ end
 
 Output:
 ```
-$ mix compile
+mix compile
 == Compilation error in file example.ex ==
 ** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
 ```
 
-Other examples can be found in the [`examples`](/lib/elixirsessions/examples) folder.
+Other examples can be found in the [`examples`](https://github.com/gertab/ElixirSessions/tree/master/lib/elixirsessions/examples) folder.
 <!-- 
 ### Features
 
@@ -283,4 +274,4 @@ Some of these are shown below, which include:
 
 ### Acknowledgements
 
-Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).
+Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](https://github.com/gertab/ElixirSessions/blob/master/ACK.md)).
