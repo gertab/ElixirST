@@ -423,79 +423,38 @@ defmodule ST do
     ElixirSessions.Parser.parse(st_string)
   end
 
-  # defmacro merge_args(function, pid, args) do
-  #   all_args =
-  #     quote do
-  #       [unquote(pid)] ++ unquote(args)
-  #     end
 
-  #   #   IO.warn(all_args)
-  #   # call =
-  #   #   Macro.postwalk(function, fn
-  #   #     {{:., meta1, [{f_name, meta2, module}]}, meta3, _args} -> {{:., meta1, [{f_name, meta2, module}]}, meta3, unquote}
-  #   #     expr -> expr
-  #   #   end)
+  @doc """
+  Spawns two actors, exchanges their pids and then calls the server/client functions
 
-  #   quote do
-  #     unquote(function).(unquote_splicing(args))
+  `server_fn` and `client_fn` need to accept a `pid` as their first parameter.
+  """
+  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: [{:client, pid} | {:server, pid}]
+  def spawn(server_fn, server_args, client_fn, client_args)
+      when is_function(server_fn) and is_list(server_args) and
+             is_function(client_fn) and is_list(client_args) do
+    server =
+      spawn(fn ->
+        receive do
+          {:pid, pid} ->
+            send(pid, {:pid, self()})
+             apply(server_fn, [pid | server_args])
+        end
+      end)
 
-  #   end
+    client =
+      spawn(fn ->
+        send(server, {:pid, self()})
 
-  #   # quote do
-  #   #   if length(unquote(args)) > 0 do
-  #   #     :notok
-  #   #     all_args = [unquote(pid)] ++ unquote(args)
-  #   #     unquote(function).(unquote(pid), 0)
-  #   #     # IO.puts(inspect unquote(function_name))
-  #   #     # IO.inspect(quote do: unquote(function_name).(unquote(pid), 0))
-  #   #   else
-  #   #     :ok
-  #   #     # IO.puts(inspect  unquote(function_name))
-  #   #     unquote(function).(unquote(pid))
-  #   #   end
-  #   # end
-  # end
+        receive do
+          {:pid, pid} ->
+            client_fn.(pid)
+            apply(client_fn, [pid | client_args])
+        end
+      end)
 
-  # # defmacro merge_args(function_name, pid, args) do
-  # #   quote do
-  # #     if length(unquote(args)) > 0 do
-  # #       IO.puts(inspect unquote(function_name))
-  # #       all_args = [unquote(pid)] ++ unquote(args)
-  # #       IO.inspect(quote do: unquote(function_name).(unquote(pid), 0))
-  # #     else
-  # #       IO.puts(inspect  unquote(function_name))
-  # #       unquote(function_name).(unquote(pid))
-  # #     end
-  # #   end
-  # # end
-
-  # def spawn(server_fn, server_args, client_fn, client_args)
-  #     when is_function(server_fn) and is_list(server_args) and
-  #            is_function(client_fn) and is_list(client_args) do
-  #   server =
-  #     spawn(fn ->
-  #       receive do
-  #         {:pid, pid} ->
-  #           send(pid, {:pid, self()})
-  #           IO.inspect(merge_args(server_fn, pid, server_args))
-  #           # IO.inspect merge_args(server_fn, pid: pid, args: server_args)
-  #           # IO.inspect(quote do: server_fn.(pid, 0))
-  #       end
-  #     end)
-
-  #   client =
-  #     spawn(fn ->
-  #       send(server, {:pid, self()})
-
-  #       receive do
-  #         {:pid, pid} ->
-  #           # client_fn.(pid)
-  #           IO.inspect(merge_args(client_fn, pid, server_args))
-  #       end
-  #     end)
-
-  #   [server: server, client: client]
-  # end
+    [server: server, client: client]
+  end
 
   @doc """
   Returns the dual of the fiven session type.
