@@ -333,8 +333,12 @@ defmodule ST do
     "&{#{v}}"
   end
 
-  def st_to_string_internal(%ST.Recurse{label: label, body: body}) do
-    "rec #{label}.(#{st_to_string_internal(body)})"
+  def st_to_string_internal(%ST.Recurse{label: label, body: body, outer_recurse: outer_recurse}) do
+    if outer_recurse do
+      "#{label} = #{st_to_string_internal(body)}"
+    else
+      "rec #{label}.(#{st_to_string_internal(body)})"
+    end
   end
 
   def st_to_string_internal(%ST.Call_Recurse{label: label}) do
@@ -394,8 +398,12 @@ defmodule ST do
     "&{#{v}}"
   end
 
-  defp st_to_string_current_internal(%ST.Recurse{label: label, body: body}) do
-    "rec #{label}.(#{st_to_string_current_internal(body)})"
+  defp st_to_string_current_internal(%ST.Recurse{label: label, body: body, outer_recurse: outer_recurse}) do
+    if outer_recurse do
+      "#{label} = #{st_to_string_current_internal(body)}"
+    else
+      "rec #{label}.(#{st_to_string_current_internal(body)})"
+    end
   end
 
   defp st_to_string_current_internal(%ST.Call_Recurse{label: label}) do
@@ -423,7 +431,6 @@ defmodule ST do
     ElixirSessions.Parser.parse(st_string)
   end
 
-
   @doc """
   Spawns two actors, exchanges their pids and then calls the server/client functions
 
@@ -438,7 +445,7 @@ defmodule ST do
         receive do
           {:pid, pid} ->
             send(pid, {:pid, self()})
-             apply(server_fn, [pid | server_args])
+            apply(server_fn, [pid | server_args])
         end
       end)
 

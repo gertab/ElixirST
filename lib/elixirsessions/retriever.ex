@@ -37,7 +37,10 @@ defmodule ElixirSessions.Retriever do
         end
 
       # Gets the list of session types, which were stored as attributes in the module
-      session_types = Keyword.get_values(dbgi_map[:attributes], :session_marked)
+      session_types =
+        Keyword.get_values(dbgi_map[:attributes], :session_marked)
+        # Removing outer_recurse label
+        |> Keyword.values()
 
       session_types_parsed =
         session_types
@@ -63,7 +66,6 @@ defmodule ElixirSessions.Retriever do
         # x -> Logger.error(x)
     end
   end
-
 
   defp to_map(list) do
     list

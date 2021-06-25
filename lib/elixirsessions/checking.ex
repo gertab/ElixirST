@@ -43,18 +43,20 @@ defmodule ElixirSessions do
 
   # Processes @session attribute - gets the function and session type details
   defp session_attribute(session, name, arity, kind, env) do
-    if not is_nil(session) do
+    unless is_nil(session) do
       # @session_marked contains a list of functions with session types
       # E.g. [{{:pong, 0}, "?ping()"}, ...]
-      # Ensure that only one session type is set for each function (in case of multiple cases)
+      # Ensures that only one session type is set for each function (in case of multiple cases)
+      all_session_types = Module.get_attribute(env.module, :session_marked)
+
       duplicate_session_types =
-        Module.get_attribute(env.module, :session_marked)
+        all_session_types
         |> Enum.find(nil, fn
           {{^name, ^arity}, _} -> true
           _ -> false
         end)
 
-      if not is_nil(duplicate_session_types) do
+      unless is_nil(duplicate_session_types) do
         throw("Cannot set multiple session types for the same function #{name}/#{arity}.")
       end
 
@@ -65,47 +67,47 @@ defmodule ElixirSessions do
         )
       end
 
-      # Ensure that the session type is valid
-      ST.string_to_st(session)
+      # Ensures that the session type is valid
+      parsed_session_type = ST.string_to_st(session)
 
-      Module.put_attribute(env.module, :session_marked, {{name, arity}, session})
+      case parsed_session_type do
+        %ST.Recurse{outer_recurse: true, label: label} ->
+          if Keyword.has_key?(all_session_types, label) do
+            raise "Cannot have multiple session types with the same label: '#{label}'"
+          end
+
+          Module.put_attribute(env.module, :session_marked, {label, {{name, arity}, session}})
+
+        _ ->
+          Module.put_attribute(env.module, :session_marked, {nil, {{name, arity}, session}})
+      end
+
       Module.delete_attribute(env.module, :session)
     end
   end
 
-  # Processes @dual attribute, which takes a function reference, e.g. @dual &function/1.
-  defp dual_attribute(dual, name, arity, env) do
-    if not is_nil(dual) do
-      if not is_function(dual) do
-        throw("Expected function name but found #{inspect(dual)}.")
+  # Processes @dual attribute, which takes a function reference, e.g. @dual "session_name".
+  defp dual_attribute(dual_label, name, arity, env) do
+    unless is_nil(dual_label) do
+      unless is_binary(dual_label) do
+        throw("Expected session type name but found #{inspect(dual_label)}.")
       end
 
-      function = Function.info(dual)
+      all_session_types = Module.get_attribute(env.module, :session_marked)
 
-      # dual_module = function[:module] # todo should be the same as current module
-      dual_name = function[:name]
-      dual_arity = function[:arity]
+      case Keyword.fetch(all_session_types, String.to_atom(dual_label)) do
+        {:ok, {{_dual_name, _dual_arity}, session_type}} ->
+          expected_dual_session =
+            ST.string_to_st(session_type)
+            |> ST.dual()
+            |> ST.st_to_string()
 
-      dual_session =
-        Module.get_attribute(env.module, :session_marked)
-        |> Enum.find(nil, fn
-          {{^dual_name, ^dual_arity}, _} -> true
-          _ -> false
-        end)
+          Module.put_attribute(env.module, :session_marked, {nil, {{name, arity}, expected_dual_session}})
+          Module.delete_attribute(env.module, :dual)
 
-      if is_nil(dual_session) do
-        throw("No dual match found for #{inspect(dual)}.")
+        :error ->
+          throw("Dual session type '#{dual_label}' does not exist")
       end
-
-      {_name_arity, dual_session} = dual_session
-
-      expected_dual_session =
-        ST.string_to_st(dual_session)
-        |> ST.dual()
-        |> ST.st_to_string()
-
-      Module.put_attribute(env.module, :session_marked, {{name, arity}, expected_dual_session})
-      Module.delete_attribute(env.module, :dual)
     end
   end
 
@@ -123,7 +125,10 @@ defmodule ElixirSessions do
       if args_types_converted == :error or return_type_converted == :error do
         throw(
           "Problem with @spec for #{spec_name}/#{length(args_types)} " <>
-            inspect(args_types) <> " :: " <> inspect(return_type) <> " ## " <>
+            inspect(args_types) <>
+            " :: " <>
+            inspect(return_type) <>
+            " ## " <>
             inspect(args_types_converted) <> " :: " <> inspect(return_type_converted)
         )
       end

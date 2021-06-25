@@ -8,7 +8,7 @@ defmodule ElixirSessions.SimpleExample do
     ST.spawn(&server/2, [0], &client/1, [])
   end
 
-  @session "rec X.(&{?num(number).X, ?result().!total(number)})"
+  @session "server = &{?num(number).server, ?result().!total(number)}"
   @spec server(pid(), number()) :: :ok
   def server(pid, acc) do
     IO.puts("Server")
@@ -23,7 +23,7 @@ defmodule ElixirSessions.SimpleExample do
     end
   end
 
-  @dual &ElixirSessions.SimpleExample.server/2
+  @dual "server"
   @spec client(pid()) :: atom()
   def client(pid) do
     IO.puts("Client")

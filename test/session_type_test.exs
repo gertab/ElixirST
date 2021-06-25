@@ -305,6 +305,26 @@ defmodule STTest do
     assert actual == expected
   end
 
+  test "st_to_string outer label" do
+    s1 = "A = !B().A"
+
+    session1 = ST.string_to_st(s1)
+
+    actual = ST.st_to_string(session1)
+    expected = s1
+
+    assert actual == expected
+
+    s1 = "A = !B()"
+    expected = "A = !B()"
+    session1 = ST.string_to_st(s1)
+
+    actual = ST.st_to_string(session1)
+    assert actual == expected
+    actual = ST.st_to_string_current(session1)
+    assert actual == expected
+  end
+
   test "Comparing session types simple" do
     s1 = "!Hello2(atom, number).!Hello(atom, number).?H11()"
 
