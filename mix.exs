@@ -19,7 +19,15 @@ defmodule ElixirSessions.MixProject do
 
       # Leex/Yecc options
       # leex_options: [],
-      erlc_paths: ["lib/elixirsessions/parser"]
+      erlc_paths: ["lib/elixirsessions/parser"],
+
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -34,7 +42,8 @@ defmodule ElixirSessions.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.22.0", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 
