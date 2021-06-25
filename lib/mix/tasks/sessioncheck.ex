@@ -1,5 +1,4 @@
 defmodule Mix.Tasks.SessionCheck do
-  # @dialyzer {:nowarn_function}
   use Mix.Task
 
   # @moduledoc false
