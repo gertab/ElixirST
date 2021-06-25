@@ -66,7 +66,7 @@ defmodule ElixirSessions.Parser do
           | {:choice, [session_type_tuple()]}
           | {:branch, [session_type_tuple()]}
           | {:call, atom}
-          | {:recurse, atom, session_type_tuple()}
+          | {:recurse, atom, session_type_tuple(), boolean()}
           | {:terminate},
           [label()]
         ) :: session_type()
@@ -133,12 +133,12 @@ defmodule ElixirSessions.Parser do
     }
   end
 
-  defp convert_to_structs({:recurse, label, body}, recurse_var) do
+  defp convert_to_structs({:recurse, label, body, outer_recurse}, recurse_var) do
     # if label in recurse_var do
     #   throw("Cannot have multiple recursions with same variable: #{label}.")
     # end
 
-    %ST.Recurse{label: label, body: convert_to_structs(body, [label | recurse_var])}
+    %ST.Recurse{label: label, body: convert_to_structs(body, [label | recurse_var]), outer_recurse: outer_recurse}
   end
 
   defp convert_to_structs({:call, label}, _recurse_var) do

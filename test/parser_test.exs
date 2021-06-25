@@ -134,6 +134,34 @@ defmodule ParserTest do
     assert expected == result
   end
 
+  test "recurse with outer label" do
+    source = "server = !A().server"
+
+    expected = %ST.Recurse{
+      body: %ST.Send{
+        label: :A,
+        next: %ST.Call_Recurse{
+          label: :server
+        },
+        types: []
+      },
+      label: :server,
+      outer_recurse: true
+    }
+
+    result = Parser.parse(source)
+    assert expected == result
+  end
+
+  test "no recurse with outer label" do
+    source = "server = !A().end"
+
+    expected = %ST.Recurse{label: :server, body: %ST.Send{label: :A, types: [], next: %ST.Terminate{}}, outer_recurse: true}
+
+    result = Parser.parse(source)
+    assert expected == result
+  end
+
   test "validation no error - choice" do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number), !other_option(number, pid).?Num(Number)}"
 

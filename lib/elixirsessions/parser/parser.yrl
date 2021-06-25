@@ -1,10 +1,13 @@
 Nonterminals
-session choice_label_sessions branch_label_sessions types_list types diff_types sequences sessions. 
+root_session session choice_label_sessions branch_label_sessions types_list types diff_types sequences sessions. 
 
 Terminals
-send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')' '[' ']'.
+send recv choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')' '[' ']' '='.
 
-Rootsymbol session.
+Rootsymbol root_session.
+
+root_session -> session : '$1'.
+root_session -> label '=' session : #recurse{label=unwrap('$1'), body='$3', outer_recurse=true}.
 
 session -> terminate                                       : #terminate{}.
 session -> send label '(' ')'                              : #send{label=unwrap('$2'), types=[], next=#terminate{}}.
@@ -17,8 +20,8 @@ session -> recv label '(' ')' sessions                     : #recv{label=unwrap(
 session -> recv label '(' types_list ')' sessions          : #recv{label=unwrap('$2'), types='$4', next='$6'}.
 session -> choice '{' choice_label_sessions '}'            : #choice{choices='$3'}.
 session -> branch '{' branch_label_sessions '}'            : #branch{branches='$3'}.
-session -> recurse label sequences '(' session ')'         : #recurse{label=unwrap('$2'), body='$5'}.
-session -> recurse label '(' session ')'                   : #recurse{label=unwrap('$2'), body='$4'}.
+session -> recurse label sequences '(' session ')'         : #recurse{label=unwrap('$2'), body='$5', outer_recurse=false}.
+session -> recurse label '(' session ')'                   : #recurse{label=unwrap('$2'), body='$4', outer_recurse=false}.
 session -> label                                           : #call{label=unwrap('$1')}.
 
 sequences -> sequence                                      : nil.
@@ -51,7 +54,7 @@ Erlang code.
 -record(recv, {label, types, next}).
 -record(choice, {choices}).
 -record(branch, {branches}).
--record(recurse, {label, body}).
+-record(recurse, {label, body, outer_recurse}).
 -record(call, {label}).
 -record(terminate, {}).
 

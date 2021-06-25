@@ -10,12 +10,10 @@ defmodule ElixirSessions do
     quote do
       import ElixirSessions
 
-      Module.register_attribute(__MODULE__, :session_typing, accumulate: false, persist: true)
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
-      @session_typing true
       @compile :debug_info
 
       @on_definition ElixirSessions

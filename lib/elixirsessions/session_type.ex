@@ -195,11 +195,11 @@ defmodule ST do
   defmodule Recurse do
     @moduledoc false
     @enforce_keys [:label, :body]
-    defstruct [:label, :body]
+    defstruct [:label, :body, outer_recurse: false]
 
     @type session_type() :: ST.session_type()
     @type label() :: ST.label()
-    @type t :: %__MODULE__{label: label(), body: session_type()}
+    @type t :: %__MODULE__{label: label(), body: session_type(), outer_recurse: boolean()}
   end
 
   defmodule Call_Recurse do
@@ -737,6 +737,7 @@ defmodule ST do
     st
   end
 
+  # todo remove subtraction for now
   # Walks through session_type by header_session_type and returns the remaining session type.
   # !A().!B().!C() - !A() = !B().!C()
 
