@@ -37,16 +37,30 @@ defmodule ElixirSessions.Retriever do
         end
 
       # Gets the list of session types, which were stored as attributes in the module
-      session_types =
-        Keyword.get_values(dbgi_map[:attributes], :session_marked)
-        # Removing outer_recurse label
-        |> Keyword.values()
+      session_types = Keyword.get_values(dbgi_map[:attributes], :session_type_collection)
 
       session_types_parsed =
-        session_types
-        |> Enum.map(fn {{name, arity}, session_type_string} ->
+        for {{name, arity}, session_type_string} <- Keyword.values(session_types) do
           {{name, arity}, ST.string_to_st(session_type_string)}
-        end)
+        end
+
+      # Retrieve dual session types (as labels)
+      duals = Keyword.get_values(dbgi_map[:attributes], :dual_unprocessed_collection)
+
+      dual_session_types_parsed =
+        for {{name, arity}, dual_label} <- duals do
+          case Keyword.fetch(session_types, dual_label) do
+            {:ok, {{_dual_name, _dual_arity}, session_type}} ->
+              dual =
+                ST.string_to_st(session_type)
+                |> ST.dual()
+
+              {{name, arity}, dual}
+
+            :error ->
+              throw("Dual session type '#{dual_label}' does not exist")
+          end
+        end
 
       function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
@@ -56,7 +70,7 @@ defmodule ElixirSessions.Retriever do
 
       ElixirSessions.SessionTypechecking.session_typecheck_module(
         all_functions,
-        to_map(session_types_parsed),
+        to_map(session_types_parsed ++ dual_session_types_parsed),
         dbgi_map[:module],
         options
       )

@@ -12,7 +12,8 @@ defmodule ElixirSessions do
 
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
-      Module.register_attribute(__MODULE__, :session_marked, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :session_type_collection, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :dual_unprocessed_collection, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
       @compile :debug_info
 
@@ -30,7 +31,8 @@ defmodule ElixirSessions do
     {name, arity} = env.function
 
     # Parse temporary attributes into persistent attributes:
-    #      @session, @dual -> @session_marked
+    #      @session        -> @session_type_collection
+    #      @dual           -> @dual_unprocessed_collection
     #      @spec           -> @type_specs
     session_attribute(session, name, arity, kind, env)
     dual_attribute(dual, name, arity, env)
@@ -44,10 +46,10 @@ defmodule ElixirSessions do
   # Processes @session attribute - gets the function and session type details
   defp session_attribute(session, name, arity, kind, env) do
     unless is_nil(session) do
-      # @session_marked contains a list of functions with session types
+      # @session_type_collection contains a list of functions with session types
       # E.g. [{{:pong, 0}, "?ping()"}, ...]
       # Ensures that only one session type is set for each function (in case of multiple cases)
-      all_session_types = Module.get_attribute(env.module, :session_marked)
+      all_session_types = Module.get_attribute(env.module, :session_type_collection)
 
       duplicate_session_types =
         all_session_types
@@ -76,10 +78,10 @@ defmodule ElixirSessions do
             raise "Cannot have multiple session types with the same label: '#{label}'"
           end
 
-          Module.put_attribute(env.module, :session_marked, {label, {{name, arity}, session}})
+          Module.put_attribute(env.module, :session_type_collection, {label, {{name, arity}, session}})
 
         _ ->
-          Module.put_attribute(env.module, :session_marked, {nil, {{name, arity}, session}})
+          Module.put_attribute(env.module, :session_type_collection, {nil, {{name, arity}, session}})
       end
 
       Module.delete_attribute(env.module, :session)
@@ -93,21 +95,8 @@ defmodule ElixirSessions do
         throw("Expected session type name but found #{inspect(dual_label)}.")
       end
 
-      all_session_types = Module.get_attribute(env.module, :session_marked)
-
-      case Keyword.fetch(all_session_types, String.to_atom(dual_label)) do
-        {:ok, {{_dual_name, _dual_arity}, session_type}} ->
-          expected_dual_session =
-            ST.string_to_st(session_type)
-            |> ST.dual()
-            |> ST.st_to_string()
-
-          Module.put_attribute(env.module, :session_marked, {nil, {{name, arity}, expected_dual_session}})
-          Module.delete_attribute(env.module, :dual)
-
-        :error ->
-          throw("Dual session type '#{dual_label}' does not exist")
-      end
+      Module.put_attribute(env.module, :dual_unprocessed_collection, {{name, arity}, String.to_atom(dual_label)})
+      Module.delete_attribute(env.module, :dual)
     end
   end
 

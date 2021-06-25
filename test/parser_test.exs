@@ -134,6 +134,27 @@ defmodule ParserTest do
     assert expected == result
   end
 
+  # todo reject recursion without any actions
+  test "cannot have multiple recursions next to each other" do
+    source = "rec X.(rec Y.(X))"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+
+    source = "X = rec Y.(X)"
+
+    try do
+      ElixirSessions.Parser.parse(source)
+      assert false
+    catch
+      _ -> assert true
+    end
+  end
+
   test "recurse with outer label" do
     source = "server = !A().server"
 

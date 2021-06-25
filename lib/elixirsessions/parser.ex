@@ -21,9 +21,10 @@ defmodule ElixirSessions.Parser do
   """
   @spec parse(bitstring() | charlist()) :: session_type()
   def parse(string) when is_bitstring(string) do
-    st = string
-    |> String.to_charlist()
-    |> parse()
+    st =
+      string
+      |> String.to_charlist()
+      |> parse()
 
     validate!(st)
     st
@@ -216,8 +217,14 @@ defmodule ElixirSessions.Parser do
     end
   end
 
-  defp validate!(%ST.Recurse{body: body}) do
-    validate!(body)
+  defp validate!(%ST.Recurse{body: body} = st) do
+    case body do
+      %ST.Recurse{} ->
+        throw("It is unnecessary to having multiple recursions following each other: '#{ST.st_to_string(st)}'")
+
+      _ ->
+        validate!(body)
+    end
   end
 
   defp validate!(%ST.Call_Recurse{}) do

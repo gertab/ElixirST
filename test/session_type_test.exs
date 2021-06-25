@@ -241,37 +241,6 @@ defmodule STTest do
     assert ST.st_to_string(actual) == ST.st_to_string(session_result)
   end
 
-  # todo fix multiple unfolds; unfold
-  test "unfold multiple" do
-    _s1 = "rec X.(rec Y.(&{?A().X, ?B.Y}))"
-
-    _result = "&{?A().rec X.(rec Y.(&{?A().X, ?B.Y})), ?B.rec Y.(&{?A().X, ?B.Y})}"
-
-    # session1 = ST.string_to_st(s1)
-    # session_result = ST.string_to_st(result)
-
-    # actual = ST.unfold(session1)
-
-    # assert ST.st_to_string(actual) == ST.st_to_string(session_result)
-  end
-
-  # todo reject recursion without any actions
-  test "unfold multiple no infill" do
-    s1 = "rec X.(rec Y.(X))"
-
-    # result = "!A().rec X.(!A().X)"
-
-    _session1 = ST.string_to_st(s1)
-    # _session_result = ST.string_to_st(result)
-
-    # try do
-    #   ST.unfold(session1)
-    #   assert false
-    # catch
-    #   _ -> assert true
-    # end
-  end
-
   test "st_to_string_current complex" do
     s1 =
       "?M220(string).+{!Helo(string).?M250(string).rec X.(+{!MailFrom(string).?M250(string).rec Y.(+{!Data().?M354(string).!Content(string).?M250(string).X, !Quit().?M221(string), !RcptTo(string).?M250(string).Y}), !Quit().?M221(string)}), !Quit().?M221(string)}"
