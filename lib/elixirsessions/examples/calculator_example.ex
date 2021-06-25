@@ -1,5 +1,6 @@
 defmodule Examples.Counter do
   use ElixirSessions
+  @moduledoc false
 
   def main() do
     ST.spawn(&process1/1, [], &process2/1, [0])

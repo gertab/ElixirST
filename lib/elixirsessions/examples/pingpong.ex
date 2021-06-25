@@ -1,5 +1,6 @@
 defmodule Examples.PingPong do
   use ElixirSessions
+  @moduledoc false
 
   def run() do
     # IO.puts("Spawning process")

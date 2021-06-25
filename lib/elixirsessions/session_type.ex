@@ -293,7 +293,7 @@ defmodule ST do
     st_to_string_internal(session_type)
   end
 
-  def st_to_string_internal(%ST.Send{label: label, types: types, next: next}) do
+  defp st_to_string_internal(%ST.Send{label: label, types: types, next: next}) do
     types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
@@ -305,7 +305,7 @@ defmodule ST do
     end
   end
 
-  def st_to_string_internal(%ST.Recv{label: label, types: types, next: next}) do
+  defp st_to_string_internal(%ST.Recv{label: label, types: types, next: next}) do
     types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
@@ -317,7 +317,7 @@ defmodule ST do
     end
   end
 
-  def st_to_string_internal(%ST.Choice{choices: choices}) do
+  defp st_to_string_internal(%ST.Choice{choices: choices}) do
     v =
       Enum.map(choices, fn {_label, x} -> st_to_string_internal(x) end)
       |> Enum.join(", ")
@@ -325,7 +325,7 @@ defmodule ST do
     "+{#{v}}"
   end
 
-  def st_to_string_internal(%ST.Branch{branches: branches}) do
+  defp st_to_string_internal(%ST.Branch{branches: branches}) do
     v =
       Enum.map(branches, fn {_label, x} -> st_to_string_internal(x) end)
       |> Enum.join(", ")
@@ -333,7 +333,7 @@ defmodule ST do
     "&{#{v}}"
   end
 
-  def st_to_string_internal(%ST.Recurse{label: label, body: body, outer_recurse: outer_recurse}) do
+  defp st_to_string_internal(%ST.Recurse{label: label, body: body, outer_recurse: outer_recurse}) do
     if outer_recurse do
       "#{label} = #{st_to_string_internal(body)}"
     else
@@ -341,11 +341,11 @@ defmodule ST do
     end
   end
 
-  def st_to_string_internal(%ST.Call_Recurse{label: label}) do
+  defp st_to_string_internal(%ST.Call_Recurse{label: label}) do
     "#{label}"
   end
 
-  def st_to_string_internal(%ST.Terminate{}) do
+  defp st_to_string_internal(%ST.Terminate{}) do
     ""
   end
 
@@ -474,11 +474,6 @@ defmodule ST do
       iex> st_string = "!Ping(Number).?Pong(String)"
       ...> st = ElixirSessions.Parser.parse(st_string)
       ...> st_dual = ST.dual(st)
-      %ST.Recv{
-        label: :Ping,
-        next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: [:string]},
-        types: [:number]
-      }
       ...> ST.st_to_string(st_dual)
       "?Ping(number).!Pong(string)"
 
@@ -704,15 +699,15 @@ defmodule ST do
   end
 
   @spec unfold(session_type(), label(), ST.Recurse.t()) :: session_type()
-  def unfold(%ST.Send{label: label_send, types: types, next: next}, label, rec) do
+  defp unfold(%ST.Send{label: label_send, types: types, next: next}, label, rec) do
     %ST.Send{label: label_send, types: types, next: unfold(next, label, rec)}
   end
 
-  def unfold(%ST.Recv{label: label_recv, types: types, next: next}, label, rec) do
+  defp unfold(%ST.Recv{label: label_recv, types: types, next: next}, label, rec) do
     %ST.Recv{label: label_recv, types: types, next: unfold(next, label, rec)}
   end
 
-  def unfold(%ST.Choice{choices: choices}, label, rec) do
+  defp unfold(%ST.Choice{choices: choices}, label, rec) do
     %ST.Choice{
       choices:
         Enum.map(choices, fn {l, choice} -> {l, unfold(choice, label, rec)} end)
@@ -720,7 +715,7 @@ defmodule ST do
     }
   end
 
-  def unfold(%ST.Branch{branches: branches}, label, rec) do
+  defp unfold(%ST.Branch{branches: branches}, label, rec) do
     %ST.Branch{
       branches:
         Enum.map(branches, fn {l, branch} -> {l, unfold(branch, label, rec)} end)
@@ -728,19 +723,19 @@ defmodule ST do
     }
   end
 
-  def unfold(%ST.Recurse{label: diff_label, body: body}, label, rec) do
+  defp unfold(%ST.Recurse{label: diff_label, body: body}, label, rec) do
     %ST.Recurse{label: diff_label, body: unfold(body, label, rec)}
   end
 
-  def unfold(%ST.Call_Recurse{label: label}, label, rec) do
+  defp unfold(%ST.Call_Recurse{label: label}, label, rec) do
     rec
   end
 
-  def unfold(%ST.Call_Recurse{label: diff_label}, _label, _rec) do
+  defp unfold(%ST.Call_Recurse{label: diff_label}, _label, _rec) do
     %ST.Call_Recurse{label: diff_label}
   end
 
-  def unfold(%ST.Terminate{} = st, _label, _rec) do
+  defp unfold(%ST.Terminate{} = st, _label, _rec) do
     st
   end
 

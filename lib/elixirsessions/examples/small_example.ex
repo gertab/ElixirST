@@ -1,6 +1,6 @@
 defmodule Examples.SmallExample do
-  @moduledoc false
   use ElixirSessions
+  @moduledoc false
 
   @session "server = ?Hello(binary)"
   @spec server(pid) :: :ok

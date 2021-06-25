@@ -1,5 +1,6 @@
 defmodule Examples.SimpleExample do
   use ElixirSessions
+  @moduledoc false
 
   # Acts as an adder/counter
 

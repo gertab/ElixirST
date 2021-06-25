@@ -7,7 +7,7 @@ defmodule ElixirSessions.Retriever do
 
   @doc """
   Input as bytecode from a BEAM file, takes the Elixir AST from the debug_info
-  and forwards it to the typechecker/s.
+  and forwards it to the typechecker.
   """
   @spec process(binary, list) :: list
   def process(bytecode, options \\ []) do
