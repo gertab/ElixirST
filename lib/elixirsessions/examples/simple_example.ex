@@ -1,14 +1,16 @@
-defmodule ElixirSessions.SimpleExample do
+defmodule Examples.SimpleExample do
   use ElixirSessions
 
+  # Acts as an adder/counter
+
   # iex -S mix
-  # recompile && ElixirSessions.SimpleExample.run
+  # recompile && Examples.SimpleExample.run
 
   def run() do
     ST.spawn(&server/2, [0], &client/1, [])
   end
 
-  @session "server = &{?num(number).server, ?result().!total(number)}"
+  @session "counter = &{?num(number).counter, ?result().!total(number)}"
   @spec server(pid(), number()) :: :ok
   def server(pid, acc) do
     IO.puts("Server")
@@ -23,7 +25,7 @@ defmodule ElixirSessions.SimpleExample do
     end
   end
 
-  @dual "server"
+  @dual "counter"
   @spec client(pid()) :: atom()
   def client(pid) do
     IO.puts("Client")
@@ -32,12 +34,10 @@ defmodule ElixirSessions.SimpleExample do
     send(pid, {:num, 3})
     send(pid, {:result})
 
-    total =
-      receive do
-        {:total, value} ->
-          value
-      end
-
-    IO.puts("Total value = " <> inspect(total))
+    receive do
+      {:total, value} ->
+        IO.puts("Total value = " <> inspect(value))
+        :ok
+    end
   end
 end

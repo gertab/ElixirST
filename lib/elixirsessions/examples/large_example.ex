@@ -1,4 +1,4 @@
-defmodule LargeExample do
+defmodule Examples.LargeExample do
   @moduledoc false
   use ElixirSessions
 
@@ -10,11 +10,11 @@ defmodule LargeExample do
   end
 
   @session """
-              rec X.(&{
-                        ?Option1(string),
-                        ?Option2().X,
-                        ?Option3()
-                      })
+              X =  &{
+                      ?Option1(binary),
+                      ?Option2().X,
+                      ?Option3()
+                    }
            """
   @spec do_something_else :: :ok
   def do_something_else() do
@@ -28,5 +28,13 @@ defmodule LargeExample do
       {:Option3} ->
         :ok
     end
+  end
+
+  @dual "X"
+  @spec do_something_else_dual(pid) :: :ok
+  def do_something_else_dual(pid) do
+    send(pid, {:Option2})
+    send(pid, {:Option1, "Hello"})
+    :ok
   end
 end

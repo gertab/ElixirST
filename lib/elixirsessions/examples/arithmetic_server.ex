@@ -1,4 +1,4 @@
-# defmodule ElixirSessions.ArithmeticServer do
+# defmodule Examples.ArithmeticServer do
 #   use ElixirSessions
 
 #   @moduledoc false

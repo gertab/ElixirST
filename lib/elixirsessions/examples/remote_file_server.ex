@@ -1,4 +1,4 @@
-# defmodule ElixirSessions.FileServer do
+# defmodule Examples.FileServer do
 #   use ElixirSessions
 #   @moduledoc false
 #   # iex -S mix

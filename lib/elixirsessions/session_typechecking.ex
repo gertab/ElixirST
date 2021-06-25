@@ -128,7 +128,9 @@ defmodule ElixirSessions.SessionTypechecking do
                %{
                  result
                  | state: :error,
-                   error_data: "Return type for #{name}/#{arity} is #{inspect(result[:type])} but expected " <> inspect(expected_return_type)
+                   error_data:
+                     "Return type for #{name}/#{arity} is #{ElixirSessions.TypeOperations.string(result[:type])} but expected " <>
+                       ElixirSessions.TypeOperations.string(expected_return_type)
                }}
 
             true ->
@@ -869,7 +871,7 @@ defmodule ElixirSessions.SessionTypechecking do
     ast =
       quote do
         # {:A, 5, s} = { :A, 4, [1,2,3,4]}
-        [a | [b | c]] = [1,2,3,4]
+        [a | [b | c]] = [1, 2, 3, 4]
       end
 
     st = ST.string_to_st("+{!hello(boolean, boolean)}")

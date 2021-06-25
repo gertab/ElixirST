@@ -1,21 +1,24 @@
-defmodule SmallExample do
+defmodule Examples.SmallExample do
   @moduledoc false
   use ElixirSessions
 
-  @session "server = ?Hello()"
+  @session "server = ?Hello(binary)"
   @spec server(pid) :: :ok
   def server(_pid) do
     receive do
-      {:Hello} ->
+      {:Hello, _h} ->
         :ok
     end
   end
 
   @dual "server"
-  @spec client(pid) :: {atom()}
+  @spec client(pid) :: atom()
   def client(pid) do
-    send(pid, {:Hello})
+    kkk = "hello"
+    send(pid, {:Hello, kkk})
+
+    :ok
   end
 end
 
-# explicitly: `mix session_check SmallExample`
+# explicitly: `mix session_check Examples.SmallExample`

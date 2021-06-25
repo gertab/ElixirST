@@ -1,37 +1,40 @@
-# defmodule ElixirSessions.PingPong do
-#   use ElixirSessions
+defmodule Examples.PingPong do
+  use ElixirSessions
 
-#   def run() do
-#     IO.puts("Spawning process")
-#     pinger = spawn(__MODULE__, :ping, [])
-#     _ponger = spawn(__MODULE__, :pong, [pinger])
-#     IO.puts("Process spawned as #{inspect(pinger)}")
-#   end
+  def run() do
+    # IO.puts("Spawning process")
+    # pinger = spawn(__MODULE__, :ping, [])
+    # _ponger = spawn(__MODULE__, :pong, [pinger])
+    # IO.puts("Process spawned as #{inspect(pinger)}")
+    ST.spawn(&ping/1, [], &pong/1, [])
+  end
 
-#   @session "rec X.(?ping(pid).!pong().X)"
-#   def ping() do
-#     receive do
-#       {:ping, pid} ->
-#         IO.puts(
-#           "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} " <>
-#             "to #{inspect(pid)}"
-#         )
+  @session "ping = ?ping().!pong().ping"
+  @spec ping(pid) :: no_return
+  def ping(pid) do
+    receive do
+      {:ping} ->
+        IO.puts(
+          "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} " <>
+            "to #{inspect(pid)}"
+        )
 
-#         send(pid, {:pong})
-#     end
+        send(pid, {:pong})
+    end
 
-#     ping()
-#   end
+    ping(pid)
+  end
 
-#   @dual &ElixirSessions.PingPong.ping/0
-#   def pong(pid) do
-#     send(pid, {:ping, self()})
+  @dual "ping"
+  @spec pong(pid) :: no_return
+  def pong(pid) do
+    send(pid, {:ping})
 
-#     receive do
-#       {:pong} ->
-#         IO.puts("Received pong.")
-#     end
+    receive do
+      {:pong} ->
+        IO.puts("Received pong.")
+    end
 
-#     pong(pid)
-#   end
-# end
+    pong(pid)
+  end
+end
