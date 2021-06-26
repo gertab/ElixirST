@@ -2,7 +2,7 @@
 
 [![Elixir CI](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml)
 
-ElixirSessions uses *Session Types* to statically check that Elixir programs use the correct communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
+ElixirSessions applies *Session Types* to the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Installation
 
@@ -39,29 +39,28 @@ To session typecheck files in Elixir, add `use ElixirSessions` and include any a
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
-defmodule SmallExample do
+defmodule Examples.SmallExample do
   use ElixirSessions
 
-  @session "!Hello()"
+  @session "server = ?Hello()"
+  @spec server(pid) :: atom()
+  def server(_pid) do
+    receive do
+      {:Hello} -> :ok
+    end
+  end
+
+  @dual "server"
   @spec client(pid) :: {atom()}
   def client(pid) do
     send(pid, {:Hello})
-  end
-
-  @dual &SmallExample.client/1
-  @spec server() :: :ok
-  def server() do
-    receive do
-      {:Hello} ->
-        :ok
-    end
   end
 end
 ```
 
 ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix session_check (module)`):
 ```text
-$ mix session_check SmallExample
+$ mix session_check Examples.SmallExample
 [info]  Session typechecking for client/1 terminated successfully
 [info]  Session typechecking for server/0 terminated successfully
 ```
@@ -69,7 +68,7 @@ $ mix session_check SmallExample
 If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), ElixirSessions will complain:
 
 ```text
-$ mix session_check SmallExample
+$ mix session_check Examples.SmallExample
 [error] Session typechecking for client/1 found an error. 
 [error] [Line 7] Expected send with label :Hello but found :Hi.
 ```
@@ -97,7 +96,6 @@ types =
   | number
   | pid
   | nil
-  | string
   | binary
   | {types, types, ...}             (tuple)
   | [types]                         (list)
@@ -171,15 +169,17 @@ If it receives <code>{:Option2}</code>, then it terminates.
 <tr>
 <td> 
 
-```rec X.(&{?Stop(), ?Retry().X})```
+```X = &{?Stop(), ?Retry().X}```
 
 </td>
 <td>
 
 ```elixir
-receive do
-  {:Stop}  -> # ...
-  {:Retry} -> recurse()
+def rec() do
+  receive do
+    {:Stop}  -> # ...
+    {:Retry} -> rec()
+  end 
 end
 ```
 </td>
@@ -202,75 +202,17 @@ use ElixirSessions
 
 Insert any checks using the `@session` attribute followed by a function that should be session type checked, such as:
 ```elixir
-@session "!Ping().?Pong()"
+@session "pinger = !Ping().?Pong()"
 def function(), do: ...
 ```
 
 The `@dual` attribute checks the dual of the specified session type.
 ```elixir
-@dual &function/0
+@dual "pinger"
 # Equivalent to: @session "?Ping().!Pong()"
 ```
 
-In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions.
-
-## Another Example
-
-In the following example, the module `LargerExample` contains two functions that will be typechecked. The first function is typechecked with the session type `!Hello().end` - it expects a single send action containing `{:Hello}`. The second function is typechecked with respect to `rec X.(&{...})` which expects a branch using the receive construct and a recursive call. The `@spec` directives are required to ensure type correctness for the parameters. This example is found in [`larger_example.ex`](/lib/elixirsessions/examples/larger_example.ex):
-
-```elixir
-defmodule LargeExample do
-  use ElixirSessions
-
-  @session "!Hello().end"
-  @spec do_something(pid) :: :ok
-  def do_something(pid) do
-    send(pid, {:Hello})
-    :ok
-  end
-
-  @session """
-              rec X.(&{
-                        ?Option1(string),
-                        ?Option2().X,
-                        ?Option3()
-                      })
-           """
-  @spec do_something_else :: :ok
-  def do_something_else() do
-    receive do
-      {:Option1, value} ->
-        IO.puts(value)
-
-      {:Option2} ->
-        do_something_else()
-
-      {:Option3} ->
-        :ok
-    end
-  end
-```
-
-In the next example, session typechecking fails because the session type `!Hello()` was expecting to find a send action with `{:Hello}` but found `{:Yo}`:
-
-```elixir
-defmodule Module2 do
-  use ElixirSessions
-
-  @session "!Hello()"
-  @spec do_something(pid) :: {:Yo}
-  def do_something(pid) do
-    send(pid, {:Yo})
-  end
-end
-```
-
-Output:
-```
-$ mix compile
-== Compilation error in file example.ex ==
-** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
-```
+<!-- In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions. -->
 
 Other examples can be found in the [`examples`](/lib/elixirsessions/examples) folder.
 <!-- 

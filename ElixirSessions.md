@@ -1,6 +1,6 @@
 # ElixirSessions
 
-ElixirSessions uses *Session Types* to statically check that Elixir programs use the correct communication structure (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
+ElixirSessions applies *Session Types* to the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Installation
 
@@ -37,29 +37,28 @@ To session typecheck files in Elixir, add `use ElixirSessions` and include any a
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
-defmodule SmallExample do
+defmodule Examples.SmallExample do
   use ElixirSessions
 
-  @session "!Hello()"
+  @session "server = ?Hello()"
+  @spec server(pid) :: atom()
+  def server(_pid) do
+    receive do
+      {:Hello} -> :ok
+    end
+  end
+
+  @dual "server"
   @spec client(pid) :: {atom()}
   def client(pid) do
     send(pid, {:Hello})
-  end
-
-  @dual &SmallExample.client/1
-  @spec server() :: :ok
-  def server() do
-    receive do
-      {:Hello} ->
-        :ok
-    end
   end
 end
 ```
 
 ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix session_check`):
 ```text
-$ mix session_check SmallExample
+$ mix session_check Examples.SmallExample
 [info]  Session typechecking for client/1 terminated successfully
 [info]  Session typechecking for server/0 terminated successfully
 ```
@@ -67,7 +66,7 @@ $ mix session_check SmallExample
 If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), ElixirSessions will complain:
 
 ```text
-$ mix session_check SmallExample
+$ mix session_check Examples.SmallExample
 [error] Session typechecking for client/1 found an error. 
 [error] [Line 7] Expected send with label :Hello but found :Hi.
 ```
@@ -95,7 +94,6 @@ types =
   | number
   | pid
   | nil
-  | string
   | binary
   | {types, types, ...}             (tuple)
   | [types]                         (list)
@@ -167,15 +165,17 @@ The following are some session type examples along with the equivalent Elixir co
 
 -   **Recurse**
 
-    ```rec X.(&{?Stop(), ?Retry().X})``` - 
+    ```X = &{?Stop(), ?Retry().X}``` - 
     If the process receives `{:Stop}`, it terminates. 
     If it receives `{:Retry}` it recurses back to the beginning.  
     
     Equivalent Elixir code:
     ```elixir
-    receive do
-      {:Stop}  -> # ...
-      {:Retry} -> recurse()
+    def rec() do
+      receive do
+        {:Stop}  -> # ...
+        {:Retry} -> rec()
+      end 
     end
     ```
 
@@ -222,7 +222,7 @@ defmodule LargeExample do
 
   @session """
               rec X.(&{
-                        ?Option1(string),
+                        ?Option1(boolean),
                         ?Option2().X,
                         ?Option3()
                       })

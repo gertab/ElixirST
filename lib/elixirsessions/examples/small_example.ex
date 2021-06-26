@@ -2,22 +2,18 @@ defmodule Examples.SmallExample do
   use ElixirSessions
   @moduledoc false
 
-  @session "server = ?Hello(binary)"
-  @spec server(pid) :: :ok
+  @session "server = ?Hello()"
+  @spec server(pid) :: atom()
   def server(_pid) do
     receive do
-      {:Hello, _h} ->
-        :ok
+      {:Hello} -> :ok
     end
   end
 
   @dual "server"
-  @spec client(pid) :: atom()
+  @spec client(pid) :: {atom()}
   def client(pid) do
-    kkk = "hello"
-    send(pid, {:Hello, kkk})
-
-    :ok
+    send(pid, {:Hello})
   end
 end
 
