@@ -33,4 +33,16 @@ defmodule Examples.Counter do
         num
     end
   end
+
+  # @dual "count"
+  # @spec incorrect_client(pid) :: number
+  # def incorrect_client(server) do
+  #   send(server, {:increment})
+  #   send(server, {:decrement})
+  #   # send(server, {:stop})
+
+  #   receive do
+  #     {:value, num} -> num
+  #   end
+  # end
 end
