@@ -1,4 +1,4 @@
-defmodule Examples.Counter do
+defmodule Examples.Calculator do
   use ElixirSessions
   @moduledoc false
 
