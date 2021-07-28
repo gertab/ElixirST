@@ -614,6 +614,18 @@ defmodule ElixirSessions.SessionTypechecking do
         expected_session_type = env[:session_type]
 
         if ST.equal?(function_session_type, expected_session_type) do
+          # todo add checks for parameter types
+          # {_ast2, send_body_env} = Macro.prewalk(send_body, env, &typecheck/2)
+
+          # if send_body_env[:state] == :error do
+          #   throw({:error, send_body_env[:error_data]})
+          # end
+
+          # case send_body_env[:type] do
+          #   {:tuple, _} -> :ok
+          #   _ -> throw({:error, "Expected a tuple in send statement containing {:label, ...}"})
+          # end
+
           {node, %{env | session_type: %ST.Terminate{}, type: function.return_type}}
         else
           throw(

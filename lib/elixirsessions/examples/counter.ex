@@ -43,4 +43,22 @@ defmodule Examples.Counter do
   def main do
     ST.spawn(&server/2, [0], &client/1, [])
   end
+
+  @session "counter2 = &{?incr(number).counter2,
+                        ?stop().!value(number).end}"
+  @spec server2(pid, number) :: atom
+  def server2(client, tot) do
+    abc = true
+
+    receive do
+      {:incr, val} -> server2(client, tot + val + abc)
+      {:stop} -> terminate2(client, tot)
+    end
+  end
+
+  @spec terminate2(pid, number) :: atom
+  defp terminate2(client, tot) do
+    send(client, {:value, tot})
+    :ok
+  end
 end

@@ -705,6 +705,57 @@ defmodule SessionTypecheckingTest do
     assert result[:session_type] == %ST.Terminate{}
   end
 
+  test "aaaaaaaaaaaa" do
+    ast =
+      quote do
+        # @session "counter = &{?incr(number).counter,
+        # ?stop().!value(number).end}"
+        # @spec server(pid, number) :: atom
+        # def server(client, tot) do
+        abc = true
+        tot = 55
+        val = 55
+        client = self()
+        receive do
+          {:incr, val} ->
+            send(client, {:value, tot + val + abc})
+
+          {:stop} ->
+            send(client, {:value, tot})
+            :ok
+        end
+
+        # end
+
+        # @spec terminate(pid, number) :: atom
+        # defp terminate(client, tot) do
+        #   send(client, {:value, tot})
+        #   :ok
+        # end
+      end
+
+    env = %{env() | session_type: ST.string_to_st("counter = &{?incr(number).!value(number),?stop().!value(number).end}")}
+    result = typecheck(ast, env)
+    assert result[:state] == :error
+    IO.inspect(result)
+
+    ast =
+      quote do
+        x = 7
+
+        if x do
+          :ok
+        else
+          :not_ok
+        end
+      end
+
+    result = typecheck(ast)
+    assert result[:state] == :ok
+    assert result[:type] == :atom
+    assert result[:session_type] == %ST.Terminate{}
+  end
+
   def env_function_demo do
     %{
       error_data: nil,

@@ -54,17 +54,14 @@ defmodule ElixirSessions.Helper do
 
   def ast() do
     quote do
-        x = 7
+      tot = 5
+      val = 5.5
+      abc = true
 
-        case x do
-          z ->
-            :ok
-            :ok
-
-          _ ->
-            :jkjk
-        end
-
+      receive do
+        {:incr, val} -> server(client, tot + val + abc)
+        {:stop} -> terminate(client, tot)
+      end
     end
   end
 
