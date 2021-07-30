@@ -437,29 +437,24 @@ defmodule ST do
   `server_fn` and `client_fn` need to accept a `pid` as their first parameter.
   """
   @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: [{:client, pid} | {:server, pid}]
-  def spawn(server_fn, server_args, client_fn, client_args)
-      when is_function(server_fn) and is_list(server_args) and
-             is_function(client_fn) and is_list(client_args) do
-    server =
+  def spawn(serverFn, server_args, clientFn, client_args)
+      when is_function(serverFn) and is_list(server_args) and
+             is_function(clientFn) and is_list(client_args) do
+    server_pid =
       spawn(fn ->
         receive do
-          {:pid, pid} ->
-            send(pid, {:pid, self()})
-            apply(server_fn, [pid | server_args])
+          {:pid, client_pid} ->
+            apply(serverFn, [client_pid | server_args])
         end
       end)
 
-    client =
+    client_pid =
       spawn(fn ->
-        send(server, {:pid, self()})
-
-        receive do
-          {:pid, pid} ->
-            apply(client_fn, [pid | client_args])
-        end
+        send(server_pid, {:pid, self()})
+        apply(clientFn, [server_pid | client_args])
       end)
 
-    [server: server, client: client]
+    [server: server_pid, client: client_pid]
   end
 
   @doc """

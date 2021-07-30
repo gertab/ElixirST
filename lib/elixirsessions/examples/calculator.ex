@@ -3,7 +3,7 @@ defmodule Examples.Calculator do
   @moduledoc false
 
   def main() do
-    ST.spawn(&process1/1, [], &process2/1, [0])
+    ST.spawn(&process1/1, [], &process2/1, [])
   end
 
   @session "calc = &{?add(number, number).!result(number).calc, ?mult(number, number).!result(number).calc, ?stop()}"
@@ -11,6 +11,7 @@ defmodule Examples.Calculator do
   def process1(pid) do
     receive do
       {:add, number1, number2} ->
+        IO.puts("process1: 3 + 7 = ")
         send(pid, {:result, number1 + number2})
         process1(pid)
       {:mult, number1, number2} ->
@@ -27,13 +28,13 @@ defmodule Examples.Calculator do
     send(pid, {:add, 3, 7})
     receive do
       {:result, value} ->
-        IO.puts("3 + 7 = " <> value)
-    end
+        IO.puts("process1: 3 + 7 = #{value}")
+      end
 
-    send(pid, {:mult, 5, 26})
-    receive do
-      {:result, value} ->
-        IO.puts("5 * 26 = " <> value)
+      send(pid, {:mult, 5, 26})
+      receive do
+        {:result, value} ->
+          IO.puts("process1: 5 * 26 = #{value}")
     end
 
     send(pid, {:stop})
