@@ -455,7 +455,6 @@ defmodule ST do
 
         receive do
           {:pid, pid} ->
-            client_fn.(pid)
             apply(client_fn, [pid | client_args])
         end
       end)

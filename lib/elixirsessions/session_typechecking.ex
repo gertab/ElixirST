@@ -608,24 +608,21 @@ defmodule ElixirSessions.SessionTypechecking do
         throw({:error, "Function #{name}/#{length(args)} has unknown return type. Use @spec to set parameter and return types."})
       end
 
+      # # Checks for parameter types
+      # {_ast, argument_env} = Macro.prewalk(args, env, &typecheck/2)
+
+      # if argument_env[:state] == :error do
+      #   throw({:error, argument_env[:error_data]})
+      # end
+
+      # if ElixirSessions.TypeOperations.equal?(argument_env[:type])
+
       if env[:function_session_type_ctx][name_arity] do
         # Function with known session type (i.e. def with @session)
         function_session_type = env[:function_session_type_ctx][name_arity]
         expected_session_type = env[:session_type]
 
         if ST.equal?(function_session_type, expected_session_type) do
-          # todo add checks for parameter types
-          # {_ast2, send_body_env} = Macro.prewalk(send_body, env, &typecheck/2)
-
-          # if send_body_env[:state] == :error do
-          #   throw({:error, send_body_env[:error_data]})
-          # end
-
-          # case send_body_env[:type] do
-          #   {:tuple, _} -> :ok
-          #   _ -> throw({:error, "Expected a tuple in send statement containing {:label, ...}"})
-          # end
-
           {node, %{env | session_type: %ST.Terminate{}, type: function.return_type}}
         else
           throw(
