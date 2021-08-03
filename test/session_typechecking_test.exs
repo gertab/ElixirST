@@ -737,7 +737,7 @@ defmodule SessionTypecheckingTest do
     env = %{env() | session_type: ST.string_to_st("counter = &{?incr(number).!value(number),?stop().!value(number).end}")}
     result = typecheck(ast, env)
     assert result[:state] == :error
-    IO.inspect(result)
+    # IO.inspect(result)
 
     ast =
       quote do

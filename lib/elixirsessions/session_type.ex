@@ -436,7 +436,7 @@ defmodule ST do
 
   `server_fn` and `client_fn` need to accept a `pid` as their first parameter.
   """
-  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: [{:client, pid} | {:server, pid}]
+  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: {pid, pid}
   def spawn(serverFn, server_args, clientFn, client_args)
       when is_function(serverFn) and is_list(server_args) and
              is_function(clientFn) and is_list(client_args) do
@@ -454,11 +454,11 @@ defmodule ST do
         apply(clientFn, [server_pid | client_args])
       end)
 
-    [server: server_pid, client: client_pid]
+    {server_pid, client_pid}
   end
 
   @doc """
-  Returns the dual of the fiven session type.
+  Returns the dual of the given session type.
 
   ### Changes that are made:
   -  Receive <-> Send
