@@ -608,12 +608,29 @@ defmodule ElixirSessions.SessionTypechecking do
         throw({:error, "Function #{name}/#{length(args)} has unknown return type. Use @spec to set parameter and return types."})
       end
 
-      # # Checks for parameter types
-      # {_ast, argument_env} = Macro.prewalk(args, env, &typecheck/2)
+      argument_types =
+        for arg <- args do
+          # Checks for parameter types
+          {_ast, argument_env} = Macro.prewalk(arg, env, &typecheck/2)
 
-      # if argument_env[:state] == :error do
-      #   throw({:error, argument_env[:error_data]})
-      # end
+          if argument_env[:state] == :error do
+            throw({:error, argument_env[:error_data]})
+          end
+
+          argument_env[:type]
+        end
+
+      # Check argument types
+      Enum.zip(function.param_types, argument_types)
+      |> Enum.map(fn {expected, actual} ->
+        unless ElixirSessions.TypeOperations.equal?(expected, actual) do
+          throw(
+            {:error,
+             "Argument type error when calling #{name}/#{length(args)}: " <>
+               "Expect #{ElixirSessions.TypeOperations.string(expected)} but found #{ElixirSessions.TypeOperations.string(actual)}"}
+          )
+        end
+      end)
 
       # if ElixirSessions.TypeOperations.equal?(argument_env[:type])
 

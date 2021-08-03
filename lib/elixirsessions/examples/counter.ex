@@ -25,11 +25,14 @@ defmodule Examples.Counter do
     # send(server, {:decr, 2})
     send(server, {:stop})
 
-    receive do
-      {:value, val} ->
-        IO.puts(val)
-        val
-    end
+    val =
+      receive do
+        {:value, val} ->
+          val
+      end
+
+    IO.puts("Total value is: #{val}")
+    val
   end
 
   # Client with issues
@@ -40,25 +43,8 @@ defmodule Examples.Counter do
   #   send(server, {:decr, 2})
   # end
 
+  # Examples.Counter.main
   def main do
     ST.spawn(&server/2, [0], &client/1, [])
-  end
-
-  @session "counter2 = &{?incr(number).counter2,
-                        ?stop().!value(number).end}"
-  @spec server2(pid, number) :: atom
-  def server2(client, tot) do
-    abc = 4
-
-    receive do
-      {:incr, val} -> server2(client, tot + val + abc)
-      {:stop} -> terminate2(client, tot)
-    end
-  end
-
-  @spec terminate2(pid, number) :: atom
-  defp terminate2(client, tot) do
-    send(client, {:value, tot})
-    :ok
   end
 end
