@@ -4,7 +4,7 @@ defmodule STEx.MixProject do
   def project do
     [
       app: :stex_elixir,
-      version: "0.4.0",
+      version: "0.4.2",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
@@ -15,7 +15,7 @@ defmodule STEx.MixProject do
       name: "STEx",
       source_url: "https://github.com/gertab/STEx",
       # The main page in the docs
-      docs: [main: "Docs", extras: ["Docs.md", "LICENCE"]],
+      docs: [main: "docs", extras: ["docs.md", "LICENCE"]],
 
       # Leex/Yecc options
       # leex_options: [],
@@ -52,7 +52,8 @@ defmodule STEx.MixProject do
       maintainers: ["Gerard Tabone"],
       licenses: ["GPL-3.0"],
       links: %{"GitHub" => "https://github.com/gertab/STEx"},
-      description: "Session types in Elixir"
+      description: "Session types in Elixir",
+      files: ~w(lib .formatter.exs mix.exs README* LICENCE docs.md)
     ]
   end
 
