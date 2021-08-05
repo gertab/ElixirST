@@ -155,7 +155,7 @@ defmodule STEx.SessionTypechecking do
           function_session_type_ctx: _
         } = env
       ) do
-    # Logger.error("ElixirSessions Error! " <> error_data)
+    # Logger.error("STEx Error! " <> error_data)
     {nil, env}
   end
 

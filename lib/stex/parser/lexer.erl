@@ -12,7 +12,7 @@
 -export([format_error/1]).
 
 %% User code. This is placed here to allow extra attributes.
--file("lib/elixirsessions/parser/lexer.xrl", 36).
+-file("lib/stex/parser/lexer.xrl", 36).
 
 -file("/usr/lib/erlang/lib/parsetools-2.1.8/include/leexinc.hrl", 14).
 
@@ -305,7 +305,7 @@ adjust_line(T, A, [_|Cs], L) ->
 %% return signal either an unrecognised character or end of current
 %% input.
 
--file("lib/elixirsessions/parser/lexer.erl", 307).
+-file("lib/stex/parser/lexer.erl", 307).
 yystate() -> 30.
 
 yystate(45, [100|Ics], Line, Tlen, _, _) ->
@@ -865,92 +865,92 @@ yyaction(17, _, _, _) ->
 yyaction(_, _, _, _) -> error.
 
 -compile({inline,yyaction_0/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 15).
+-file("lib/stex/parser/lexer.xrl", 15).
 yyaction_0(TokenLine) ->
      { token, { send, TokenLine } } .
 
 -compile({inline,yyaction_1/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 16).
+-file("lib/stex/parser/lexer.xrl", 16).
 yyaction_1(TokenLine) ->
      { token, { recv, TokenLine } } .
 
 -compile({inline,yyaction_2/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 17).
+-file("lib/stex/parser/lexer.xrl", 17).
 yyaction_2(TokenLine) ->
      { token, { choice, TokenLine } } .
 
 -compile({inline,yyaction_3/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 18).
+-file("lib/stex/parser/lexer.xrl", 18).
 yyaction_3(TokenLine) ->
      { token, { branch, TokenLine } } .
 
 -compile({inline,yyaction_4/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 19).
+-file("lib/stex/parser/lexer.xrl", 19).
 yyaction_4(TokenLine) ->
      { token, { sequence, TokenLine } } .
 
 -compile({inline,yyaction_5/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 20).
+-file("lib/stex/parser/lexer.xrl", 20).
 yyaction_5(TokenLine) ->
      { token, { recurse, TokenLine } } .
 
 -compile({inline,yyaction_6/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 21).
+-file("lib/stex/parser/lexer.xrl", 21).
 yyaction_6(TokenLine) ->
      { token, { terminate, TokenLine } } .
 
 -compile({inline,yyaction_7/3}).
--file("lib/elixirsessions/parser/lexer.xrl", 22).
+-file("lib/stex/parser/lexer.xrl", 22).
 yyaction_7(TokenChars, TokenLen, TokenLine) ->
      { token, { label, TokenLine, list_to_atom (lists : sublist (TokenChars, 1, TokenLen)) } } .
 
 -compile({inline,yyaction_8/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 23).
+-file("lib/stex/parser/lexer.xrl", 23).
 yyaction_8(TokenLine) ->
      { token, { '=', TokenLine } } .
 
 -compile({inline,yyaction_9/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 24).
+-file("lib/stex/parser/lexer.xrl", 24).
 yyaction_9(TokenLine) ->
      { token, { '[', TokenLine } } .
 
 -compile({inline,yyaction_10/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 25).
+-file("lib/stex/parser/lexer.xrl", 25).
 yyaction_10(TokenLine) ->
      { token, { ']', TokenLine } } .
 
 -compile({inline,yyaction_11/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 26).
+-file("lib/stex/parser/lexer.xrl", 26).
 yyaction_11(TokenLine) ->
      { token, { '{', TokenLine } } .
 
 -compile({inline,yyaction_12/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 27).
+-file("lib/stex/parser/lexer.xrl", 27).
 yyaction_12(TokenLine) ->
      { token, { '}', TokenLine } } .
 
 -compile({inline,yyaction_13/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 28).
+-file("lib/stex/parser/lexer.xrl", 28).
 yyaction_13(TokenLine) ->
      { token, { ':', TokenLine } } .
 
 -compile({inline,yyaction_14/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 29).
+-file("lib/stex/parser/lexer.xrl", 29).
 yyaction_14(TokenLine) ->
      { token, { ',', TokenLine } } .
 
 -compile({inline,yyaction_15/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 30).
+-file("lib/stex/parser/lexer.xrl", 30).
 yyaction_15(TokenLine) ->
      { token, { '(', TokenLine } } .
 
 -compile({inline,yyaction_16/1}).
--file("lib/elixirsessions/parser/lexer.xrl", 31).
+-file("lib/stex/parser/lexer.xrl", 31).
 yyaction_16(TokenLine) ->
      { token, { ')', TokenLine } } .
 
 -compile({inline,yyaction_17/0}).
--file("lib/elixirsessions/parser/lexer.xrl", 32).
+-file("lib/stex/parser/lexer.xrl", 32).
 yyaction_17() ->
      skip_token .
 

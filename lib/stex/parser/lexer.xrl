@@ -1,4 +1,4 @@
-% Compiled - set in mix.exs: erlc_paths: ["lib/elixirsessions/parser"]
+% Compiled - set in mix.exs: erlc_paths: ["lib/stex/parser"]
 
 Definitions.
 

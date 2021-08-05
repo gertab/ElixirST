@@ -6,7 +6,7 @@ STEx (**S**ession **T**ypes in **E**li**x**ir) applies *Session Types* to a part
 
 ## Example
 
-To session typecheck modules in Elixir, add `use STEx` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](/lib/stex/examples/small_example.ex):
+To session typecheck modules in Elixir, add `use STEx` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](/lib/stex/examples/small_example.ex), which receives one label (`?Hello()`):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
@@ -29,14 +29,14 @@ defmodule Example do
 end
 ```
 
-ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix sessions (module)`):
+STEx runs automatically at compile time (`mix compile`) or as a mix task (`mix sessions [module name]`):
 ```text
 $ mix sessions SmallExample
 [info]  Session typechecking for client/1 terminated successfully
 [info]  Session typechecking for server/0 terminated successfully
 ```
 
-If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), ElixirSessions will complain:
+If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), STEx will complain:
 
 ```text
 $ mix sessions Examples.SmallExample
@@ -46,10 +46,10 @@ $ mix sessions Examples.SmallExample
 
 ## Session Types in Elixir
 
-Session types are used to ensure correct communication between concurrent programs. 
-Some session type definitions: `!` refers to a send action, `?` refers to a receive action, `&` refers to a branch (external choice), and `+` refers to an (internal) choice.
+Session types are used to ensure correct communication between concurrent processes. 
+The session type operations include the following: `!` refers to a send action, `?` refers to a receive action, `&` refers to a branch (external choice), and `+` refers to an (internal) choice.
 
-Session types accept the following grammar and types:
+Session types accept the following grammar:
 
 ```text
 S =
@@ -103,12 +103,12 @@ Documentation can be found at [https://hexdocs.pm/stex_elixir](https://hexdocs.p
 
 ### Use in Elixir modules
 
-To session typecheck a module, insert this line at the top:
+To session typecheck a module, link the STEx library using this line:
 ```elixir
 use STEx
 ```
 
-Insert any checks using the `@session` attribute followed by a function that should be session type checked, such as:
+Insert any checks using the `@session` attribute followed by a function that should be session typechecked, such as:
 ```elixir
 @session "pinger = !Ping().?Pong()"
 def function(), do: ...
@@ -126,9 +126,9 @@ Other examples can be found in the [`examples`](/lib/stex/examples) folder.
 <!-- 
 ### Features
 
-ElixirSessions implements several features that allow for _session type_ manipulation.
+STEx implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
- - session type parsing ([`lib/elixirsessions/parser/parser.ex`](/lib/elixirsessions/parser/parser.ex)),
+ - session type parsing ([`lib/stex/parser/parser.ex`](/lib/stex/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
 ### Acknowledgements
