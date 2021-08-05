@@ -295,4 +295,4 @@ Some of these are shown below, which include:
 
 Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](https://github.com/gertab/STEx/blob/master/ACK.md)).
 
-This project is licenced under the GPL-3.0 licence.
+This project is licenced under the GPL-3.0 [licence](https://github.com/gertab/STEx/blob/master/LICENCE).
