@@ -35,12 +35,12 @@ be found at [https://hexdocs.pm/elixirsessions](https://hexdocs.pm/elixirsession
 
 ## Example
 
-To session typecheck files in Elixir, add `use ElixirSessions` and include any assertions using `@session` (or `@dual`) attributes preceding any `def` functions. The following is a [`simple example`](/lib/elixirsessions/examples/small_example.ex):
+To session typecheck files in Elixir, add `use STEx` and include any assertions using `@session` (or `@dual`) attributes preceding any `def` functions. The following is a [`simple example`](/lib/elixirsessions/examples/small_example.ex):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
 defmodule Examples.SmallExample do
-  use ElixirSessions
+  use STEx
 
   @session "server = ?Hello()"
   @spec server(pid) :: atom()
@@ -197,7 +197,7 @@ If it receives <code>{:Retry}</code> it recurses back to the beginning.
 
 To session typecheck a module, insert this line at the top:
 ```elixir
-use ElixirSessions
+use STEx
 ```
 
 Insert any checks using the `@session` attribute followed by a function that should be session type checked, such as:

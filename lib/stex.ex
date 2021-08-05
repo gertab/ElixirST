@@ -1,4 +1,4 @@
-defmodule ElixirSessions do
+defmodule STEx do
   require Logger
 
   @moduledoc false
@@ -8,7 +8,7 @@ defmodule ElixirSessions do
 
   defmacro __using__(_) do
     quote do
-      import ElixirSessions
+      import STEx
 
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
@@ -17,8 +17,8 @@ defmodule ElixirSessions do
       Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
       @compile :debug_info
 
-      @on_definition ElixirSessions
-      @after_compile ElixirSessions
+      @on_definition STEx
+      @after_compile STEx
 
       IO.puts("ElixirSession started in #{IO.inspect(__MODULE__)}")
     end

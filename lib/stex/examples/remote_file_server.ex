@@ -1,5 +1,5 @@
 # defmodule Examples.FileServer do
-#   use ElixirSessions
+#   use STEx
 #   @moduledoc false
 #   # iex -S mix
 #   # Modular session types for objects pg 37

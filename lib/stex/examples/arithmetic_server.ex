@@ -1,5 +1,5 @@
 # defmodule Examples.ArithmeticServer do
-#   use ElixirSessions
+#   use STEx
 
 #   @moduledoc false
 

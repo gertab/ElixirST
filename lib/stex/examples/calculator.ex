@@ -1,5 +1,5 @@
 defmodule Examples.Calculator do
-  use ElixirSessions
+  use STEx
   @moduledoc false
 
   def main() do

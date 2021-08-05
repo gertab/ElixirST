@@ -1,5 +1,5 @@
 defmodule Examples.Counter do
-  use ElixirSessions
+  use STEx
   @moduledoc false
 
   @session "counter = &{?incr(number).counter,

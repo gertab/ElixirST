@@ -1,5 +1,5 @@
 defmodule Examples.PingPong do
-  use ElixirSessions
+  use STEx
   @moduledoc false
 
   def run() do

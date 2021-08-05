@@ -1,5 +1,5 @@
 defmodule Examples.SimpleExample do
-  use ElixirSessions
+  use STEx
   @moduledoc false
 
   # Acts as an adder/counter

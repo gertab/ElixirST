@@ -1,6 +1,6 @@
 defmodule Examples.LargeExample do
   @moduledoc false
-  use ElixirSessions
+  use STEx
 
   @session "!Hello().end"
   @spec do_something(pid) :: :ok

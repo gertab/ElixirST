@@ -33,12 +33,12 @@ be found at [https://hexdocs.pm/elixirsessions](https://hexdocs.pm/elixirsession
 
 ## Example
 
-To session typecheck files in Elixir, add `use ElixirSessions` and include any assertions using `@session` (or `@dual`) attributes preceding any `def` functions. The following is a [`simple example`](/lib/elixirsessions/examples/small_example.ex):
+To session typecheck files in Elixir, add `use STEx` and include any assertions using `@session` (or `@dual`) attributes preceding any `def` functions. The following is a [`simple example`](/lib/elixirsessions/examples/small_example.ex):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
 defmodule Examples.SmallExample do
-  use ElixirSessions
+  use STEx
 
   @session "server = ?Hello()"
   @spec server(pid) :: atom()
@@ -188,7 +188,7 @@ The following are some session type examples along with the equivalent Elixir co
 
 To session typecheck a module, insert this line at the top:
 ```elixir
-use ElixirSessions
+use STEx
 ```
 
 Insert any checks using the `@session` attribute followed by a function that should be session type checked, such as:
@@ -211,7 +211,7 @@ In the following example, the module `LargerExample` contains two functions that
 
 ```elixir
 defmodule LargeExample do
-  use ElixirSessions
+  use STEx
 
   @session "!Hello().end"
   @spec do_something(pid) :: :ok
@@ -246,7 +246,7 @@ In the next example, session typechecking fails because the session type `!Hello
 
 ```elixir
 defmodule Module2 do
-  use ElixirSessions
+  use STEx
 
   @session "!Hello()"
   @spec do_something(pid) :: {:Yo}
