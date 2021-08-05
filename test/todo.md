@@ -5,16 +5,16 @@
 - [ ] Replace throws by Logger
 - [ ] allow `@dual &fun/1` instead of having to include the module (e.g. `@dual &Module.Submodule.fun/1`)
 
-### ElixirSessions.Retriever Module
+### STEx.Retriever Module
 - [ ] Ensure that process/2 is only called once (in mix task and in @after_compile)
 - [x] Execute session typecheck from BEAM (rather than rely on @after_compile), a la ExUnit - can be done using `mix session_check Module`
 
-### ElixirSessions.SessionType Module
+### STEx.SessionType Module
 - [ ] Improve examples, docs and doctests
 - [ ] Add spawn(server_fn, server_args, client_fn, client_args) that spawns two actors, exchanges their pids and calls the server/client functions
 - [ ] Unfold multiple e.g. rec X.rec Y.(!A().X)
 
-### ElixirSessions.SessionTypechecking Module
+### STEx.SessionTypechecking Module
 - [ ] Improve error messages
 - [ ] Logger should accept different levels (:debug, :info, :warn & :error)
 - [ ] Ignore variable type starting with _, e.g. _var = 7

@@ -1,6 +1,6 @@
-defmodule ElixirSessions.TypeOperations do
+defmodule STEx.TypeOperations do
   @moduledoc """
-  Operations related to expression typing
+  Operations related to expression typing.
   """
   # List of accepted types in session types
   @types [
@@ -262,7 +262,7 @@ defmodule ElixirSessions.TypeOperations do
   # Checks if a type is valid
   # Returns correct_type or {:error, incorrect_type}
   def valid_type(type) when is_atom(type) do
-    accepted_types = ElixirSessions.TypeOperations.accepted_types()
+    accepted_types = STEx.TypeOperations.accepted_types()
 
     type = if type in [:integer, :float], do: :number, else: type
 

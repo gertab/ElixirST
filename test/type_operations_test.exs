@@ -1,6 +1,7 @@
 defmodule TypeOperationsTest do
   use ExUnit.Case
-  doctest ElixirSessions.TypeOperations
+  doctest STEx.TypeOperations
+  alias STEx.TypeOperations
 
   test "small example" do
     {:@, _, [spec]} =
@@ -10,8 +11,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [:number, :number]
     assert return_type == :number
@@ -35,8 +36,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [:any, :atom, :binary, :boolean, nil, :number, :pid, :string, :no_return]
     assert return_type == :any
@@ -50,8 +51,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [:number, {:list, :number}]
     assert return_type == {:tuple, [:number]}
@@ -65,8 +66,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [:number, nil, :atom, :binary]
     assert return_type == :atom
@@ -80,8 +81,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [:number, :boolean, :boolean, :number, nil, :pid, :binary]
     assert return_type == :atom
@@ -95,8 +96,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{_spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [{:tuple, [:number, :number, :atom]}]
     assert return_type == :atom
@@ -110,8 +111,8 @@ defmodule TypeOperationsTest do
 
     {:spec, _, [{:"::", _, [{__spec_name, _, args_types}, return_type]}]} = spec
 
-    args_types = ElixirSessions.TypeOperations.get_type(args_types)
-    return_type = ElixirSessions.TypeOperations.get_type(return_type)
+    args_types = TypeOperations.get_type(args_types)
+    return_type = TypeOperations.get_type(return_type)
 
     assert args_types == [:error]
     assert return_type == :number
@@ -120,21 +121,21 @@ defmodule TypeOperationsTest do
   test "equal list" do
     type1 = {:list, [:number]}
     type2 = {:list, [:number]}
-    assert ElixirSessions.TypeOperations.equal?(type1, type2) === true
-    assert ElixirSessions.TypeOperations.equal?(type2, type1) === true
+    assert TypeOperations.equal?(type1, type2) === true
+    assert TypeOperations.equal?(type2, type1) === true
   end
 
   test "equal bad" do
-    assert ElixirSessions.TypeOperations.equal?(:abc, :number) === false
-    assert ElixirSessions.TypeOperations.equal?({:tuple, [:atom]}, {:list, [:abc]}) === false
-    assert ElixirSessions.TypeOperations.equal?(:float, :atom) === false
+    assert TypeOperations.equal?(:abc, :number) === false
+    assert TypeOperations.equal?({:tuple, [:atom]}, {:list, [:abc]}) === false
+    assert TypeOperations.equal?(:float, :atom) === false
   end
 
   test "var_pattern" do
     a = [{:{}, [line: 74], [:A, {:_value, [line: 74], nil}, {:_value2, [line: 74], nil}]}]
     b = [{:tuple, [:atom, :boolean, :number]}]
 
-    assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{
+    assert TypeOperations.var_pattern(a, b) == %{
              _value: :boolean,
              _value2: :number
            }
@@ -146,41 +147,41 @@ defmodule TypeOperationsTest do
     ]
 
     b = [{:tuple, [:atom, :number, :float]}]
-    assert ElixirSessions.TypeOperations.var_pattern(a, b) == %{y: :number, z: :float}
+    assert TypeOperations.var_pattern(a, b) == %{y: :number, z: :float}
   end
 
   test "to string" do
     types = {:tuple, [:atom, :boolean, :number]}
     string = "{atom, boolean, number}"
-    assert ElixirSessions.TypeOperations.string(types) == string
+    assert TypeOperations.string(types) == string
 
     types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
     string = "{atom, boolean, {atom, boolean, number}}"
-    assert ElixirSessions.TypeOperations.string(types) == string
+    assert TypeOperations.string(types) == string
 
     types = {:list, {:tuple, [:atom, {:tuple, [:atom, :boolean, :number]}, :number]}}
     string = "[{atom, {atom, boolean, number}, number}]"
-    assert ElixirSessions.TypeOperations.string(types) == string
+    assert TypeOperations.string(types) == string
   end
 
   test "valid_type" do
     types = {:tuple, [:atom, :boolean, :number]}
 
-    case ElixirSessions.TypeOperations.valid_type(types) do
+    case TypeOperations.valid_type(types) do
       {:error, _} -> assert false
       valid_type -> assert valid_type == types
     end
 
     types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
 
-    case ElixirSessions.TypeOperations.valid_type(types) do
+    case TypeOperations.valid_type(types) do
       {:error, _} -> assert false
       valid_type -> assert valid_type == types
     end
 
     types = {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}]}]}
 
-    case ElixirSessions.TypeOperations.valid_type(types) do
+    case TypeOperations.valid_type(types) do
       {:error, _} -> assert false
       valid_type -> assert valid_type == types
     end
@@ -189,21 +190,21 @@ defmodule TypeOperationsTest do
   test "valid_type invalid" do
     types = {:tuple, [:abc, :boolean, :number]}
 
-    case ElixirSessions.TypeOperations.valid_type(types) do
+    case TypeOperations.valid_type(types) do
       {:error, _} -> assert true
       _ -> assert false
     end
 
     types = {:list, [:atom, :boolean, {:tuple, [:atom, :boolean, :number]}]}
 
-    case ElixirSessions.TypeOperations.valid_type(types) do
+    case TypeOperations.valid_type(types) do
       {:error, _} -> assert true
       _ -> assert false
     end
 
     types = {:abc, [:number]}
 
-    case ElixirSessions.TypeOperations.valid_type(types) do
+    case TypeOperations.valid_type(types) do
       {:error, _} -> assert true
       _ -> assert false
     end

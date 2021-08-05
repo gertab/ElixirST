@@ -1,11 +1,12 @@
-defmodule ElixirSessions.SessionTypechecking do
+defmodule STEx.SessionTypechecking do
   alias STEx.ST
+  alias STEx.TypeOperations
   require ST
-  require ElixirSessions.TypeOperations
+  require STEx.TypeOperations
   require Logger
 
   @moduledoc """
-  Given a session type and Elixir code, the Elixir code is typechecked against the session type.
+  Elixir code is typechecked against a pre-define session type.
   """
 
   # Session type checking a whole module, which may include multiple functions with multiple session type definitions
@@ -113,7 +114,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
         _ ->
           # Check return type
-          same_type = ElixirSessions.TypeOperations.equal?(result[:type], expected_return_type)
+          same_type = TypeOperations.equal?(result[:type], expected_return_type)
 
           cond do
             result[:session_type] != %ST.Terminate{} ->
@@ -130,8 +131,8 @@ defmodule ElixirSessions.SessionTypechecking do
                  result
                  | state: :error,
                    error_data:
-                     "Return type for #{name}/#{arity} is #{ElixirSessions.TypeOperations.string(result[:type])} but expected " <>
-                       ElixirSessions.TypeOperations.string(expected_return_type)
+                     "Return type for #{name}/#{arity} is #{TypeOperations.string(result[:type])} but expected " <>
+                       TypeOperations.string(expected_return_type)
                }}
 
             true ->
@@ -183,9 +184,9 @@ defmodule ElixirSessions.SessionTypechecking do
   def typecheck(node, env)
       when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
              is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
-    Logger.debug("Typechecking: Literal: #{inspect(node)} #{ElixirSessions.TypeOperations.typeof(node)}")
+    Logger.debug("Typechecking: Literal: #{inspect(node)} #{TypeOperations.typeof(node)}")
 
-    {node, %{env | type: ElixirSessions.TypeOperations.typeof(node)}}
+    {node, %{env | type: TypeOperations.typeof(node)}}
   end
 
   # Tuples
@@ -233,7 +234,7 @@ defmodule ElixirSessions.SessionTypechecking do
             {:halt, result}
 
           _ ->
-            if ElixirSessions.TypeOperations.equal?(result[:type], env_acc[:type]) do
+            if TypeOperations.equal?(result[:type], env_acc[:type]) do
               {:cont, %{result | variable_ctx: Map.merge(env_acc[:variable_ctx], result[:variable_ctx] || %{})}}
             else
               {:halt,
@@ -268,7 +269,7 @@ defmodule ElixirSessions.SessionTypechecking do
            %{
              result_env
              | state: :error,
-               error_data: error_message("Expected type of list but found " <> ElixirSessions.TypeOperations.string(result_env[:type]), meta2)
+               error_data: error_message("Expected type of list but found " <> TypeOperations.string(result_env[:type]), meta2)
            }}
       end
     end
@@ -328,7 +329,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
       _ ->
         pattern = if is_list(pattern), do: pattern, else: [pattern]
-        pattern_vars = ElixirSessions.TypeOperations.var_pattern(pattern, [expr_env[:type]])
+        pattern_vars = TypeOperations.var_pattern(pattern, [expr_env[:type]])
 
         case pattern_vars do
           {:error, msg} -> {node, %{expr_env | state: :error, error_data: error_message(msg, meta)}}
@@ -366,7 +367,7 @@ defmodule ElixirSessions.SessionTypechecking do
           # Get label, parameters and remaining ast from the source ast
           all_cases_result =
             Enum.map(cases, fn {lhs, rhs} ->
-              pattern_vars = ElixirSessions.TypeOperations.var_pattern([lhs], [expr_env[:type]]) || %{}
+              pattern_vars = TypeOperations.var_pattern([lhs], [expr_env[:type]]) || %{}
 
               case pattern_vars do
                 {:error, msg} ->
@@ -411,7 +412,7 @@ defmodule ElixirSessions.SessionTypechecking do
         throw({:error, send_body_env[:error_data]})
       end
 
-      if ElixirSessions.TypeOperations.equal?(send_destination_env[:type], :pid) == false do
+      if TypeOperations.equal?(send_destination_env[:type], :pid) == false do
         throw({:error, "Expected pid in send statement, but found #{inspect(send_destination_env[:type])}"})
       end
 
@@ -424,7 +425,7 @@ defmodule ElixirSessions.SessionTypechecking do
 
       [label | parameters] = tuple_to_list(send_body)
 
-      if ElixirSessions.TypeOperations.equal?(label_type, :atom) == false do
+      if TypeOperations.equal?(label_type, :atom) == false do
         throw({:error, "First item in tuple should be a literal/atom"})
       end
 
@@ -465,7 +466,7 @@ defmodule ElixirSessions.SessionTypechecking do
         )
       end
 
-      if ElixirSessions.TypeOperations.equal?(parameter_types, expected_types) == false do
+      if TypeOperations.equal?(parameter_types, expected_types) == false do
         throw(
           {:error,
            "Incorrect parameter types. Expected " <>
@@ -521,7 +522,7 @@ defmodule ElixirSessions.SessionTypechecking do
           if branches_session_types[head] do
             %ST.Recv{types: expected_types, next: remaining_st} = branches_session_types[head]
 
-            pattern_vars = ElixirSessions.TypeOperations.var_pattern([lhs], [{:tuple, [:atom] ++ expected_types}]) || %{}
+            pattern_vars = TypeOperations.var_pattern([lhs], [{:tuple, [:atom] ++ expected_types}]) || %{}
 
             case pattern_vars do
               {:error, msg} ->
@@ -624,16 +625,16 @@ defmodule ElixirSessions.SessionTypechecking do
       # Check argument types
       Enum.zip(function.param_types, argument_types)
       |> Enum.map(fn {expected, actual} ->
-        unless ElixirSessions.TypeOperations.equal?(expected, actual) do
+        unless TypeOperations.equal?(expected, actual) do
           throw(
             {:error,
              "Argument type error when calling #{name}/#{length(args)}: " <>
-               "Expect #{ElixirSessions.TypeOperations.string(expected)} but found #{ElixirSessions.TypeOperations.string(actual)}"}
+               "Expect #{TypeOperations.string(expected)} but found #{TypeOperations.string(actual)}"}
           )
         end
       end)
 
-      # if ElixirSessions.TypeOperations.equal?(argument_env[:type])
+      # if TypeOperations.equal?(argument_env[:type])
 
       if env[:function_session_type_ctx][name_arity] do
         # Function with known session type (i.e. def with @session)
@@ -703,7 +704,7 @@ defmodule ElixirSessions.SessionTypechecking do
           {:halt, {:error, message}}
 
         _ ->
-          common_type = ElixirSessions.TypeOperations.equal?(curr_case[:type], acc[:type])
+          common_type = TypeOperations.equal?(curr_case[:type], acc[:type])
 
           if common_type == false do
             {:halt,
@@ -756,7 +757,7 @@ defmodule ElixirSessions.SessionTypechecking do
            }}
 
         operator == :| ->
-          same_type = ElixirSessions.TypeOperations.equal?({:list, op1_env[:type]}, op2_env[:type])
+          same_type = TypeOperations.equal?({:list, op1_env[:type]}, op2_env[:type])
 
           if same_type do
             {node,
@@ -773,14 +774,14 @@ defmodule ElixirSessions.SessionTypechecking do
                  error_data:
                    error_message(
                      "Operator type problem in [a | b]: b should be a list of the type of a. Found " <>
-                       "#{ElixirSessions.TypeOperations.string(op1_env[:type])}, #{ElixirSessions.TypeOperations.string(op2_env[:type])}",
+                       "#{TypeOperations.string(op1_env[:type])}, #{TypeOperations.string(op2_env[:type])}",
                      meta
                    )
              }}
           end
 
         true ->
-          same_type = ElixirSessions.TypeOperations.equal?(op1_env[:type], op2_env[:type])
+          same_type = TypeOperations.equal?(op1_env[:type], op2_env[:type])
 
           if same_type == false do
             {node,
@@ -789,13 +790,13 @@ defmodule ElixirSessions.SessionTypechecking do
                | state: :error,
                  error_data:
                    error_message(
-                     "Operator type problem in #{Atom.to_string(operator)}: #{ElixirSessions.TypeOperations.string(op1_env[:type])}, " <>
-                       "#{ElixirSessions.TypeOperations.string(op2_env[:type])} are not of the same type",
+                     "Operator type problem in #{Atom.to_string(operator)}: #{TypeOperations.string(op1_env[:type])}, " <>
+                       "#{TypeOperations.string(op2_env[:type])} are not of the same type",
                      meta
                    )
              }}
           else
-            if any_type || ElixirSessions.TypeOperations.equal?(op1_env[:type], allowed_type) do
+            if any_type || TypeOperations.equal?(op1_env[:type], allowed_type) do
               {node,
                %{
                  op1_env
@@ -805,8 +806,8 @@ defmodule ElixirSessions.SessionTypechecking do
             else
               throw(
                 {:error,
-                 "Operator type problem in #{Atom.to_string(operator)}: #{ElixirSessions.TypeOperations.string(op1_env[:type])}, " <>
-                   "#{ElixirSessions.TypeOperations.string(op2_env[:type])} is not of type #{inspect(allowed_type)}"}
+                 "Operator type problem in #{Atom.to_string(operator)}: #{TypeOperations.string(op1_env[:type])}, " <>
+                   "#{TypeOperations.string(op2_env[:type])} is not of type #{inspect(allowed_type)}"}
               )
             end
           end
@@ -828,7 +829,7 @@ defmodule ElixirSessions.SessionTypechecking do
         {node, op1_env}
 
       _ ->
-        same_type = ElixirSessions.TypeOperations.equal?(op1_env[:type], expected_type)
+        same_type = TypeOperations.equal?(op1_env[:type], expected_type)
 
         if same_type do
           {node, op1_env}
@@ -891,29 +892,5 @@ defmodule ElixirSessions.SessionTypechecking do
       # Function does not exist in current module
       throw({:error, "Function #{name}/#{arity} was not found in the current module."})
     end
-  end
-
-  # recompile && ElixirSessions.SessionTypechecking.run
-  def run() do
-    ast =
-      quote do
-        # {:A, 5, s} = { :A, 4, [1,2,3,4]}
-        [a | [b | c]] = [1, 2, 3, 4]
-      end
-
-    st = ST.string_to_st("+{!hello(boolean, boolean)}")
-
-    env = %{
-      :state => :ok,
-      :error_data => nil,
-      :variable_ctx => %{},
-      :session_type => st,
-      :type => :any,
-      :functions => %{},
-      :function_session_type_ctx => %{}
-    }
-
-    ElixirSessions.Helper.expanded_quoted(ast)
-    |> Macro.prewalk(env, &typecheck/2)
   end
 end

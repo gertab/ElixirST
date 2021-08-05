@@ -1,9 +1,9 @@
-defmodule ElixirSessions.Helper do
+defmodule STEx.Helper do
   @moduledoc false
+  # Used to get information from BEAM files and expanding ASTs
 
-  # recompile && ElixirSessions.Helper.get_BEAM()
-  def get_BEAM() do
-    module = "ElixirSessions.SmallExample"
+  # recompile && STEx.Helper.get_BEAM()
+  def get_BEAM(module \\ "Examples.Counter") do
     load_paths = Mix.Project.compile_path()
     paths = Path.wildcard(load_paths <> "/Elixir*." <> module <> ".beam")
 
@@ -55,17 +55,11 @@ defmodule ElixirSessions.Helper do
   def ast() do
     quote do
       tot = 5
-      val = 5.5
-      abc = true
-
-      receive do
-        {:incr, val} -> server(client, tot + val + abc)
-        {:stop} -> terminate(client, tot)
-      end
+      7 + tot
     end
   end
 
-  # recompile && ElixirSessions.Helper.quoted
+  # recompile && STEx.Helper.quoted
   def quoted() do
     ast()
     |> Macro.to_string()
@@ -73,7 +67,7 @@ defmodule ElixirSessions.Helper do
     |> IO.puts()
   end
 
-  # recompile && ElixirSessions.Helper.quoted_prettify
+  # recompile && STEx.Helper.quoted_prettify
   def quoted_prettify() do
     quoted()
     |> Macro.to_string()
@@ -82,7 +76,7 @@ defmodule ElixirSessions.Helper do
   end
 
   # Expands fully the quoted AST (including macros and erlang function calls)
-  # recompile && ElixirSessions.Helper.expanded_quoted
+  # recompile && STEx.Helper.expanded_quoted
   def expanded_quoted() do
     expanded_quoted(ast())
   end
@@ -93,7 +87,7 @@ defmodule ElixirSessions.Helper do
     ast
   end
 
-  # recompile && ElixirSessions.Helper.expanded_quoted_prettify
+  # recompile && STEx.Helper.expanded_quoted_prettify
   def expanded_quoted_prettify() do
     expanded_quoted_prettify(ast())
   end

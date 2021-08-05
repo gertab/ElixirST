@@ -1,12 +1,15 @@
 defmodule Mix.Tasks.Sessions do
   use Mix.Task
 
-  # @moduledoc false
+  @moduledoc """
+  Use `mix sessions` to run STEx for all module, or `mix sessions [module name]` to run STEx only for a specific module.
+  """
+
   @spec run([binary]) :: list
   def run(args) do
-    # ElixirSessions.SessionTypechecking.run
-    {opts, argv} = OptionParser.parse!(args, switches: [expression_typing: :boolean])
-    expression_typing = Keyword.get(opts, :expression_typing, true)
+    {_opts, argv} = OptionParser.parse!(args, switches: [expression_typing: :boolean])
+    # options
+    # expression_typing = Keyword.get(opts, :expression_typing, true)
 
     load_paths = Mix.Project.compile_path()
 
@@ -32,7 +35,7 @@ defmodule Mix.Tasks.Sessions do
       end
 
     for file <- files do
-      ElixirSessions.Retriever.process(file, expression_typing: expression_typing)
+      STEx.Retriever.process(file)
     end
   end
 end

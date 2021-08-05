@@ -1,6 +1,6 @@
 defmodule STEx.ST do
   @moduledoc """
-  Manipulate Session Type data
+  Manipulate Session Type (ST) data.
 
   Session type definitions:
       ! = send
@@ -47,7 +47,7 @@ defmodule STEx.ST do
   - `%Call_Recurse{label}`
   - `%Terminate{}`
 
-  The labels and types are of type `t:label/0` and `t:types/0` respectively. `next`, `choices`, `branches` and `body` have the type
+  The labels and types are of type `t:label/0` and `t:types/0`, respectively. `next`, `choices`, `branches` and `body` have the type
   `t:session_type/0`.
 
   ### Parser
@@ -295,7 +295,7 @@ defmodule STEx.ST do
   end
 
   defp st_to_string_internal(%ST.Send{label: label, types: types, next: next}) do
-    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
 
@@ -307,7 +307,7 @@ defmodule STEx.ST do
   end
 
   defp st_to_string_internal(%ST.Recv{label: label, types: types, next: next}) do
-    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
 
@@ -370,13 +370,13 @@ defmodule STEx.ST do
   defp st_to_string_current_internal(session_type)
 
   defp st_to_string_current_internal(%ST.Send{label: label, types: types}) do
-    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
 
     "!#{label}(#{types_string})"
   end
 
   defp st_to_string_current_internal(%ST.Recv{label: label, types: types}) do
-    types_string = Enum.map(types, &ElixirSessions.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
 
     "?#{label}(#{types_string})"
   end
@@ -429,7 +429,7 @@ defmodule STEx.ST do
   """
   @spec string_to_st(String.t()) :: session_type()
   def string_to_st(st_string) do
-    ElixirSessions.Parser.parse(st_string)
+    STEx.Parser.parse(st_string)
   end
 
   @doc """
@@ -441,7 +441,7 @@ defmodule STEx.ST do
 
   ## Examples
       iex> st_string = "!Ping(Number).?Pong(String)"
-      ...> st = ElixirSessions.Parser.parse(st_string)
+      ...> st = STEx.Parser.parse(st_string)
       ...> st_dual = STEx.ST.dual(st)
       ...> STEx.ST.st_to_string(st_dual)
       "?Ping(number).!Pong(string)"

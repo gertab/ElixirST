@@ -3,10 +3,28 @@ defmodule STEx do
   require Logger
   require ST
 
-  @moduledoc false
-  # @moduledoc """
-  # This module is the starting point of STEx. It parses the `@session` attribute and starts the AST code comparison with the session type.
-  # """
+  @moduledoc """
+  This module is the starting point of STEx. It parses the `@session` (and `@dual`) attribute
+  and starts analysing the AST code using session types.
+
+  A basic module, typechecked using STEx, takes the following form:
+
+  ```elixir
+  defmodule Examples.SmallExample do
+    use STEx
+
+    @session "X = !Hello()"
+    @spec some_process(pid) :: atom()
+    def some_process(pid) do
+      send(pid, {:Hello})
+      :ok
+    end
+
+    @dual "X"
+    # ...
+  end
+  ```
+  """
 
   defmacro __using__(_) do
     quote do
@@ -42,7 +60,7 @@ defmodule STEx do
   end
 
   def __after_compile__(_env, bytecode) do
-    ElixirSessions.Retriever.process(bytecode)
+    STEx.Retriever.process(bytecode)
   end
 
   # Processes @session attribute - gets the function and session type details
@@ -110,8 +128,8 @@ defmodule STEx do
 
       args_types = args_types || []
 
-      args_types_converted = ElixirSessions.TypeOperations.get_type(args_types)
-      return_type_converted = ElixirSessions.TypeOperations.get_type(return_type)
+      args_types_converted = STEx.TypeOperations.get_type(args_types)
+      return_type_converted = STEx.TypeOperations.get_type(return_type)
 
       if args_types_converted == :error or return_type_converted == :error do
         throw(

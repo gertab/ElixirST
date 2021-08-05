@@ -1,7 +1,7 @@
 defmodule ParserTest do
   use ExUnit.Case
-  doctest ElixirSessions.Parser
-  alias ElixirSessions.Parser
+  doctest STEx.Parser
+  alias STEx.Parser
   alias STEx.ST
 
   test "send session type" do
@@ -140,7 +140,7 @@ defmodule ParserTest do
     source = "rec X.(rec Y.(X))"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -149,7 +149,7 @@ defmodule ParserTest do
     source = "X = rec Y.(X)"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -188,7 +188,7 @@ defmodule ParserTest do
     source = "!Hello(Integer).+{!neg(number, pid).?Num(Number), !other_option(number, pid).?Num(Number)}"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert true
     catch
       _ -> assert false
@@ -199,7 +199,7 @@ defmodule ParserTest do
     source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?other_option(number, pid).?Num(Number)}"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert true
     catch
       _ -> assert false
@@ -210,7 +210,7 @@ defmodule ParserTest do
     source = "!Hello(Integer).&{?neg(number, pid).?Num(Number), ?neg(number, pid).?Num(Number)}"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -221,7 +221,7 @@ defmodule ParserTest do
     source = "!Hello(Integer).+{?neg(number, pid).?Num(Number), !neg2(number, pid).?Num(Number)}"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -232,7 +232,7 @@ defmodule ParserTest do
     source = "!Hello(Integer).&{!neg1(number, pid).?Num(Number), ?neg2(number, pid).?Num(Number)}"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -243,7 +243,7 @@ defmodule ParserTest do
     source = "!Hello(atom, {}, [abc]).+{!neg(number, pid).?Num(Number)}"
 
     try do
-      ElixirSessions.Parser.parse(source)
+      STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -252,7 +252,7 @@ defmodule ParserTest do
     source = "!Hello(atom, {boolean}, [abc]).+{!neg(number, pid).?Num(Number)}"
 
     try do
-      assert false == ElixirSessions.Parser.parse(source)
+      assert false == STEx.Parser.parse(source)
       assert false
     catch
       _ -> assert true
@@ -263,7 +263,7 @@ defmodule ParserTest do
     source =
       "?M220(string).+{!Helo(string).?M250(string).rec X.(+{!MailFrom(string).?M250(string).rec Y.(+{!Data().?M354(string).!Content(string).?M250(string).X, !Quit().?M221(string), !RcptTo(string).?M250(string).Y}), !Quit().?M221(string)}), !Quit().?M221(string)}"
 
-    st = ElixirSessions.Parser.parse(source)
+    st = STEx.Parser.parse(source)
 
     assert ST.st_to_string(st) == source
   end

@@ -18,12 +18,12 @@ end
 ```elixir
 def deps do
   [
-    {:dep_from_git, git: "https://github.com/gertab/ElixirSessions.git"}
+    {:dep_from_git, git: "https://github.com/gertab/STEx.git"}
   ]
 end
 ```
 
-{:dep_from_git, git: "https://github.com/gertab/ElixirSessions.git", tag: "0.1.0"}
+{:dep_from_git, git: "https://github.com/gertab/STEx.git", tag: "0.1.0"}
 -->
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
