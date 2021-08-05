@@ -2,6 +2,7 @@ defmodule SessionTypecheckingTest do
   use ExUnit.Case
   doctest ElixirSessions.SessionTypechecking
   alias ElixirSessions.SessionTypechecking, as: TC
+  alias STEx.ST
 
   setup_all do
     Logger.remove_backend(:console)

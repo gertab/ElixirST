@@ -1,4 +1,4 @@
-defmodule ST do
+defmodule STEx.ST do
   @moduledoc """
   Manipulate Session Type data
 
@@ -57,28 +57,29 @@ defmodule ST do
   #### Simple example
 
       iex> s = "!Hello(Number)"
-      ...> ST.string_to_st(s)
-      %ST.Send{label: :Hello, next: %ST.Terminate{}, types: [:number]}
+      ...> STEx.ST.string_to_st(s)
+      %STEx.ST.Send{label: :Hello, next: %STEx.ST.Terminate{}, types: [:number]}
 
   #### Another example
 
       iex> s = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
-      ...> ST.string_to_st(s)
-      %ST.Recurse{
+      ...> STEx.ST.string_to_st(s)
+      %STEx.ST.Recurse{
         label: :X,
-        body: %ST.Branch{
+        body: %STEx.ST.Branch{
           branches: %{
-            Ping: %ST.Recv{
+            Ping: %STEx.ST.Recv{
               label: :Ping,
-              next: %ST.Send{label: :Pong, next: %ST.Call_Recurse{label: :X}, types: []},
+              next: %STEx.ST.Send{label: :Pong, next: %STEx.ST.Call_Recurse{label: :X}, types: []},
               types: []
             },
-            Quit: %ST.Recv{label: :Quit, next: %ST.Terminate{}, types: []}
+            Quit: %STEx.ST.Recv{label: :Quit, next: %STEx.ST.Terminate{}, types: []}
           }
         }
       }
 
   """
+  alias STEx.ST
 
   @typedoc """
   A session type list of session operations.
@@ -282,8 +283,8 @@ defmodule ST do
 
   ## Examples
       iex> s = "rec x.(&{?Hello(number), ?Retry().X})"
-      ...> st = ST.string_to_st(s)
-      ...> ST.st_to_string(st)
+      ...> st = STEx.ST.string_to_st(s)
+      ...> STEx.ST.st_to_string(st)
       "rec x.(&{?Hello(number), ?Retry().X})"
   """
   @spec st_to_string(session_type()) :: String.t()
@@ -354,8 +355,8 @@ defmodule ST do
 
   ## Examples
       iex> s = "?Hello(number).?Retry()"
-      ...> st = ST.string_to_st(s)
-      ...> ST.st_to_string_current(st)
+      ...> st = STEx.ST.string_to_st(s)
+      ...> STEx.ST.st_to_string_current(st)
       "?Hello(number)"
   """
   @spec st_to_string_current(session_type()) :: String.t()
@@ -419,42 +420,16 @@ defmodule ST do
 
   ## Examples
       iex> s = "?Ping().!Pong()"
-      ...> ST.string_to_st(s)
-      %ST.Recv{
+      ...> STEx.ST.string_to_st(s)
+      %STEx.ST.Recv{
         label: :Ping,
-        next: %ST.Send{label: :Pong, next: %ST.Terminate{}, types: []},
+        next: %STEx.ST.Send{label: :Pong, next: %STEx.ST.Terminate{}, types: []},
         types: []
       }
   """
   @spec string_to_st(String.t()) :: session_type()
   def string_to_st(st_string) do
     ElixirSessions.Parser.parse(st_string)
-  end
-
-  @doc """
-  Spawns two actors, exchanges their pids and then calls the server/client functions
-
-  `server_fn` and `client_fn` need to accept a `pid` as their first parameter.
-  """
-  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: {pid, pid}
-  def spawn(serverFn, server_args, clientFn, client_args)
-      when is_function(serverFn) and is_list(server_args) and
-             is_function(clientFn) and is_list(client_args) do
-    server_pid =
-      spawn(fn ->
-        receive do
-          {:pid, client_pid} ->
-            apply(serverFn, [client_pid | server_args])
-        end
-      end)
-
-    client_pid =
-      spawn(fn ->
-        send(server_pid, {:pid, self()})
-        apply(clientFn, [server_pid | client_args])
-      end)
-
-    {server_pid, client_pid}
   end
 
   @doc """
@@ -467,8 +442,8 @@ defmodule ST do
   ## Examples
       iex> st_string = "!Ping(Number).?Pong(String)"
       ...> st = ElixirSessions.Parser.parse(st_string)
-      ...> st_dual = ST.dual(st)
-      ...> ST.st_to_string(st_dual)
+      ...> st_dual = STEx.ST.dual(st)
+      ...> STEx.ST.st_to_string(st_dual)
       "?Ping(number).!Pong(string)"
 
   """
@@ -678,9 +653,9 @@ defmodule ST do
 
   ## Examples
           iex> st = "rec X.(!A().X)"
-          ...> session_type = ST.string_to_st(st)
-          ...> unfolded = ST.unfold(session_type)
-          ...> ST.st_to_string(unfolded)
+          ...> session_type = STEx.ST.string_to_st(st)
+          ...> unfolded = STEx.ST.unfold(session_type)
+          ...> STEx.ST.st_to_string(unfolded)
           "!A().rec X.(!A().X)"
   """
   @spec unfold(session_type()) :: session_type()

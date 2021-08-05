@@ -6,9 +6,8 @@ defmodule Examples.SimpleExample do
 
   # iex -S mix
   # recompile && Examples.SimpleExample.run
-
   def run() do
-    ST.spawn(&server/2, [0], &client/1, [])
+    STEx.spawn(&server/2, [0], &client/1, [])
   end
 
   @session "counter = &{?num(number).counter, ?result().!total(number)}"

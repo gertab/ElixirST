@@ -7,7 +7,7 @@ defmodule Examples.PingPong do
     # pinger = spawn(__MODULE__, :ping, [])
     # _ponger = spawn(__MODULE__, :pong, [pinger])
     # IO.puts("Process spawned as #{inspect(pinger)}")
-    ST.spawn(&ping/1, [], &pong/1, [])
+    STEx.spawn(&ping/1, [], &pong/1, [])
   end
 
   @session "ping = ?ping().!pong().ping"

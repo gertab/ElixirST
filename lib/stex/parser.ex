@@ -2,6 +2,7 @@ defmodule ElixirSessions.Parser do
   @moduledoc """
     Parses an input string to session types (as Elixir data).
   """
+  alias STEx.ST
   require Logger
   require ST
 
@@ -16,7 +17,7 @@ defmodule ElixirSessions.Parser do
   ## Example
       iex> s = "rec Y.(+{!Hello(number, [{boolean, atom}]).Y, !Ok()})"
       ...> session_type = ElixirSessions.Parser.parse(s)
-      ...> ST.st_to_string(session_type)
+      ...> STEx.ST.st_to_string(session_type)
       "rec Y.(+{!Hello(number, [{boolean, atom}]).Y, !Ok()})"
   """
   @spec parse(bitstring() | charlist()) :: session_type()

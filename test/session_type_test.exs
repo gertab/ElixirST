@@ -1,6 +1,7 @@
 defmodule STTest do
   use ExUnit.Case
-  doctest ST
+  doctest STEx.ST
+  alias STEx.ST
 
   test "equal simple rec" do
     s1 = "rec X . (X)"

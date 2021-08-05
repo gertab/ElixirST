@@ -2,6 +2,7 @@ defmodule ParserTest do
   use ExUnit.Case
   doctest ElixirSessions.Parser
   alias ElixirSessions.Parser
+  alias STEx.ST
 
   test "send session type" do
     source = "!Label(any)"

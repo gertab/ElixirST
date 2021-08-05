@@ -45,6 +45,6 @@ defmodule Examples.Counter do
 
   # Examples.Counter.main
   def main do
-    ST.spawn(&server/2, [0], &client/1, [])
+    STEx.spawn(&server/2, [0], &client/1, [])
   end
 end

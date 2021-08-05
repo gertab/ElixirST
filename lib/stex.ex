@@ -1,5 +1,7 @@
 defmodule STEx do
+  alias STEx.ST
   require Logger
+  require ST
 
   @moduledoc false
   # @moduledoc """
@@ -140,5 +142,29 @@ defmodule STEx do
     end
   end
 
-  # todo add spawn
+  @doc """
+  Spawns two actors, exchanges their pids and then calls the server/client functions
+
+  `server_fn` and `client_fn` need to accept a `pid` as their first parameter.
+  """
+  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: {pid, pid}
+  def spawn(serverFn, server_args, clientFn, client_args)
+      when is_function(serverFn) and is_list(server_args) and
+             is_function(clientFn) and is_list(client_args) do
+    server_pid =
+      spawn(fn ->
+        receive do
+          {:pid, client_pid} ->
+            apply(serverFn, [client_pid | server_args])
+        end
+      end)
+
+    client_pid =
+      spawn(fn ->
+        send(server_pid, {:pid, self()})
+        apply(clientFn, [server_pid | client_args])
+      end)
+
+    {server_pid, client_pid}
+  end
 end

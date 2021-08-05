@@ -1,4 +1,5 @@
 defmodule ElixirSessions.SessionTypechecking do
+  alias STEx.ST
   require ST
   require ElixirSessions.TypeOperations
   require Logger

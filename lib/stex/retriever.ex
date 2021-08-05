@@ -1,5 +1,6 @@
 defmodule ElixirSessions.Retriever do
   require Logger
+  alias STEx.ST
 
   @moduledoc """
   Retrieves bytecode and (session) typechecks it

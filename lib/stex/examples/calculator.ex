@@ -3,7 +3,7 @@ defmodule Examples.Calculator do
   @moduledoc false
 
   def main() do
-    ST.spawn(&server/1, [], &client/1, [])
+    STEx.spawn(&server/1, [], &client/1, [])
   end
 
   @session "calc = &{?add(number, number).!result(number).calc, ?mult(number, number).!result(number).calc, ?stop()}"
