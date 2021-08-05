@@ -1,4 +1,4 @@
-defmodule ElixirSessions.MixProject do
+defmodule STEx.MixProject do
   use Mix.Project
 
   def project do
@@ -12,14 +12,14 @@ defmodule ElixirSessions.MixProject do
       package: package(),
 
       # Docs
-      name: "ElixirSessions",
-      source_url: "https://github.com/gertab/ElixirSessions",
+      name: "STEx",
+      source_url: "https://github.com/gertab/STEx",
       # The main page in the docs
-      docs: [main: "ElixirSessions", extras: ["ElixirSessions.md", "LICENCE"]],
+      docs: [main: "Docs", extras: ["Docs.md", "LICENCE"]],
 
       # Leex/Yecc options
       # leex_options: [],
-      erlc_paths: ["lib/elixirsessions/parser"],
+      erlc_paths: ["lib/stex/parser"],
 
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
@@ -51,8 +51,8 @@ defmodule ElixirSessions.MixProject do
     [
       maintainers: ["Gerard Tabone"],
       licenses: ["GPL-3.0"],
-      links: %{"GitHub" => "https://github.com/gertab/ElixirSessions"},
-      description: "Session types for Elixir"
+      links: %{"GitHub" => "https://github.com/gertab/STEx"},
+      description: "Session types in Elixir"
     ]
   end
 
