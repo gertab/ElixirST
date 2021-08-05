@@ -83,7 +83,7 @@ The package can be installed by adding `stex_elixir` to your list of dependencie
 ```elixir
 def deps do
   [
-    {:stex_elixir, "~> 0.4.2"}
+    {:stex_elixir, "~> 0.4.5"}
   ]
 end
 ```
@@ -133,6 +133,6 @@ Some of these are shown below, which include:
 
 ### Acknowledgements
 
-Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).
+Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK.md)).
 
 This project is licenced under the GPL-3.0 licence.

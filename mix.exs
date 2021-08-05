@@ -4,7 +4,7 @@ defmodule STEx.MixProject do
   def project do
     [
       app: :stex_elixir,
-      version: "0.4.4",
+      version: "0.4.5",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,

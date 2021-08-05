@@ -6,7 +6,7 @@ STEx (**S**ession **T**ypes in **E**li**x**ir) applies *Session Types* to a part
 
 ## Example
 
-To session typecheck modules in Elixir, add `use STEx` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](/lib/stex/examples/small_example.ex), which receives one label (`?Hello()`):
+To session typecheck modules in Elixir, add `use STEx` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](https://github.com/gertab/STEx/blob/master/lib/stex/examples/small_example.ex), which receives one label (`?Hello()`):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
@@ -43,6 +43,30 @@ $ mix sessions Examples.SmallExample
 [error] Session typechecking for client/1 found an error. 
 [error] [Line 7] Expected send with label :Hello but found :Hi.
 ```
+
+## Another (Failing) Example 
+
+In the next example, session typechecking fails because the session type `!Hello()` was expecting to find a send action with `{:Hello}` but found `{:Yo}`:
+
+```elixir
+defmodule Module2 do
+  use STEx
+
+  @session "!Hello()"
+  @spec do_something(pid) :: {:Yo}
+  def do_something(pid) do
+    send(pid, {:Yo})
+  end
+end
+```
+
+Output:
+```
+mix compile
+== Compilation error in file example.ex ==
+** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
+```
+
 
 ## Session Types in Elixir
 
@@ -164,7 +188,7 @@ The package can be installed by adding `stex_elixir` to your list of dependencie
 ```elixir
 def deps do
   [
-    {:stex_elixir, "~> 0.4.2"}
+    {:stex_elixir, "~> 0.4.5"}
   ]
 end
 ```
@@ -203,7 +227,7 @@ The `@dual` attribute checks the dual of the specified session type.
 
 <!-- In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions. -->
 
-Other examples can be found in the [`examples`](/lib/stex/examples) folder.
+Other examples can be found in the [`examples`](https://github.com/gertab/STEx/blob/master/lib/stex/examples) folder.
 <!-- 
 ### Features
 
@@ -214,7 +238,7 @@ Some of these are shown below, which include:
 
 ### Acknowledgements
 
-Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).
+Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](https://github.com/gertab/STEx/blob/master/ACK.md)).
 
 This project is licenced under the GPL-3.0 licence.
 
@@ -259,30 +283,6 @@ The `@dual` attribute checks the dual of the specified session type.
 
 In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions.
 
-## Another (Failing) Example 
-
-In the next example, session typechecking fails because the session type `!Hello()` was expecting to find a send action with `{:Hello}` but found `{:Yo}`:
-
-```elixir
-defmodule Module2 do
-  use STEx
-
-  @session "!Hello()"
-  @spec do_something(pid) :: {:Yo}
-  def do_something(pid) do
-    send(pid, {:Yo})
-  end
-end
-```
-
-Output:
-```
-mix compile
-== Compilation error in file example.ex ==
-** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
-```
-
-Other examples can be found in the [`examples`](https://github.com/gertab/STEx/tree/master/lib/stex/examples) folder.
 <!-- 
 ### Features
 
