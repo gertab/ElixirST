@@ -21,14 +21,17 @@ erl_crash.dump
 
 # Ignore package tarball (built via "mix hex.build").
 elixirsessions-*.tar
+stex_elixir-*.tar
 
 notes*.txt
 
 /src/*.erl
 
 /lib/elixirsessions/parser/*.erl
+/lib/stex/parser/*.erl
 
 /lib/elixirsessions/snippets/
+/lib/stex/snippets/
 
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
