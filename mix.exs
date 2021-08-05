@@ -19,7 +19,7 @@ defmodule STEx.MixProject do
 
       # Leex/Yecc options
       # leex_options: [],
-      erlc_paths: ["lib/elixirsessions/parser"],
+      erlc_paths: ["lib/stex/parser"],
 
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [

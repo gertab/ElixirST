@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.SessionCheck do
+defmodule Mix.Tasks.Sessions do
   use Mix.Task
 
   # @moduledoc false
