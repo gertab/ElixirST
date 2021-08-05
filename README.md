@@ -1,45 +1,16 @@
-# ElixirSessions
+# Session Types in Elixir
 
-[![Elixir CI](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirSessions/actions/workflows/elixir.yml)
+[![Elixir CI](https://github.com/gertab/STEx/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/STEx/actions/workflows/elixir.yml)
 
-ElixirSessions applies *Session Types* to the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between actors. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `elixirsessions` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:elixirsessions, "~> 0.2.0"}
-  ]
-end
-```
-<!-- 
-```elixir
-def deps do
-  [
-    {:dep_from_git, git: "https://github.com/gertab/STEx.git"}
-  ]
-end
-```
-
-{:dep_from_git, git: "https://github.com/gertab/STEx.git", tag: "0.1.0"}
--->
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/elixirsessions](https://hexdocs.pm/elixirsessions).
-
+STEx (**S**ession **T**ypes in **E**li**x**ir) applies *Session Types* to a part of the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between processes. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Example
 
-To session typecheck files in Elixir, add `use STEx` and include any assertions using `@session` (or `@dual`) attributes preceding any `def` functions. The following is a [`simple example`](/lib/elixirsessions/examples/small_example.ex):
+To session typecheck modules in Elixir, add `use STEx` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](/lib/stex/examples/small_example.ex):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
-defmodule Examples.SmallExample do
+defmodule Example do
   use STEx
 
   @session "server = ?Hello()"
@@ -60,7 +31,7 @@ end
 
 ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix sessions (module)`):
 ```text
-$ mix sessions Examples.SmallExample
+$ mix sessions SmallExample
 [info]  Session typechecking for client/1 terminated successfully
 [info]  Session typechecking for server/0 terminated successfully
 ```
@@ -94,106 +65,43 @@ types =
   atom
   | boolean
   | number
+  | atom
   | pid
-  | nil
-  | binary
   | {types, types, ...}             (tuple)
   | [types]                         (list)
 ```
 
-The following are some session type examples along with the equivalent Elixir code. 
-
-<table>
-<tr>
-<td> Session Type </td> <td> Elixir </td> <td> Description </td>
-</tr>
-<tr>
-<td> 
-
-`!Hello()` 
-</td>
-<td>
-
-```elixir
-send(pid, {:Hello})
-```
-</td>
-<td>
-Send one label <code>:Hello</code>.
-</td>
-</tr>
-<tr>
-<td> 
-
-`?Ping(number)` 
-</td>
-<td>
-
-```elixir
-receive do
-  {:Ping, value} -> value
-end
-```
-</td>
-<td>
-Receive a label <code>:Ping</code> with a value of type <code>number</code>.
-</td>
-</tr>
-<tr>
-<td> 
-
-```
-&{ 
-  ?Option1().!Hello(number), 
-  ?Option2()
- }
-```
-
-</td>
-<td>
-
-```elixir
-receive do
-  {:Option1} -> send(pid, {:Hello, 55})
-                # ...
-  {:Option2} -> # ...
-end
-```
-</td>
-<td>
-The process can receive either <code>{:Option1}</code> or <code>{:Option2}</code>. 
-If the process receives the former, then it has to send <code>{:Hello}</code>. 
-If it receives <code>{:Option2}</code>, then it terminates.
-</td>
-</tr>
-<tr>
-<td> 
-
-```X = &{?Stop(), ?Retry().X}```
-
-</td>
-<td>
-
-```elixir
-def rec() do
-  receive do
-    {:Stop}  -> # ...
-    {:Retry} -> rec()
-  end 
-end
-```
-</td>
-<td>
-If the process receives <code>{:Stop}</code>, then it terminates. 
-If it receives <code>{:Retry}</code> it recurses back to the beginning.
-</td>
-</tr>
-</table>
-<!-- !Hello().end = Hello() -->
-
 ----------
 
-## Using ElixirSessions
+## Using STEx
+
+
+### Installation
+
+The package can be installed by adding `stex_elixir` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:stex_elixir, "~> 0.4.2"}
+  ]
+end
+```
+<!-- 
+```elixir
+def deps do
+  [
+    {:dep_from_git, git: "https://github.com/gertab/STEx.git"}
+  ]
+end
+```
+
+{:dep_from_git, git: "https://github.com/gertab/STEx.git", tag: "0.1.0"}
+-->
+
+Documentation can be found at [https://hexdocs.pm/stex_elixir](https://hexdocs.pm/stex_elixir/docs.html).
+
+### Use in Elixir modules
 
 To session typecheck a module, insert this line at the top:
 ```elixir
@@ -214,7 +122,7 @@ The `@dual` attribute checks the dual of the specified session type.
 
 <!-- In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions. -->
 
-Other examples can be found in the [`examples`](/lib/elixirsessions/examples) folder.
+Other examples can be found in the [`examples`](/lib/stex/examples) folder.
 <!-- 
 ### Features
 
@@ -226,3 +134,5 @@ Some of these are shown below, which include:
 ### Acknowledgements
 
 Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK)).
+
+This project is licenced under the GPL-3.0 licence.
