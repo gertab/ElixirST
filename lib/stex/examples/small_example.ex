@@ -17,4 +17,4 @@ defmodule Examples.SmallExample do
   end
 end
 
-# explicitly: `mix session_check Examples.SmallExample`
+# explicitly: `mix sessions Examples.SmallExample`

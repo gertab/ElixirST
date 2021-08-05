@@ -1,14 +1,7 @@
 defmodule Examples.PingPong do
   use STEx
   @moduledoc false
-
-  def run() do
-    # IO.puts("Spawning process")
-    # pinger = spawn(__MODULE__, :ping, [])
-    # _ponger = spawn(__MODULE__, :pong, [pinger])
-    # IO.puts("Process spawned as #{inspect(pinger)}")
-    STEx.spawn(&ping/1, [], &pong/1, [])
-  end
+  # Send ping pong indefinitely
 
   @session "ping = ?ping().!pong().ping"
   @spec ping(pid) :: no_return
@@ -37,5 +30,9 @@ defmodule Examples.PingPong do
     end
 
     pong(pid)
+  end
+
+  def main() do
+    STEx.spawn(&ping/1, [], &pong/1, [])
   end
 end

@@ -56,9 +56,9 @@ defmodule Examples.SmallExample do
 end
 ```
 
-ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix session_check`):
+ElixirSessions runs automatically at compile time (`mix compile`) or as a mix task (`mix sessions`):
 ```text
-$ mix session_check Examples.SmallExample
+$ mix sessions Examples.SmallExample
 [info]  Session typechecking for client/1 terminated successfully
 [info]  Session typechecking for server/0 terminated successfully
 ```
@@ -66,7 +66,7 @@ $ mix session_check Examples.SmallExample
 If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), ElixirSessions will complain:
 
 ```text
-$ mix session_check Examples.SmallExample
+$ mix sessions Examples.SmallExample
 [error] Session typechecking for client/1 found an error. 
 [error] [Line 7] Expected send with label :Hello but found :Hi.
 ```

@@ -16,7 +16,7 @@
         {
             "type": "mix_task",
             "request": "launch",
-            "name": "mix session_check SmallExample",
+            "name": "mix sessions SmallExample",
             "task": "session_check",
             "taskArgs": [],
             "projectDir": "${workspaceRoot}"
