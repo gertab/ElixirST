@@ -3,8 +3,8 @@ defmodule STEx.MixProject do
 
   def project do
     [
-      app: :elixirsessions,
-      version: "0.3.0",
+      app: :stex_elixir,
+      version: "0.4.0",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
@@ -19,7 +19,7 @@ defmodule STEx.MixProject do
 
       # Leex/Yecc options
       # leex_options: [],
-      erlc_paths: ["lib/stex/parser"],
+      erlc_paths: ["lib/elixirsessions/parser"],
 
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
