@@ -180,7 +180,6 @@ The following are some session type examples along with the equivalent Elixir co
 
 ## Using STEx
 
-
 ### Installation
 
 The package can be installed by adding `stex_elixir` to your list of dependencies in `mix.exs`:
@@ -224,8 +223,6 @@ The `@dual` attribute checks the dual of the specified session type.
 @dual "pinger"
 # Equivalent to: @session "?Ping().!Pong()"
 ```
-
-<!-- In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions. -->
 
 Other examples can be found in the [`examples`](https://github.com/gertab/STEx/blob/master/lib/stex/examples) folder.
 <!-- 
@@ -291,7 +288,7 @@ Some of these are shown below, which include:
  - session type parsing ([`lib/stex/parser/parser.ex`](/lib/stex/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
-### Acknowledgements
+## Acknowledgements
 
 Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](https://github.com/gertab/STEx/blob/master/ACK.md)).
 

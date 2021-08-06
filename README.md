@@ -131,7 +131,7 @@ Some of these are shown below, which include:
  - session type parsing ([`lib/stex/parser/parser.ex`](/lib/stex/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
-### Acknowledgements
+## Acknowledgements
 
 Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](ACK.md)).
 
