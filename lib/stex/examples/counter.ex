@@ -3,7 +3,7 @@ defmodule Examples.Counter do
   @moduledoc false
 
   @session "counter = &{?incr(number).counter,
-                      ?stop().!value(number).end}"
+                        ?stop().!value(number).end}"
   @spec server(pid, number) :: atom
   def server(client, tot) do
     receive do
@@ -22,7 +22,9 @@ defmodule Examples.Counter do
   @spec client(pid) :: number
   def client(server) do
     send(server, {:incr, 5})
-    # send(server, {:decr, 2})
+    send(server, {:incr, 6})
+    send(server, {:incr, 12})
+    send(server, {:incr, 1})
     send(server, {:stop})
 
     val =

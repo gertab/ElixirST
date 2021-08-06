@@ -9,13 +9,11 @@ defmodule Examples.LargeExample do
     :ok
   end
 
-  @session """
-              X =  &{
-                      ?Option1(binary),
-                      ?Option2().X,
-                      ?Option3()
-                    }
-           """
+  @session "X =  &{
+                    ?Option1(binary),
+                    ?Option2().X,
+                    ?Option3()
+                  }"
   @spec do_something_else :: :ok
   def do_something_else() do
     receive do

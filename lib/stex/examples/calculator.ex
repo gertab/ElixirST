@@ -2,8 +2,9 @@ defmodule Examples.Calculator do
   use STEx
   @moduledoc false
 
-
-  @session "calc = &{?add(number, number).!result(number).calc, ?mult(number, number).!result(number).calc, ?stop()}"
+  @session "calc = &{?add(number, number).!result(number).calc,
+                     ?mult(number, number).!result(number).calc,
+                     ?stop().end}"
   @spec server(pid) :: atom
   def server(pid) do
     receive do
