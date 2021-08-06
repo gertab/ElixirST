@@ -3,7 +3,7 @@ defmodule Examples.LargeExample do
   use STEx
 
   @session "!Hello().end"
-  @spec do_something(pid) :: :ok
+  @spec do_something(pid) :: atom
   def do_something(pid) do
     send(pid, {:Hello})
     :ok
@@ -14,7 +14,7 @@ defmodule Examples.LargeExample do
                     ?Option2().X,
                     ?Option3()
                   }"
-  @spec do_something_else :: :ok
+  @spec do_something_else :: atom
   def do_something_else() do
     receive do
       {:Option1, value} ->
@@ -29,7 +29,7 @@ defmodule Examples.LargeExample do
   end
 
   @dual "X"
-  @spec do_something_else_dual(pid) :: :ok
+  @spec do_something_else_dual(pid) :: atom
   def do_something_else_dual(pid) do
     send(pid, {:Option2})
     send(pid, {:Option1, "Hello"})

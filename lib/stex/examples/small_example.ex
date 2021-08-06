@@ -3,7 +3,7 @@ defmodule Examples.SmallExample do
   @moduledoc false
 
   @session "server = ?Hello()"
-  @spec server(pid) :: atom()
+  @spec server(pid) :: atom
   def server(_pid) do
     receive do
       {:Hello} -> :ok
@@ -11,7 +11,7 @@ defmodule Examples.SmallExample do
   end
 
   @dual "server"
-  @spec client(pid) :: {atom()}
+  @spec client(pid) :: {atom}
   def client(pid) do
     send(pid, {:Hello})
   end

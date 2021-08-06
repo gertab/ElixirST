@@ -20,7 +20,7 @@ defmodule Examples.Calculator do
   end
 
   @dual "calc"
-  @spec client(pid) :: {atom()}
+  @spec client(pid) :: {atom}
   def client(pid) do
     send(pid, {:add, 3, 7})
     receive do
