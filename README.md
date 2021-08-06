@@ -39,7 +39,7 @@ $ mix sessions SmallExample
 If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), STEx will complain:
 
 ```text
-$ mix sessions Examples.SmallExample
+$ mix sessions SmallExample
 [error] Session typechecking for client/1 found an error. 
 [error] [Line 7] Expected send with label :Hello but found :Hi.
 ```

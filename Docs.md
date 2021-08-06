@@ -52,7 +52,7 @@ In the next example, session typechecking fails because the session type `!Hello
 defmodule Module2 do
   use STEx
 
-  @session "!Hello()"
+  @session "!Hello().end"
   @spec do_something(pid) :: {:Yo}
   def do_something(pid) do
     send(pid, {:Yo})
@@ -64,7 +64,7 @@ Output:
 ```
 mix compile
 == Compilation error in file example.ex ==
-** (throw) "[Line 6] Expected send with label :Hello but found :Yo."
+** (throw) "[Line 7] Expected send with label :Hello but found :Yo."
 ```
 
 
