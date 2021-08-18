@@ -44,7 +44,8 @@ defmodule STEx.MixProject do
       {:ex_doc, "~> 0.22.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
-      {:httpoison, "~> 1.8"}
+      {:httpoison, "~> 1.8"},
+      {:poison, "~> 3.1"}
     ]
   end
 
