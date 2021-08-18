@@ -3,7 +3,6 @@ defmodule Examples.FlightServer do
     use HTTPoison.Base
 
     @endpoint "https://api.duffel.com/air/"
-    @authorization DuffelApi.get()
 
     # @spec process_url(binary) :: binary
     def process_url(url) do
@@ -17,7 +16,7 @@ defmodule Examples.FlightServer do
     def process_request_headers(headers) do
       headers ++
         [
-          {"Authorization", "Bearer " <> @authorization},
+          {"Authorization", "Bearer " <> secret_key()},
           {"Accept", "application/json"},
           {"Content-Type", "application/json"},
           {"Duffel-Version", "beta"}
@@ -38,6 +37,17 @@ defmodule Examples.FlightServer do
 
     # @spec process_response_status_code(integer) :: term
     # def process_response_status_code(status_code)
+    @spec secret_key :: binary()
+    def secret_key() do
+      if Code.ensure_compiled?(DuffelApi) do
+        DuffelApi.get()
+      else
+        IO.warn("Duffel API key not set")
+        # Get api key from https://duffel.com/ and replace the following line
+        "duffel_test_abcccccccc"
+      end
+    end
+
   end
 
   # recompile && Examples.FlightServer.main

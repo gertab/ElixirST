@@ -39,3 +39,5 @@ notes*.txt
 workspace.code-workspace
 
 secret_api.ex
+
+*.secret.exs
