@@ -39,10 +39,11 @@ defmodule Examples.FlightServer do
     # def process_response_status_code(status_code)
     @spec secret_key :: binary()
     def secret_key() do
-      if Code.ensure_compiled?(DuffelApi) do
-        DuffelApi.get()
+      key = Application.get_env(:stex_elixir, :duffel_access_token)
+      if key do
+        key
       else
-        IO.warn("Duffel API key not set")
+        IO.warn("Duffel API key not set, see config folder")
         # Get api key from https://duffel.com/ and replace the following line
         "duffel_test_abcccccccc"
       end
