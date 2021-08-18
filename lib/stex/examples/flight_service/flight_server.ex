@@ -40,6 +40,7 @@ defmodule Examples.FlightServer do
     @spec secret_key :: binary()
     def secret_key() do
       key = Application.get_env(:stex_elixir, :duffel_access_token)
+
       if key do
         key
       else
@@ -48,47 +49,60 @@ defmodule Examples.FlightServer do
         "duffel_test_abcccccccc"
       end
     end
-
   end
 
   # recompile && Examples.FlightServer.main
   def main do
-    HTTPoison.start()
-    # HTTPoison.get!("http://httparrot.herokuapp.com/get")
-    # HTTPoison.request(:get, "http://httparrot.herokuapp.com/get")
+    Duffel.start()
 
-    body = '{
-      "data": {
-          "slices": [
-              {
-                  "origin": "MLA",
-                  "destination": "LUX",
-                  "departure_date": "2021-08-21"
-              }
-          ],
-          "passengers": [
-              {
-                  "type": "adult"
-              },
-              {
-                  "type": "adult"
-              },
-              {
-                  "age": 1
-              }
-          ],
-          "cabin_class": "economy"
+    origin = "MLA"
+    destination = "LUX"
+    departure_date = "2021-09-21"
+    class = :economy
+    passengers = 3
+
+    body = %{
+      "data" => %{
+        "cabin_class" => class,
+        "passengers" => List.duplicate(%{"type" => "adult"}, passengers),
+        "slices" => [
+          %{
+            "departure_date" => departure_date,
+            "destination" => destination,
+            "origin" => origin
+          }
+        ]
       }
-  }'
+    }
 
-    # Poison.decode!(body)
-    # |> IO.inspect()
+    Poison.encode!(body)
+    |> IO.puts()
 
-    %HTTPoison.Response{body: resp} = Duffel.post!("offer_requests", body)
+    resp = Duffel.post("offer_requests", Poison.encode!(body))
 
-    File.write!("flight.json", resp)
+    case resp do
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        # Error
+        {:error, "Error while sending message: #{inspect(reason)}"}
 
-    Poison.decode!(resp)
+      {:ok,
+       %HTTPoison.Response{
+         body: body,
+         status_code: status_code
+       }}
+      when status_code >= 300 ->
+        # Error
+        error = Poison.decode!(body)["errors"]
+        {:error, hd(error)["message"]}
+
+      {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
+        # Ok
+        {:ok, Poison.decode!(body)["data"]}
+    end
+
+    # File.write!("flight.json", resp)
+
+    # Poison.decode!(resp)
   end
 
   def establishConnection do
