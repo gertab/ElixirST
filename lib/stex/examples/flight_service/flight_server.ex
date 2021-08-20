@@ -46,7 +46,7 @@ defmodule Examples.FlightServer do
       else
         IO.warn("Duffel API key not set, see config folder")
         # Get api key from https://duffel.com/ and replace the following line
-        "duffel_test_abcccccccc"
+        "duffel_test_abc"
       end
     end
   end
@@ -62,14 +62,14 @@ defmodule Examples.FlightServer do
     passengers = 3
 
     body = %{
-      "data" => %{
-        "cabin_class" => class,
-        "passengers" => List.duplicate(%{"type" => "adult"}, passengers),
-        "slices" => [
+      data: %{
+        cabin_class: class,
+        passengers: List.duplicate(%{type: "adult"}, passengers),
+        slices: [
           %{
-            "departure_date" => departure_date,
-            "destination" => destination,
-            "origin" => origin
+            departure_date: departure_date,
+            destination: destination,
+            origin: origin
           }
         ]
       }
@@ -96,29 +96,158 @@ defmodule Examples.FlightServer do
           {:ok, Poison.decode!(body)["data"]["offers"]}
       end
 
-      next_offer(resp)
+    # IO.puts(length(elem(resp, 1)))
+    next_offer(resp)
+  end
+
+  defp next_offer({:error, message}) do
+    {:error, message}
   end
 
   defp next_offer({:ok, []}) do
-    throw("No more offers available")
+    {:error, "No more offers available"}
   end
 
   defp next_offer({:ok, [next_offer | other_offers]}) do
-    IO.inspect(process_offer(next_offer))
+    %{
+      id: id,
+      total_amount: total_amount,
+      currency: currency,
+      duration: duration,
+      stops: stops,
+      passengers: passengers,
+      segments: segments
+    } = process_offer(next_offer)
 
-    cont = IO.gets("next y/n:")
+    IO.inspect(%{
+      id: id,
+      total_amount: total_amount,
+      currency: currency,
+      duration: duration,
+      stops: stops,
+      passengers: passengers,
+      segments: segments
+    })
+
+    cont = IO.gets("[a]ccept/[n]ext offer/[c]ancel:")
 
     case cont do
-      "n\n" ->
-        :ok
+      "c\n" ->
+        :cancel
+
+      "a\n" ->
+        # IO.puts("Sending request to get more details")
+        IO.puts("Accepting offer ##{id}")
+
+        case Duffel.get("offers/#{id}", [], timeout: 10000, recv_timeout: 100_000) do
+          {:error, %HTTPoison.Error{reason: reason}} ->
+            # Error
+            {:error, "Error while sending message: #{inspect(reason)}"}
+
+          {:ok,
+           %HTTPoison.Response{
+             body: body,
+             status_code: status_code
+           }}
+          when status_code >= 300 ->
+            # Error
+            error = Poison.decode!(body)["errors"]
+            {:error, hd(error)["message"]}
+
+          {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
+            # Ok
+            {:ok, Poison.decode!(body)["data"]}
+
+            IO.puts("Latest offer: ")
+            IO.inspect(Poison.decode!(body)["data"])
+
+            cont = IO.gets("[p]roceed/[c]ancel and see next offer:")
+
+            case cont do
+              "p\n" ->
+                order(Poison.decode!(body)["data"])
+
+              _ ->
+                :ok
+            end
+        end
 
       _ ->
         next_offer({:ok, other_offers})
     end
   end
 
-  defp next_offer({:error, message}) do
-    throw(message)
+  defp order(details) do
+    order = %{
+      data: %{
+        selected_offers: [details["id"]],
+        payments: [
+          %{
+            type: "balance",
+            currency: details["base_currency"],
+            amount: details["total_amount"]
+          }
+        ],
+        passengers: passenger_details(details["passengers"])
+      }
+    }
+
+    case Duffel.post("orders", Poison.encode!(order), [], timeout: 10000, recv_timeout: 100_000) do
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        # Error
+        {:error, "Error while sending message: #{inspect(reason)}"}
+
+      {:ok,
+       %HTTPoison.Response{
+         body: body,
+         status_code: status_code
+       }}
+      when status_code >= 300 ->
+        # Error
+        error = Poison.decode!(body)["errors"]
+        {:error, hd(error)["title"] <> ": " <> hd(error)["message"]}
+        # {:error, Poison.decode!(body)}
+
+      {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
+        # Ok
+        {:ok, Poison.decode!(body)["data"]}
+    end
+  end
+
+  defp passenger_details(passengers) when is_list(passengers) do
+    details = [
+      %{
+        phone_number: "+442080160508",
+        email: "tony@example.com",
+        born_on: "1980-07-24",
+        title: "mr",
+        gender: "m",
+        family_name: "Stark",
+        given_name: "Tony"
+      },
+      %{
+        phone_number: "+442080160509",
+        email: "potts@example.com",
+        born_on: "1983-11-02",
+        title: "mrs",
+        gender: "m",
+        family_name: "Potts",
+        given_name: "Pepper"
+      },
+      %{
+        phone_number: "+442080160506",
+        email: "morgan@example.com",
+        born_on: "2019-08-24",
+        title: "mrs",
+        gender: "f",
+        family_name: "Stark",
+        given_name: "Morgan"
+      }
+    ]
+
+    for {passenger, detail} <- Enum.zip(passengers, details) do
+      Map.merge(detail, %{id: passenger["id"], type: passenger["type"]})
+    end
   end
 
   defp process_offer(offer) do
@@ -127,10 +256,19 @@ defmodule Examples.FlightServer do
     currency = offer["total_currency"]
     slices = offer["slices"]
     segments = hd(slices)["segments"]
+    passengers = hd(segments)["passengers"]
     stops = length(segments) - 1
     duration = hd(slices)["duration"]
 
-    %{id: id, total_amount: total_amount, currency: currency, duration: duration, stops: stops, segments: process_segments(segments)}
+    %{
+      id: id,
+      total_amount: total_amount,
+      currency: currency,
+      duration: duration,
+      stops: stops,
+      passengers: passengers,
+      segments: process_segments(segments)
+    }
   end
 
   defp process_segments(segments) when is_list(segments) do
