@@ -9,9 +9,6 @@ defmodule Examples.FlightServer do
       @endpoint <> url
     end
 
-    # @spec process_request_body(term) :: binary
-    # def process_request_body(body)
-
     # @spec process_request_headers(term) :: [{binary, term}]
     def process_request_headers(headers) do
       headers ++
@@ -23,20 +20,6 @@ defmodule Examples.FlightServer do
         ]
     end
 
-    # @spec process_request_options(keyword) :: keyword
-    # def process_request_options(options)
-
-    # @spec process_response_body(binary) :: term
-    # def process_response_body(body)
-
-    # @spec process_response_chunk(binary) :: term
-    # def process_response_chunk(chunk)
-
-    # @spec process_headers([{binary, term}]) :: term
-    # def process_headers(headers)
-
-    # @spec process_response_status_code(integer) :: term
-    # def process_response_status_code(status_code)
     @spec secret_key :: binary()
     def secret_key() do
       key = Application.get_env(:stex_elixir, :duffel_access_token)
@@ -56,7 +39,7 @@ defmodule Examples.FlightServer do
     Duffel.start()
 
     origin = "MLA"
-    destination = "LUX"
+    destination = "CDG"#"LUX"
     departure_date = "2021-10-21"
     class = :economy
     passengers = 3
@@ -206,44 +189,56 @@ defmodule Examples.FlightServer do
         # Error
         error = Poison.decode!(body)["errors"]
         {:error, hd(error)["title"] <> ": " <> hd(error)["message"]}
-        # {:error, Poison.decode!(body)}
+
+      # {:error, Poison.decode!(body)}
 
       {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
-        # Ok
-        {:ok, Poison.decode!(body)["data"]}
+        # Ok, booking created
+        # {:ok, Poison.decode!(body)["data"]}
+        {:ok, process_booking_details(Poison.decode!(body)["data"])}
     end
   end
 
+  defp process_booking_details(details) when is_map(details) do
+    %{
+      booking_reference: details["booking_reference"]
+    }
+  end
+
   defp passenger_details(passengers) when is_list(passengers) do
-    details = [
-      %{
-        phone_number: "+442080160508",
-        email: "tony@example.com",
-        born_on: "1980-07-24",
-        title: "mr",
-        gender: "m",
-        family_name: "Stark",
-        given_name: "Tony"
-      },
-      %{
-        phone_number: "+442080160509",
-        email: "potts@example.com",
-        born_on: "1983-11-02",
-        title: "mrs",
-        gender: "m",
-        family_name: "Potts",
-        given_name: "Pepper"
-      },
-      %{
-        phone_number: "+442080160506",
-        email: "morgan@example.com",
-        born_on: "2019-08-24",
-        title: "mrs",
-        gender: "f",
-        family_name: "Stark",
-        given_name: "Morgan"
-      }
-    ]
+    # [
+    details = %{
+      phone_number: "+442080160508",
+      email: "tony@example.com",
+      born_on: "1980-07-24",
+      title: "mr",
+      gender: "m",
+      family_name: "Stark",
+      given_name: "Tony"
+    }
+
+    # ,
+    #   %{
+    #     phone_number: "+442080160509",
+    #     email: "potts@example.com",
+    #     born_on: "1983-11-02",
+    #     title: "mrs",
+    #     gender: "m",
+    #     family_name: "Potts",
+    #     given_name: "Pepper"
+    #   },
+    #   %{
+    #     phone_number: "+442080160506",
+    #     email: "morgan@example.com",
+    #     born_on: "2019-08-24",
+    #     title: "mrs",
+    #     gender: "f",
+    #     family_name: "Stark",
+    #     given_name: "Morgan"
+    #   }
+    # ]
+    details = List.duplicate(details, length(passengers))
+    |> Enum.map(fn detail -> %{detail | given_name: detail["given_name"]<>"a"} end)
 
     for {passenger, detail} <- Enum.zip(passengers, details) do
       Map.merge(detail, %{id: passenger["id"], type: passenger["type"]})
