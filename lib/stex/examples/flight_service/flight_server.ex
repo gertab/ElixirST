@@ -34,99 +34,39 @@ defmodule Examples.FlightServer do
     end
   end
 
-  # recompile && Examples.FlightServer.main
-  def main do
+  # recompile && Examples.FlightServer.server
+  def server(pid) do
     Duffel.start()
 
-    origin = "MLA"
-    # "LUX"
-    destination = "CDG"
-    departure_date = "2021-11-21"
-    class = :economy
-    passengers = 3
+    # {origin, destination, departure_date, class, passenger_no} =
+    receive do
+      {:request, origin, destination, departure_date, class, passenger_no} ->
+        {origin, destination, departure_date, class, passenger_no}
 
-    body = %{
-      data: %{
-        cabin_class: class,
-        passengers: List.duplicate(%{type: "adult"}, passengers),
-        slices: [
-          %{
-            departure_date: departure_date,
-            destination: destination,
-            origin: origin
+        # origin = "MLA" # "LUX"
+        # destination = "CDG"
+        # departure_date = "2021-11-21"
+        # class = :economy
+        # passenger_no = 3
+
+        body = %{
+          data: %{
+            cabin_class: class,
+            passengers: List.duplicate(%{type: "adult"}, passenger_no),
+            slices: [
+              %{
+                departure_date: departure_date,
+                destination: destination,
+                origin: origin
+              }
+            ]
           }
-        ]
-      }
-    }
+        }
 
-    resp =
-      case Duffel.post("offer_requests", Poison.encode!(body), [], timeout: 10000, recv_timeout: 100_000) do
-        {:error, %HTTPoison.Error{reason: reason}} ->
-          # Error
-          {:error, "Error while sending message: #{inspect(reason)}"}
-
-        {:ok,
-         %HTTPoison.Response{
-           body: body,
-           status_code: status_code
-         }}
-        when status_code >= 300 ->
-          # Error
-          error = Poison.decode!(body)["errors"]
-          {:error, hd(error)["message"]}
-
-        {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
-          # Ok
-          {:ok, Poison.decode!(body)["data"]["offers"]}
-      end
-
-    # IO.puts(length(elem(resp, 1)))
-    next_offer(resp)
-  end
-
-  defp next_offer({:error, message}) do
-    {:error, message}
-  end
-
-  defp next_offer({:ok, []}) do
-    {:error, "No more offers available"}
-  end
-
-  defp next_offer({:ok, [next_offer | other_offers]}) do
-    %{
-      id: id,
-      total_amount: total_amount,
-      currency: currency,
-      duration: duration,
-      stops: stops,
-      passengers: passengers,
-      segments: segments
-    } = process_offer(next_offer)
-
-    IO.inspect(%{
-      id: id,
-      total_amount: total_amount,
-      currency: currency,
-      duration: duration,
-      stops: stops,
-      passengers: passengers,
-      segments: segments
-    })
-
-    cont = IO.gets("[a]ccept/[n]ext offer/[c]ancel:")
-
-    case cont do
-      "c\n" ->
-        :cancel
-
-      "a\n" ->
-        # IO.puts("Sending request to get more details")
-        IO.puts("Accepting offer ##{id}")
-
-        case Duffel.get("offers/#{id}", [], timeout: 10000, recv_timeout: 100_000) do
+        case Duffel.post("offer_requests", Poison.encode!(body), [], timeout: 10000, recv_timeout: 100_000) do
           {:error, %HTTPoison.Error{reason: reason}} ->
             # Error
-            {:error, "Error while sending message: #{inspect(reason)}"}
+            send(pid, {:error, "Error while sending message: #{inspect(reason)}"})
 
           {:ok,
            %HTTPoison.Response{
@@ -136,33 +76,112 @@ defmodule Examples.FlightServer do
           when status_code >= 300 ->
             # Error
             error = Poison.decode!(body)["errors"]
-            IO.warn(inspect({:error, hd(error)["message"]}))
-            next_offer({:ok, other_offers})
+            send(pid, {:error, hd(error)["message"]})
+
+          {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
+            # Ok
+            # response = {:ok, Poison.decode!(body)["data"]["offers"]}
+            # IO.puts(length(elem(resp, 1)))
+            next_offer(pid, Poison.decode!(body)["data"]["offers"], 1)
+        end
+
+        server(pid)
+
+      {:cancel} ->
+        IO.puts("Server terminating")
+        :ok
+    end
+  end
+
+  defp next_offer(pid, [], offer_no) do
+    send(pid, {:error, "No more offers available. Only #{offer_no - 1} offers found."})
+  end
+
+  defp next_offer(pid, [next_offer | other_offers], offer_no) do
+    %{
+      id: id,
+      total_amount: total_amount,
+      currency: currency,
+      duration: duration,
+      stops: stops,
+      passengers: _passengers,
+      segments: segments
+    } = process_offer(next_offer)
+
+    # IO.inspect(%{
+    #   id: id,
+    #   total_amount: total_amount,
+    #   currency: currency,
+    #   duration: duration,
+    #   stops: stops,
+    #   passengers: passengers,
+    #   segments: segments
+    # })
+
+    # todo duration to number
+    send(pid, {:offer, offer_no, total_amount, currency, duration, stops, prettify_segments(segments)})
+
+    receive do
+      {:reject} ->
+        next_offer(pid, other_offers, offer_no + 1)
+
+      {:more_details} ->
+        # IO.puts("Sending request to get more details")
+        # IO.puts("More details regarding offer ##{id}")
+
+        case Duffel.get("offers/#{id}", [], timeout: 10000, recv_timeout: 100_000) do
+          {:error, %HTTPoison.Error{reason: reason}} ->
+            # Error
+            send(pid, {:error, "Error while sending message: #{inspect(reason)}"})
+            next_offer(pid, other_offers, offer_no)
+
+          {:ok,
+           %HTTPoison.Response{
+             body: body,
+             status_code: status_code
+           }}
+          when status_code >= 300 ->
+            # Error
+            error = Poison.decode!(body)["errors"]
+            send(pid, {:error, hd(error)["message"]})
+            next_offer(pid, other_offers, offer_no)
 
           {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
             # Ok
             {:ok, Poison.decode!(body)["data"]}
 
-            IO.puts("Latest offer: ")
-            IO.inspect(Poison.decode!(body)["data"])
+            # IO.puts("Latest offer: ")
+            # IO.inspect(Poison.decode!(body)["data"])
+            %{
+              id: _id,
+              total_amount: total_amount,
+              currency: currency,
+              duration: duration,
+              stops: stops,
+              passengers: passengers,
+              segments: segments,
+              departure_time: departure_time
+            } = process_offer(Poison.decode!(body)["data"])
 
-            cont = IO.gets("[p]roceed/[c]ancel and see next offer:")
+            send(
+              pid,
+              {:details, offer_no, total_amount, currency, duration, stops, prettify_segments(segments), length(passengers), departure_time}
+            )
 
-            case cont do
-              "p\n" ->
-                order(Poison.decode!(body)["data"])
+            # cont = IO.gets("[p]roceed/[c]ancel and see next offer:")
 
-              _ ->
+            receive do
+              {:make_booking, names} ->
+                order(pid, names, Poison.decode!(body)["data"])
+
+              {:cancel} ->
                 :ok
             end
         end
-
-      _ ->
-        next_offer({:ok, other_offers})
     end
   end
 
-  defp order(details) do
+  defp order(pid, _names, details) do
     order = %{
       data: %{
         selected_offers: [details["id"]],
@@ -190,21 +209,19 @@ defmodule Examples.FlightServer do
       when status_code >= 300 ->
         # Error
         error = Poison.decode!(body)["errors"]
-        {:error, hd(error)["title"] <> ": " <> hd(error)["message"]}
-
-      # {:error, Poison.decode!(body)}
+        send(pid, {:error, hd(error)["title"] <> ": " <> hd(error)["message"]})
 
       {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
         # Ok, booking created
-        # {:ok, Poison.decode!(body)["data"]}
-        {:ok, process_booking_details(Poison.decode!(body)["data"])}
+        send(pid, {:ok, process_booking_details(Poison.decode!(body)["data"])})
     end
   end
 
   defp process_booking_details(details) when is_map(details) do
-    %{
-      booking_reference: details["booking_reference"]
-    }
+    # %{
+      # booking_reference:
+       details["booking_reference"]
+    # }
   end
 
   defp passenger_details(passengers) when is_list(passengers) do
@@ -274,6 +291,7 @@ defmodule Examples.FlightServer do
     passengers = hd(segments)["passengers"]
     stops = length(segments) - 1
     duration = hd(slices)["duration"]
+    departure_time = hd(segments)["departing_at"]
 
     %{
       id: id,
@@ -282,7 +300,8 @@ defmodule Examples.FlightServer do
       duration: duration,
       stops: stops,
       passengers: passengers,
-      segments: process_segments(segments)
+      segments: process_segments(segments),
+      departure_time: departure_time
     }
   end
 
@@ -309,5 +328,23 @@ defmodule Examples.FlightServer do
         flight_number: marketing_carrier_code <> marketing_carrier_flight_number
       }
     end
+  end
+
+  defp prettify_segments(segments) when is_list(segments) do
+    for segment <- segments do
+      %{
+        origin_city_name: origin_city_name,
+        origin_iata_code: origin_iata_code,
+        destination_city_name: destination_city_name,
+        destination_iata_code: destination_iata_code,
+        marketing_carrier: marketing_carrier,
+        departing_at: _departing_at,
+        arriving_at: _arriving_at,
+        flight_number: flight_number
+      } = segment
+
+      "#{marketing_carrier} #{flight_number}: #{origin_city_name} (#{origin_iata_code}) -> #{destination_city_name} (#{destination_iata_code})"
+    end
+    |> Enum.join(", ")
   end
 end
