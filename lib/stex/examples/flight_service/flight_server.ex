@@ -39,8 +39,9 @@ defmodule Examples.FlightServer do
     Duffel.start()
 
     origin = "MLA"
-    destination = "CDG"#"LUX"
-    departure_date = "2021-10-21"
+    # "LUX"
+    destination = "CDG"
+    departure_date = "2021-11-21"
     class = :economy
     passengers = 3
 
@@ -135,7 +136,8 @@ defmodule Examples.FlightServer do
           when status_code >= 300 ->
             # Error
             error = Poison.decode!(body)["errors"]
-            {:error, hd(error)["message"]}
+            IO.warn(inspect({:error, hd(error)["message"]}))
+            next_offer({:ok, other_offers})
 
           {:ok, %HTTPoison.Response{body: body, status_code: status_code}} when status_code >= 200 and status_code < 300 ->
             # Ok
@@ -206,39 +208,57 @@ defmodule Examples.FlightServer do
   end
 
   defp passenger_details(passengers) when is_list(passengers) do
-    # [
-    details = %{
-      phone_number: "+442080160508",
-      email: "tony@example.com",
-      born_on: "1980-07-24",
-      title: "mr",
-      gender: "m",
-      family_name: "Stark",
-      given_name: "Tony"
-    }
+    details = [
+      %{
+        phone_number: "+442080160508",
+        email: "tony@example.com",
+        born_on: "1980-07-24",
+        title: "mr",
+        gender: "m",
+        family_name: "Stark",
+        given_name: "Tony"
+      },
+      %{
+        phone_number: "+442080160509",
+        email: "potts@example.com",
+        born_on: "1983-11-02",
+        title: "mrs",
+        gender: "m",
+        family_name: "Potts",
+        given_name: "Pepper"
+      },
+      %{
+        phone_number: "+442080160506",
+        email: "morgan@example.com",
+        born_on: "2000-08-24",
+        title: "mrs",
+        gender: "f",
+        family_name: "Stark",
+        given_name: "Morgan"
+      },
+      %{
+        phone_number: "+442080160506",
+        email: "morgan@example.com",
+        born_on: "1973-09-24",
+        title: "mr",
+        gender: "m",
+        family_name: "Mac",
+        given_name: "Morgan"
+      },
+      %{
+        phone_number: "+442080160506",
+        email: "morgan@example.com",
+        born_on: "1972-10-24",
+        title: "mr",
+        gender: "m",
+        family_name: "Mabey",
+        given_name: "Ian"
+      }
+    ]
 
-    # ,
-    #   %{
-    #     phone_number: "+442080160509",
-    #     email: "potts@example.com",
-    #     born_on: "1983-11-02",
-    #     title: "mrs",
-    #     gender: "m",
-    #     family_name: "Potts",
-    #     given_name: "Pepper"
-    #   },
-    #   %{
-    #     phone_number: "+442080160506",
-    #     email: "morgan@example.com",
-    #     born_on: "2019-08-24",
-    #     title: "mrs",
-    #     gender: "f",
-    #     family_name: "Stark",
-    #     given_name: "Morgan"
-    #   }
-    # ]
-    details = List.duplicate(details, length(passengers))
-    |> Enum.map(fn detail -> %{detail | given_name: detail["given_name"]<>"a"} end)
+    # details = List.duplicate(details, length(passengers))
+    # details = Enum.zip(details, 1..length(details))
+    # |> Enum.map(fn {detail, index} -> %{detail | given_name: detail[:given_name]<>"#{index}"} end)
 
     for {passenger, detail} <- Enum.zip(passengers, details) do
       Map.merge(detail, %{id: passenger["id"], type: passenger["type"]})
