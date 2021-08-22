@@ -119,7 +119,7 @@ defmodule Examples.FlightServer do
     # })
 
     # todo duration to number
-    send(pid, {:offer, offer_no, total_amount, currency, duration, stops, prettify_segments(segments)})
+    send(pid, {:offer, offer_no, total_amount, currency, parse_time(duration), stops, prettify_segments(segments)})
 
     receive do
       {:reject} ->
@@ -165,7 +165,8 @@ defmodule Examples.FlightServer do
 
             send(
               pid,
-              {:details, offer_no, total_amount, currency, duration, stops, prettify_segments(segments), length(passengers), departure_time}
+              {:details, offer_no, total_amount, currency, parse_time(duration), stops, prettify_segments(segments), length(passengers),
+               departure_time}
             )
 
             # cont = IO.gets("[p]roceed/[c]ancel and see next offer:")
@@ -219,8 +220,8 @@ defmodule Examples.FlightServer do
 
   defp process_booking_details(details) when is_map(details) do
     # %{
-      # booking_reference:
-       details["booking_reference"]
+    # booking_reference:
+    details["booking_reference"]
     # }
   end
 
@@ -346,5 +347,25 @@ defmodule Examples.FlightServer do
       "#{marketing_carrier} #{flight_number}: #{origin_city_name} (#{origin_iata_code}) -> #{destination_city_name} (#{destination_iata_code})"
     end
     |> Enum.join(", ")
+  end
+
+  defp parse_time(duration) when is_binary(duration) do
+    split = String.split(duration, ~r[P|D|T|H|M])
+
+    case length(split) do
+      5 ->
+        IO.warn(duration)
+        IO.warn(split)
+        [_, _, hours, minutes, _seconds] = split
+        String.to_integer(hours) * 60 + String.to_integer(minutes)
+
+      6 ->
+        [_, days, _, hours, minutes, _seconds] = split
+        String.to_integer(days) * 24 * 60 + String.to_integer(hours) * 60 + String.to_integer(minutes)
+
+      _ ->
+        # throw("Error parsing time: #{duration} :::: #{inspect split}")
+        0
+    end
   end
 end

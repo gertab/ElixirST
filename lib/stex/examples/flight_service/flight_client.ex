@@ -8,8 +8,8 @@ defmodule Examples.FlightClient do
   end
 
   @session "S = +{!request(binary, binary, binary, atom, number).
-                         rec Y.(&{?offer(number, number, binary, binary, number, binary).
-                                       +{!more_details().&{?details(number, number, binary, binary, number, binary, number, binary).
+                         rec Y.(&{?offer(number, number, binary, number, number, binary).
+                                       +{!more_details().&{?details(number, number, binary, number, number, binary, number, binary).
                                                                   +{!make_booking([{binary, binary}]).&{?ok(binary),
                                                                                                         ?error(binary)},
                                                                     !cancel()},
@@ -20,7 +20,7 @@ defmodule Examples.FlightClient do
   @spec client(pid) :: :ok
   def client(pid) do
     origin = "MLA"
-    destination = "CDG"
+    destination = "LAX"
     departure_date = "2021-11-24"
     class = :economy
     passenger_no = 2
@@ -36,55 +36,57 @@ defmodule Examples.FlightClient do
   defp consume_offer(pid) do
     receive do
       {:offer, offer_no, total_amount, currency, duration, stops, segments} ->
+        IO.puts(inspect(duration))
+
         IO.puts(
-          "\nOffer ##{offer_no}: \n#{currency}#{total_amount} (duration: #{duration}) Itinerary " <>
-            "(#{stops} stop#{
-              if stops > 1 do
-                "s"
-              end
-            }): #{segments}"
+          "\nOffer ##{offer_no}: \n#{currency}#{total_amount} (duration: " <>
+            "#{String.pad_leading(Integer.to_string(div(duration, 60)), 2, "0")}:" <>
+            "#{String.pad_leading(Integer.to_string(rem(duration, 60)), 2, "0")}) Itinerary " <>
+            "(#{stops} stop#{if stops > 1, do: "s"}): #{segments}"
         )
 
-        if total_amount > 140 and stops == 0 do
-          send(pid, {:reject})
-          consume_offer(pid)
-        else
-          send(pid, {:more_details})
-          IO.puts("\nRequesting updated details for offer #{offer_no}")
+        accept? = IO.gets("Accept offer ##{offer_no}? y/n: ")
 
-          receive do
-            {:details, offer_no, total_amount, currency, duration, stops, segments, passenger_no, departure_time} ->
-              IO.puts(
-                "\nOffer ##{offer_no} (#{passenger_no} passenger/s): \n#{currency}#{total_amount} (duration: #{duration}) Itinerary " <>
-                  "(#{stops} stop#{
-                    if stops > 1 do
-                      "s"
-                    end
-                  }): #{segments}\nDeparting at #{departure_time}"
-              )
+        case accept? do
+          "y\n" ->
+            send(pid, {:more_details})
+            IO.puts("\nRequesting updated details for offer ##{offer_no}")
 
-              send(pid, {:make_booking, [{"Tony", "Stark"}, {"Pepper", "Mac"}]})
-              IO.puts("\nAccepting offer ##{offer_no}...")
+            receive do
+              {:details, offer_no, total_amount, currency, duration, stops, segments, passenger_no, departure_time} ->
+                IO.puts(
+                  "\nUpdated details for offer ##{offer_no} (#{passenger_no} passenger/s): \n#{currency}#{total_amount} (duration: " <>
+                    "#{String.pad_leading(Integer.to_string(div(duration, 60)), 2, "0")}:" <>
+                    "#{String.pad_leading(Integer.to_string(rem(duration, 60)), 2, "0")}) Itinerary " <>
+                    "(#{stops} stop#{if stops > 1, do: "s"}): #{segments}\nDeparting at #{departure_time}"
+                )
 
-              # send(pid, {:cancel})
+                send(pid, {:make_booking, [{"Tony", "Stark"}, {"Pepper", "Mac"}]})
+                IO.puts("\nAccepting offer ##{offer_no}...")
 
-              receive do
-                {:ok, booking_reference} ->
-                  # code
-                  IO.puts("\nBooking performed successfully. Reference number: #{booking_reference}.")
+                # send(pid, {:cancel})
 
-                {:error, message} ->
-                  IO.puts("\nFailed to perform booking.")
-                  error(message)
-              end
+                receive do
+                  {:ok, booking_reference} ->
+                    # code
+                    IO.puts("\nBooking performed successfully. Reference number: #{booking_reference}.")
 
-              :ok
+                  {:error, message} ->
+                    IO.puts("\nFailed to perform booking.")
+                    error(message)
+                end
 
-            {:error, message} ->
-              error(message)
-          end
+                :ok
 
-          :ok
+              {:error, message} ->
+                error(message)
+            end
+
+            :ok
+
+          _ ->
+            send(pid, {:reject})
+            consume_offer(pid)
         end
 
         :ok
