@@ -39,8 +39,6 @@ defmodule STEx do
 
       @on_definition STEx
       @after_compile STEx
-
-      IO.puts("STEx started in #{IO.inspect(__MODULE__)}")
     end
   end
 

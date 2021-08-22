@@ -576,6 +576,12 @@ defmodule STEx.SessionTypechecking do
     {node, %{env | type: :atom}}
   end
 
+  def typecheck({{:., _meta, [IO, :gets]}, meta2, _}, env) do
+    Logger.debug("Typechecking: IO.gets")
+    node = {nil, meta2, []}
+    {node, %{env | type: :binary}}
+  end
+
   def typecheck({{:., _meta, call}, meta2, _}, env) do
     Logger.debug("Typechecking: Remote function call (#{inspect(call)})")
     node = {nil, meta2, []}
