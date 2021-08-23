@@ -1,8 +1,12 @@
 defmodule STEx do
   alias STEx.ST
-  require Logger
   require ST
+  require Logger
 
+  def abc do
+    Logger.error("HGelllllo")
+    IO.warn("Environment:: #{Mix.env}")
+  end
   @moduledoc """
   This module is the starting point of STEx. It parses the `@session` (and `@dual`) attribute
   and starts analysing the AST code using session types.

@@ -8,3 +8,6 @@ if File.exists?("config/dev.secret.exs") do
   ## config :stex_elixir,
   ##   duffel_access_token: "<access token from https://duffel.com/>"
 end
+
+config :logger, level: :info
+# config :logger, level: :debug # to get more details

@@ -65,14 +65,14 @@ defmodule STEx.SessionTypechecking do
         # function_session_type_ctx: result_env[:function_session_type_ctx]
       }
       |> inspect()
-      |> Logger.debug()
+      # |> Logger.debug()
 
       case result_env[:state] do
         :ok ->
           Logger.info("Session typechecking for #{name}/#{arity} terminated successfully")
 
         :error ->
-          Logger.error("Session typechecking for #{name}/#{arity} found an error. ")
+          Logger.error("Sessiosn typechecking for #{name}/#{arity} found an error. ")
           Logger.error(result_env[:error_data])
           throw(result_env[:error_data])
       end

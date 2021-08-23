@@ -78,7 +78,6 @@ defmodule STEx.Retriever do
     catch
       {:error, message} ->
         Logger.error("Error while reading BEAM files: " <> message)
-        # x -> Logger.error(x)
     end
   end
 

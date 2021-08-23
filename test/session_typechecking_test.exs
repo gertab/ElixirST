@@ -4,11 +4,6 @@ defmodule SessionTypecheckingTest do
   alias STEx.SessionTypechecking, as: TC
   alias STEx.ST
 
-  setup_all do
-    Logger.remove_backend(:console)
-    :ok
-  end
-
   def env do
     %{
       :state => :ok,

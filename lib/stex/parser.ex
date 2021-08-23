@@ -3,7 +3,6 @@ defmodule STEx.Parser do
     Parses an input string to session types (as Elixir data).
   """
   alias STEx.ST
-  require Logger
   require ST
 
   @typedoc false
