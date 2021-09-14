@@ -22,7 +22,7 @@ defmodule Examples.FlightServer do
 
     @spec secret_key :: binary()
     def secret_key() do
-      key = Application.get_env(:stex_elixir, :duffel_access_token)
+      key = Application.get_env(:elixirst, :duffel_access_token)
 
       if key do
         key

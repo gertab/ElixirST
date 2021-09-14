@@ -21,7 +21,7 @@ erl_crash.dump
 
 # Ignore package tarball (built via "mix hex.build").
 elixirsessions-*.tar
-stex_elixir-*.tar
+elixirst-*.tar
 
 notes*.txt
 
