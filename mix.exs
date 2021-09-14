@@ -1,4 +1,4 @@
-defmodule STEx.MixProject do
+defmodule ElixirST.MixProject do
   use Mix.Project
 
   def project do
@@ -19,7 +19,7 @@ defmodule STEx.MixProject do
 
       # Leex/Yecc options
       # leex_options: [],
-      erlc_paths: ["lib/stex/parser"],
+      erlc_paths: ["lib/elixirst/parser"],
 
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
