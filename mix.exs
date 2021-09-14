@@ -3,8 +3,8 @@ defmodule STEx.MixProject do
 
   def project do
     [
-      app: :stex_elixir,
-      version: "0.4.5",
+      app: :elixirst,
+      version: "0.6.0",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
@@ -12,8 +12,8 @@ defmodule STEx.MixProject do
       package: package(),
 
       # Docs
-      name: "STEx",
-      source_url: "https://github.com/gertab/STEx",
+      name: "ElixirST",
+      source_url: "https://github.com/gertab/ElixirST",
       # The main page in the docs
       docs: [main: "docs", extras: ["docs.md", "LICENCE"]],
 
@@ -53,8 +53,8 @@ defmodule STEx.MixProject do
     [
       maintainers: ["Gerard Tabone"],
       licenses: ["GPL-3.0"],
-      links: %{"GitHub" => "https://github.com/gertab/STEx"},
-      description: "Session types in Elixir",
+      links: %{"GitHub" => "https://github.com/gertab/ElixirST"},
+      description: "ElixirST: Session Types in Elixir",
       files: ~w(lib .formatter.exs mix.exs README* LICENCE docs.md)
     ]
   end
