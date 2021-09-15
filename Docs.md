@@ -1,17 +1,17 @@
-# Session Types in Elixir
+# ElixirST: Session Types in Elixir
 
-[![Elixir CI](https://github.com/gertab/STEx/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/STEx/actions/workflows/elixir.yml)
+[![Elixir CI](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml)
 
-STEx (**S**ession **T**ypes in **E**li**x**ir) applies *Session Types* to a part of the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between processes. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
+ElixirST (**S**ession **T**ypes in **El**ixir) applies *Session Types* to a fragment of the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between processes. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
 
 ## Example
 
-To session typecheck modules in Elixir, add `use STEx` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](https://github.com/gertab/STEx/blob/master/lib/stex/examples/small_example.ex), which receives one label (`?Hello()`):
+To session typecheck modules in Elixir, add `use ElixirST` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](https://github.com/gertab/ElixirST/blob/master/lib/stex/examples/small_example.ex), which receives one label (`?Hello()`):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
 defmodule Example do
-  use STEx
+  use ElixirST
 
   @session "server = ?Hello()"
   @spec server(pid) :: atom()
@@ -29,14 +29,14 @@ defmodule Example do
 end
 ```
 
-STEx runs automatically at compile time (`mix compile`) or as a mix task (`mix sessions [module name]`):
+ElixirST runs automatically at compile time (`mix compile`) or as a mix task (`mix sessions [module name]`):
 ```text
 $ mix sessions SmallExample
 [info]  Session typechecking for client/1 terminated successfully
 [info]  Session typechecking for server/0 terminated successfully
 ```
 
-If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), STEx will complain:
+If the client sends a different label (e.g. :Hi) instead of the one specified in the session type (i.e. `@session "!Hello()"`), ElixirST will complain:
 
 ```text
 $ mix sessions Examples.SmallExample
@@ -44,13 +44,13 @@ $ mix sessions Examples.SmallExample
 [error] [Line 7] Expected send with label :Hello but found :Hi.
 ```
 
-## Another (Failing) Example 
+## A (Failing) Example 
 
 In the next example, session typechecking fails because the session type `!Hello()` was expecting to find a send action with `{:Hello}` but found `{:Yo}`:
 
 ```elixir
 defmodule Module2 do
-  use STEx
+  use ElixirST
 
   @session "!Hello().end"
   @spec do_something(pid) :: {:Yo}
@@ -178,16 +178,16 @@ The following are some session type examples along with the equivalent Elixir co
 
 ----------
 
-## Using STEx
+## Using ElixirST
 
 ### Installation
 
-The package can be installed by adding `stex_elixir` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `elixirst` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:stex_elixir, "~> 0.4.5"}
+    {:elixirst, "~> 0.4.5"}
   ]
 end
 ```
@@ -195,21 +195,21 @@ end
 ```elixir
 def deps do
   [
-    {:dep_from_git, git: "https://github.com/gertab/STEx.git"}
+    {:dep_from_git, git: "https://github.com/gertab/ElixirST.git"}
   ]
 end
 ```
 
-{:dep_from_git, git: "https://github.com/gertab/STEx.git", tag: "0.1.0"}
+{:dep_from_git, git: "https://github.com/gertab/ElixirST.git", tag: "0.1.0"}
 -->
 
-Documentation can be found at [https://hexdocs.pm/stex_elixir](https://hexdocs.pm/stex_elixir/docs.html).
+Documentation can be found at [https://hexdocs.pm/elixirst](https://hexdocs.pm/elixirst/docs.html).
 
 ### Use in Elixir modules
 
-To session typecheck a module, link the STEx library using this line:
+To session typecheck a module, link the ElixirST library using this line:
 ```elixir
-use STEx
+use ElixirST
 ```
 
 Insert any checks using the `@session` attribute followed by a function that should be session typechecked, such as:
@@ -224,17 +224,17 @@ The `@dual` attribute checks the dual of the specified session type.
 # Equivalent to: @session "?Ping().!Pong()"
 ```
 
-Other examples can be found in the [`examples`](https://github.com/gertab/STEx/blob/master/lib/stex/examples) folder.
+Other examples can be found in the [`examples`](https://github.com/gertab/ElixirST/blob/master/lib/stex/examples) folder.
 <!-- 
 ### Features
 
-STEx implements several features that allow for _session type_ manipulation.
+ElixirST implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
  - session type parsing ([`lib/stex/parser/parser.ex`](/lib/stex/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
 ### Acknowledgements
 
-Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](https://github.com/gertab/STEx/blob/master/ACK.md)).
+Some code related to Elixir expression typing was adapted from [typelixir](https://github.com/Typelixir/typelixir) by Cassola (MIT [licence](https://github.com/gertab/ElixirST/blob/master/ACK.md)).
 
 This project is licenced under the GPL-3.0 licence.

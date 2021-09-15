@@ -1,4 +1,4 @@
-STEx uses some code related to Elixir expression typing from the repository github.com/Typelixir/typelixir:
+ElixirST uses some code related to Elixir expression typing from the repository github.com/Typelixir/typelixir:
 
 MIT License
 
