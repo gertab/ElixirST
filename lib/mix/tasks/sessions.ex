@@ -2,7 +2,7 @@ defmodule Mix.Tasks.Sessions do
   use Mix.Task
 
   @moduledoc """
-  Use `mix sessions` to run STEx for all module, or `mix sessions [module name]` to run STEx only for a specific module.
+  Use `mix sessions` to run ElixirST for all module, or `mix sessions [module name]` to run ElixirST only for a specific module.
   """
 
   @spec run([binary]) :: list
@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Sessions do
       end
 
     for file <- files do
-      STEx.Retriever.process(file)
+      ElixirST.Retriever.process(file)
     end
   end
 end

@@ -1,5 +1,5 @@
 defmodule Examples.PingPong do
-  use STEx
+  use ElixirST
   @moduledoc false
   # Send ping pong indefinitely
 
@@ -33,6 +33,6 @@ defmodule Examples.PingPong do
   end
 
   def main() do
-    STEx.spawn(&ping/1, [], &pong/1, [])
+    ElixirST.spawn(&ping/1, [], &pong/1, [])
   end
 end

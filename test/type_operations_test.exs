@@ -1,7 +1,7 @@
 defmodule TypeOperationsTest do
   use ExUnit.Case
-  doctest STEx.TypeOperations
-  alias STEx.TypeOperations
+  doctest ElixirST.TypeOperations
+  alias ElixirST.TypeOperations
 
   test "small example" do
     {:@, _, [spec]} =

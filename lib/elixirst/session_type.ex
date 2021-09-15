@@ -1,4 +1,4 @@
-defmodule STEx.ST do
+defmodule ElixirST.ST do
   @moduledoc """
   Manipulate Session Type (ST) data.
 
@@ -57,29 +57,29 @@ defmodule STEx.ST do
   #### Simple example
 
       iex> s = "!Hello(Number)"
-      ...> STEx.ST.string_to_st(s)
-      %STEx.ST.Send{label: :Hello, next: %STEx.ST.Terminate{}, types: [:number]}
+      ...> ElixirST.ST.string_to_st(s)
+      %ElixirST.ST.Send{label: :Hello, next: %ElixirST.ST.Terminate{}, types: [:number]}
 
   #### Another example
 
       iex> s = "rec X.(&{?Ping().!Pong().X, ?Quit().end})"
-      ...> STEx.ST.string_to_st(s)
-      %STEx.ST.Recurse{
+      ...> ElixirST.ST.string_to_st(s)
+      %ElixirST.ST.Recurse{
         label: :X,
-        body: %STEx.ST.Branch{
+        body: %ElixirST.ST.Branch{
           branches: %{
-            Ping: %STEx.ST.Recv{
+            Ping: %ElixirST.ST.Recv{
               label: :Ping,
-              next: %STEx.ST.Send{label: :Pong, next: %STEx.ST.Call_Recurse{label: :X}, types: []},
+              next: %ElixirST.ST.Send{label: :Pong, next: %ElixirST.ST.Call_Recurse{label: :X}, types: []},
               types: []
             },
-            Quit: %STEx.ST.Recv{label: :Quit, next: %STEx.ST.Terminate{}, types: []}
+            Quit: %ElixirST.ST.Recv{label: :Quit, next: %ElixirST.ST.Terminate{}, types: []}
           }
         }
       }
 
   """
-  alias STEx.ST
+  alias ElixirST.ST
 
   @typedoc """
   A session type list of session operations.
@@ -283,8 +283,8 @@ defmodule STEx.ST do
 
   ## Examples
       iex> s = "rec x.(&{?Hello(number), ?Retry().X})"
-      ...> st = STEx.ST.string_to_st(s)
-      ...> STEx.ST.st_to_string(st)
+      ...> st = ElixirST.ST.string_to_st(s)
+      ...> ElixirST.ST.st_to_string(st)
       "rec x.(&{?Hello(number), ?Retry().X})"
   """
   @spec st_to_string(session_type()) :: String.t()
@@ -295,7 +295,7 @@ defmodule STEx.ST do
   end
 
   defp st_to_string_internal(%ST.Send{label: label, types: types, next: next}) do
-    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirST.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
 
@@ -307,7 +307,7 @@ defmodule STEx.ST do
   end
 
   defp st_to_string_internal(%ST.Recv{label: label, types: types, next: next}) do
-    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirST.TypeOperations.string/1) |> Enum.join(", ")
 
     following_st = st_to_string_internal(next)
 
@@ -355,8 +355,8 @@ defmodule STEx.ST do
 
   ## Examples
       iex> s = "?Hello(number).?Retry()"
-      ...> st = STEx.ST.string_to_st(s)
-      ...> STEx.ST.st_to_string_current(st)
+      ...> st = ElixirST.ST.string_to_st(s)
+      ...> ElixirST.ST.st_to_string_current(st)
       "?Hello(number)"
   """
   @spec st_to_string_current(session_type()) :: String.t()
@@ -370,13 +370,13 @@ defmodule STEx.ST do
   defp st_to_string_current_internal(session_type)
 
   defp st_to_string_current_internal(%ST.Send{label: label, types: types}) do
-    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirST.TypeOperations.string/1) |> Enum.join(", ")
 
     "!#{label}(#{types_string})"
   end
 
   defp st_to_string_current_internal(%ST.Recv{label: label, types: types}) do
-    types_string = Enum.map(types, &STEx.TypeOperations.string/1) |> Enum.join(", ")
+    types_string = Enum.map(types, &ElixirST.TypeOperations.string/1) |> Enum.join(", ")
 
     "?#{label}(#{types_string})"
   end
@@ -420,16 +420,16 @@ defmodule STEx.ST do
 
   ## Examples
       iex> s = "?Ping().!Pong()"
-      ...> STEx.ST.string_to_st(s)
-      %STEx.ST.Recv{
+      ...> ElixirST.ST.string_to_st(s)
+      %ElixirST.ST.Recv{
         label: :Ping,
-        next: %STEx.ST.Send{label: :Pong, next: %STEx.ST.Terminate{}, types: []},
+        next: %ElixirST.ST.Send{label: :Pong, next: %ElixirST.ST.Terminate{}, types: []},
         types: []
       }
   """
   @spec string_to_st(String.t()) :: session_type()
   def string_to_st(st_string) do
-    STEx.Parser.parse(st_string)
+    ElixirST.Parser.parse(st_string)
   end
 
   @doc """
@@ -441,9 +441,9 @@ defmodule STEx.ST do
 
   ## Examples
       iex> st_string = "!Ping(Number).?Pong(String)"
-      ...> st = STEx.Parser.parse(st_string)
-      ...> st_dual = STEx.ST.dual(st)
-      ...> STEx.ST.st_to_string(st_dual)
+      ...> st = ElixirST.Parser.parse(st_string)
+      ...> st_dual = ElixirST.ST.dual(st)
+      ...> ElixirST.ST.st_to_string(st_dual)
       "?Ping(number).!Pong(string)"
 
   """
@@ -653,9 +653,9 @@ defmodule STEx.ST do
 
   ## Examples
           iex> st = "rec X.(!A().X)"
-          ...> session_type = STEx.ST.string_to_st(st)
-          ...> unfolded = STEx.ST.unfold(session_type)
-          ...> STEx.ST.st_to_string(unfolded)
+          ...> session_type = ElixirST.ST.string_to_st(st)
+          ...> unfolded = ElixirST.ST.unfold(session_type)
+          ...> ElixirST.ST.st_to_string(unfolded)
           "!A().rec X.(!A().X)"
   """
   @spec unfold(session_type()) :: session_type()

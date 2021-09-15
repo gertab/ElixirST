@@ -1,8 +1,8 @@
-defmodule STEx.Helper do
+defmodule ElixirST.Helper do
   @moduledoc false
   # Used to get information from BEAM files and expanding ASTs
 
-  # recompile && STEx.Helper.get_BEAM()
+  # recompile && ElixirST.Helper.get_BEAM()
   def get_BEAM(module \\ "Examples.Counter") do
     load_paths = Mix.Project.compile_path()
     paths = Path.wildcard(load_paths <> "/Elixir*." <> module <> ".beam")
@@ -59,7 +59,7 @@ defmodule STEx.Helper do
     end
   end
 
-  # recompile && STEx.Helper.quoted
+  # recompile && ElixirST.Helper.quoted
   def quoted() do
     ast()
     |> Macro.to_string()
@@ -67,7 +67,7 @@ defmodule STEx.Helper do
     |> IO.puts()
   end
 
-  # recompile && STEx.Helper.quoted_prettify
+  # recompile && ElixirST.Helper.quoted_prettify
   def quoted_prettify() do
     quoted()
     |> Macro.to_string()
@@ -76,7 +76,7 @@ defmodule STEx.Helper do
   end
 
   # Expands fully the quoted AST (including macros and erlang function calls)
-  # recompile && STEx.Helper.expanded_quoted
+  # recompile && ElixirST.Helper.expanded_quoted
   def expanded_quoted() do
     expanded_quoted(ast())
   end
@@ -87,7 +87,7 @@ defmodule STEx.Helper do
     ast
   end
 
-  # recompile && STEx.Helper.expanded_quoted_prettify
+  # recompile && ElixirST.Helper.expanded_quoted_prettify
   def expanded_quoted_prettify() do
     expanded_quoted_prettify(ast())
   end

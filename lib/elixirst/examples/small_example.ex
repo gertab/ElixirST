@@ -1,5 +1,5 @@
 defmodule Examples.SmallExample do
-  use STEx
+  use ElixirST
   @moduledoc false
 
   @session "server = ?Hello()"

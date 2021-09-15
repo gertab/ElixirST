@@ -1,10 +1,10 @@
 defmodule Examples.FlightClient do
-  use STEx
+  use ElixirST
 
   # recompile && Examples.FlightClient.main
   @spec main :: {pid, pid}
   def main do
-    STEx.spawn(&client/1, [], &Examples.FlightServer.server/1, [])
+    ElixirST.spawn(&client/1, [], &Examples.FlightServer.server/1, [])
   end
 
   @session "S = +{!request(binary, binary, binary, atom, number).

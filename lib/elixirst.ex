@@ -1,5 +1,5 @@
-defmodule STEx do
-  alias STEx.ST
+defmodule ElixirST do
+  alias ElixirST.ST
   require ST
   require Logger
 
@@ -8,14 +8,14 @@ defmodule STEx do
     IO.warn("Environment:: #{Mix.env}")
   end
   @moduledoc """
-  This module is the starting point of STEx. It parses the `@session` (and `@dual`) attribute
+  This module is the starting point of ElixirST. It parses the `@session` (and `@dual`) attribute
   and starts analysing the AST code using session types.
 
-  A basic module, typechecked using STEx, takes the following form:
+  A basic module, typechecked using ElixirST, takes the following form:
 
   ```elixir
   defmodule Examples.SmallExample do
-    use STEx
+    use ElixirST
 
     @session "X = !Hello()"
     @spec some_process(pid) :: atom()
@@ -32,7 +32,7 @@ defmodule STEx do
 
   defmacro __using__(_) do
     quote do
-      import STEx
+      import ElixirST
 
       Module.register_attribute(__MODULE__, :session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :dual, accumulate: false, persist: false)
@@ -41,8 +41,8 @@ defmodule STEx do
       Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
       @compile :debug_info
 
-      @on_definition STEx
-      @after_compile STEx
+      @on_definition ElixirST
+      @after_compile ElixirST
     end
   end
 
@@ -62,7 +62,7 @@ defmodule STEx do
   end
 
   def __after_compile__(_env, bytecode) do
-    STEx.Retriever.process(bytecode)
+    ElixirST.Retriever.process(bytecode)
   end
 
   # Processes @session attribute - gets the function and session type details
@@ -130,8 +130,8 @@ defmodule STEx do
 
       args_types = args_types || []
 
-      args_types_converted = STEx.TypeOperations.get_type(args_types)
-      return_type_converted = STEx.TypeOperations.get_type(return_type)
+      args_types_converted = ElixirST.TypeOperations.get_type(args_types)
+      return_type_converted = ElixirST.TypeOperations.get_type(return_type)
 
       if args_types_converted == :error or return_type_converted == :error do
         throw(

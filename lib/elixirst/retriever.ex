@@ -1,6 +1,6 @@
-defmodule STEx.Retriever do
+defmodule ElixirST.Retriever do
   require Logger
-  alias STEx.ST
+  alias ElixirST.ST
 
   @moduledoc """
   Retrieves bytecode and (session) typechecks it.
@@ -69,7 +69,7 @@ defmodule STEx.Retriever do
         get_all_functions!(dbgi_map)
         |> add_types_to_functions(to_map(function_types))
 
-      STEx.SessionTypechecking.session_typecheck_module(
+      ElixirST.SessionTypechecking.session_typecheck_module(
         all_functions,
         to_map(session_types_parsed ++ dual_session_types_parsed),
         dbgi_map[:module],
@@ -147,7 +147,7 @@ defmodule STEx.Retriever do
     for parameter <- parameters do
       for variable <- parameter do
         # Change any variables starting with _ to nils
-        STEx.TypeOperations.get_var(variable)
+        ElixirST.TypeOperations.get_var(variable)
       end
     end
   end

@@ -1,6 +1,6 @@
 defmodule Examples.LargeExample do
   @moduledoc false
-  use STEx
+  use ElixirST
 
   @session "!Hello().end"
   @spec do_something(pid) :: atom

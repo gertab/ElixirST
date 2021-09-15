@@ -1,5 +1,5 @@
 defmodule Examples.Counter do
-  use STEx
+  use ElixirST
   @moduledoc false
 
   @session "counter = &{?incr(number).counter,
@@ -47,6 +47,6 @@ defmodule Examples.Counter do
 
   # Examples.Counter.main
   def main do
-    STEx.spawn(&server/2, [0], &client/1, [])
+    ElixirST.spawn(&server/2, [0], &client/1, [])
   end
 end

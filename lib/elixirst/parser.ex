@@ -1,8 +1,8 @@
-defmodule STEx.Parser do
+defmodule ElixirST.Parser do
   @moduledoc """
     Parses an input string to session types (as Elixir data).
   """
-  alias STEx.ST
+  alias ElixirST.ST
   require ST
 
   @typedoc false
@@ -15,8 +15,8 @@ defmodule STEx.Parser do
 
   ## Example
       iex> s = "rec Y.(+{!Hello(number, [{boolean, atom}]).Y, !Ok()})"
-      ...> session_type = STEx.Parser.parse(s)
-      ...> STEx.ST.st_to_string(session_type)
+      ...> session_type = ElixirST.Parser.parse(s)
+      ...> ElixirST.ST.st_to_string(session_type)
       "rec Y.(+{!Hello(number, [{boolean, atom}]).Y, !Ok()})"
   """
   @spec parse(bitstring() | charlist()) :: session_type()
@@ -78,7 +78,7 @@ defmodule STEx.Parser do
   end
 
   defp convert_to_structs({send_recv, label, types, next}, recurse_var) when send_recv in [:send, :recv] do
-    checked_types = Enum.map(types, &STEx.TypeOperations.valid_type/1)
+    checked_types = Enum.map(types, &ElixirST.TypeOperations.valid_type/1)
 
     Enum.each(checked_types, fn
       {:error, incorrect_types} -> throw("Invalid type/s: #{inspect(incorrect_types)}")

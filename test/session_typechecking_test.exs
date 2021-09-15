@@ -1,8 +1,8 @@
 defmodule SessionTypecheckingTest do
   use ExUnit.Case
-  doctest STEx.SessionTypechecking
-  alias STEx.SessionTypechecking, as: TC
-  alias STEx.ST
+  doctest ElixirST.SessionTypechecking
+  alias ElixirST.SessionTypechecking, as: TC
+  alias ElixirST.ST
 
   def env do
     %{
@@ -21,7 +21,7 @@ defmodule SessionTypecheckingTest do
   end
 
   def typecheck(ast, env) do
-    STEx.Helper.expanded_quoted(ast)
+    ElixirST.Helper.expanded_quoted(ast)
     |> Macro.prewalk(env, &TC.typecheck/2)
     |> elem(1)
   end

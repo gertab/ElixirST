@@ -1,7 +1,7 @@
 defmodule STTest do
   use ExUnit.Case
-  doctest STEx.ST
-  alias STEx.ST
+  doctest ElixirST.ST
+  alias ElixirST.ST
 
   test "equal simple rec" do
     s1 = "rec X . (X)"

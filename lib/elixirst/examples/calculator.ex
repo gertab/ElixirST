@@ -1,5 +1,5 @@
 defmodule Examples.Calculator do
-  use STEx
+  use ElixirST
   @moduledoc false
 
   @session "calc = &{?add(number, number).!result(number).calc,
@@ -38,6 +38,6 @@ defmodule Examples.Calculator do
   end
 
   def main() do
-    STEx.spawn(&server/1, [], &client/1, [])
+    ElixirST.spawn(&server/1, [], &client/1, [])
   end
 end

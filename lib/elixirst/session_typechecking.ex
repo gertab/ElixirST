@@ -1,8 +1,8 @@
-defmodule STEx.SessionTypechecking do
-  alias STEx.ST
-  alias STEx.TypeOperations
+defmodule ElixirST.SessionTypechecking do
+  alias ElixirST.ST
+  alias ElixirST.TypeOperations
   require ST
-  require STEx.TypeOperations
+  require ElixirST.TypeOperations
   require Logger
 
   @moduledoc """
@@ -155,7 +155,7 @@ defmodule STEx.SessionTypechecking do
           function_session_type_ctx: _
         } = env
       ) do
-    # Logger.error("STEx Error! " <> error_data)
+    # Logger.error("ElixirST Error! " <> error_data)
     {nil, env}
   end
 
