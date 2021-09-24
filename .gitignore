@@ -28,10 +28,10 @@ notes*.txt
 /src/*.erl
 
 /lib/elixirsessions/parser/*.erl
-/lib/stex/parser/*.erl
+/lib/elixirst/parser/*.erl
 
 /lib/elixirsessions/snippets/
-/lib/stex/snippets/
+/lib/elixirst/snippets/
 
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
