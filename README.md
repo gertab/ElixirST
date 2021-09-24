@@ -6,7 +6,7 @@ ElixirST (**S**ession **T**ypes in **El**ixir) applies *Session Types* to a frag
 
 ## Example
 
-To session typecheck modules in Elixir, add `use ElixirST` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](/lib/stex/examples/small_example.ex), which receives one label (`?Hello()`):
+To session typecheck modules in Elixir, add `use ElixirST` and include any assertions using the annotations `@session` and `@dual` preceding any public function (`def`). The following is a [`simple example`](/lib/elixirst/examples/small_example.ex), which receives one label (`?Hello()`):
 <!-- The `@spec` directives are needed to ensure type correctness for the parameters. -->
 
 ```elixir
@@ -83,7 +83,7 @@ The package can be installed by adding `elixirst` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:elixirst, "~> 0.4.5"}
+    {:elixirst, "~> 0.6.3"}
   ]
 end
 ```
@@ -122,13 +122,13 @@ The `@dual` attribute checks the dual of the specified session type.
 
 <!-- In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions. -->
 
-Other examples can be found in the [`examples`](/lib/stex/examples) folder.
+Other examples can be found in the [`examples`](/lib/elixirst/examples) folder.
 <!-- 
 ### Features
 
 ElixirST implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
- - session type parsing ([`lib/stex/parser/parser.ex`](/lib/stex/parser/parser.ex)),
+ - session type parsing ([`lib/elixirst/parser/parser.ex`](/lib/elixirst/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
 ## Acknowledgements
