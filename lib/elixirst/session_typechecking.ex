@@ -72,7 +72,7 @@ defmodule ElixirST.SessionTypechecking do
           Logger.info("Session typechecking for #{name}/#{arity} terminated successfully")
 
         :error ->
-          Logger.error("Sessiosn typechecking for #{name}/#{arity} found an error. ")
+          Logger.error("Session typechecking for #{name}/#{arity} found an error. ")
           Logger.error(result_env[:error_data])
           throw(result_env[:error_data])
       end
