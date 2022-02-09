@@ -19,10 +19,10 @@ defmodule ElixirST.SessionTypechecking do
   def session_typecheck_module(
         all_functions,
         function_session_type,
-        module_name,
+        _module_name,
         _options \\ []
       ) do
-    Logger.debug("Starting session typechecking for module #{inspect(module_name)}")
+    # Logger.debug("Starting session typechecking for module #{inspect(module_name)}")
 
     for {{name, arity}, expected_session_type} <- function_session_type do
       function = lookup_function!(all_functions, {name, arity})
@@ -161,7 +161,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Block
   def typecheck({:__block__, meta, args}, env) do
-    Logger.debug("Typechecking: Block")
+    # Logger.debug("Typechecking: Block")
     node = {:__block__, meta, nil}
 
     env =
@@ -184,7 +184,7 @@ defmodule ElixirST.SessionTypechecking do
   def typecheck(node, env)
       when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
              is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
-    Logger.debug("Typechecking: Literal: #{inspect(node)} #{TypeOperations.typeof(node)}")
+    # Logger.debug("Typechecking: Literal: #{inspect(node)} #{TypeOperations.typeof(node)}")
 
     {node, %{env | type: TypeOperations.typeof(node)}}
   end
@@ -252,7 +252,7 @@ defmodule ElixirST.SessionTypechecking do
 
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:++, :--] do
-    Logger.debug("Typechecking: Erlang #{operator}")
+    # Logger.debug("Typechecking: Erlang #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
     {node, result_env} = process_binary_operations(node, meta2, operator, arg1, arg2, {:list, nil}, true, false, env)
@@ -278,7 +278,7 @@ defmodule ElixirST.SessionTypechecking do
   # Arithmetic operations
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:+, :-, :*, :/] do
-    Logger.debug("Typechecking: Erlang #{operator}")
+    # Logger.debug("Typechecking: Erlang #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
     process_binary_operations(node, meta2, operator, arg1, arg2, :number, false, false, env)
@@ -302,7 +302,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Negate
   def typecheck({{:., _meta1, [:erlang, :-]}, meta2, [arg]}, env) do
-    Logger.debug("Typechecking: Erlang negation")
+    # Logger.debug("Typechecking: Erlang negation")
 
     node = {nil, meta2, []}
     process_unary_operations(node, meta2, arg, :number, env)
@@ -310,7 +310,7 @@ defmodule ElixirST.SessionTypechecking do
 
   def typecheck({{:., _meta1, [:erlang, erlang_function]}, meta2, _arg}, env)
       when erlang_function not in [:send, :self] do
-    Logger.debug("Typechecking: Erlang others #{erlang_function} (not supported)")
+    # Logger.debug("Typechecking: Erlang others #{erlang_function} (not supported)")
     node = {nil, meta2, []}
 
     {node, %{env | state: :error, error_data: error_message("Unknown erlang function #{inspect(erlang_function)}", meta2)}}
@@ -318,7 +318,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Binding operator
   def typecheck({:=, meta, [pattern, expr]}, env) do
-    Logger.debug("Typechecking: Binding operator (i.e. =)")
+    # Logger.debug("Typechecking: Binding operator (i.e. =)")
     node = {:=, meta, []}
 
     {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
@@ -340,7 +340,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Variables
   def typecheck({x, meta, arg}, env) when is_atom(arg) do
-    Logger.debug("Typechecking: Variable #{inspect(x)} with type #{inspect(env[:variable_ctx][x])}")
+    # Logger.debug("Typechecking: Variable #{inspect(x)} with type #{inspect(env[:variable_ctx][x])}")
     node = {x, meta, arg}
 
     if Map.has_key?(env[:variable_ctx], x) do
@@ -396,7 +396,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Send Function
   def typecheck({{:., _meta1, [:erlang, :send]}, meta2, [send_destination, send_body | _]}, env) do
-    Logger.debug("Typechecking: Erlang send")
+    # Logger.debug("Typechecking: Erlang send")
 
     node = {nil, meta2, []}
 
@@ -565,25 +565,25 @@ defmodule ElixirST.SessionTypechecking do
 
   # Hardcoded stuff (not ideal)
   def typecheck({{:., _meta1, [:erlang, :self]}, meta2, []}, env) do
-    Logger.debug("Typechecking: Erlang self")
+    # Logger.debug("Typechecking: Erlang self")
     node = {nil, meta2, []}
     {node, %{env | type: :pid}}
   end
 
   def typecheck({{:., _meta, [IO, :puts]}, meta2, _}, env) do
-    Logger.debug("Typechecking: IO.puts")
+    # Logger.debug("Typechecking: IO.puts")
     node = {nil, meta2, []}
     {node, %{env | type: :atom}}
   end
 
   def typecheck({{:., _meta, [IO, :gets]}, meta2, _}, env) do
-    Logger.debug("Typechecking: IO.gets")
+    # Logger.debug("Typechecking: IO.gets")
     node = {nil, meta2, []}
     {node, %{env | type: :binary}}
   end
 
-  def typecheck({{:., _meta, call}, meta2, _}, env) do
-    Logger.debug("Typechecking: Remote function call (#{inspect(call)})")
+  def typecheck({{:., _meta, _call}, meta2, _}, env) do
+    # Logger.debug("Typechecking: Remote function call (#{inspect(call)})")
     node = {nil, meta2, []}
 
     {node, %{env | state: :error, error_data: error_message("Remote functions not allowed.", meta2)}}
@@ -596,7 +596,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Functions
   def typecheck({name, meta, args}, env) when is_list(args) do
-    Logger.debug("Typechecking: Function #{inspect(name)}")
+    # Logger.debug("Typechecking: Function #{inspect(name)}")
     node = {name, meta, []}
 
     name_arity = {name, length(args)}
@@ -687,7 +687,7 @@ defmodule ElixirST.SessionTypechecking do
   end
 
   def typecheck(other, env) do
-    Logger.debug("Typechecking: other #{inspect(other)}")
+    # Logger.debug("Typechecking: other #{inspect(other)}")
     {other, env}
   end
 
