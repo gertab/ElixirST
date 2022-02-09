@@ -4,7 +4,7 @@ defmodule ElixirST.MixProject do
   def project do
     [
       app: :elixirst,
-      version: "0.6.4",
+      version: "0.6.5",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
