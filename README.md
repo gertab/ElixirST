@@ -13,7 +13,7 @@ To session typecheck modules in Elixir, add `use ElixirST` and include any asser
 defmodule Example do
   use ElixirST
 
-  @session "server = ?Hello()"
+  @session "server = ?Hello().end"
   @spec server(pid) :: atom()
   def server(_pid) do
     receive do

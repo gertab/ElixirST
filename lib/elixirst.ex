@@ -3,10 +3,6 @@ defmodule ElixirST do
   require ST
   require Logger
 
-  def abc do
-    Logger.error("HGelllllo")
-    IO.warn("Environment:: #{Mix.env}")
-  end
   @moduledoc """
   This module is the starting point of ElixirST. It parses the `@session` (and `@dual`) attribute
   and starts analysing the AST code using session types.

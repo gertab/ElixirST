@@ -1,5 +1,8 @@
 defmodule Examples.FlightServer do
+  @moduledoc false
+
   defmodule Duffel do
+    @moduledoc false
     use HTTPoison.Base
 
     @endpoint "https://api.duffel.com/air/"

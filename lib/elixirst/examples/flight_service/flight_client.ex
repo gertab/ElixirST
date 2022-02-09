@@ -1,5 +1,6 @@
 defmodule Examples.FlightClient do
   use ElixirST
+  @moduledoc false
 
   # recompile && Examples.FlightClient.main
   @spec main :: {pid, pid}
