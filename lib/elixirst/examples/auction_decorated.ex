@@ -3,56 +3,56 @@ defmodule Examples.AuctionD do
   @moduledoc false
 
   def main do
-    # ElixirST.spawn(&buyer/2, [5], &seller/2, [20])
-    ElixirST.spawn(&buyer/2, [50], &seller/2, [200])
+    # ElixirST.spawn(&buyer/2, [5], &auctioneer/2, [20])
+    ElixirST.spawn(&buyer/2, [50], &auctioneer/2, [200])
   end
 
   @session "S = !bid(number).&{?sold().end,
                                ?higher(number).+{!quit().end,
                                                  !continue().S}}"
   @spec buyer(pid, number) :: atom
-  def buyer(seller, amount) do
-    IO.puts("Buyer: Bidding €#{inspect amount}")
-    send(seller, {:bid, amount})
+  def buyer(auctioneer, amount) do
+    IO.puts("Buyer: Bidding €#{amount}")
+    send(auctioneer, {:bid, amount})
 
     receive do
       {:sold} ->
-        IO.puts("Buyer: Sold at €#{inspect amount}")
+        IO.puts("Buyer: Sold at €#{amount}")
         :ok
 
-        {:higher, value} ->
-          if value < 100 do
-            IO.puts("Buyer: Continuing")
-            send(seller, {:continue})
-            buyer(seller,  amount + 10)
-          else
-            IO.puts("Buyer: Quitting")
-            send(seller, {:quit})
+      {:higher, value} ->
+        if value < 100 do
+          IO.puts("Buyer: Continuing")
+          send(auctioneer, {:continue})
+          buyer(auctioneer,  amount + 10)
+        else
+          IO.puts("Buyer: Quitting")
+          send(auctioneer, {:quit})
           :ok
         end
     end
   end
 
   @dual "S"
-  @spec seller(pid, number) :: atom
-  def seller(buyer, minimum) do
+  @spec auctioneer(pid, number) :: atom
+  def auctioneer(buyer, minimum) do
     amount =
       receive do
         {:bid, amount} ->
-              IO.puts("Seller: Received bid of €#{inspect amount}")
+              IO.puts("auctioneer: Received bid of €#{amount}")
               amount
       end
 
     if amount > minimum do
       send(buyer, {:sold})
-      IO.puts("Seller: Accepting bid of €#{inspect amount}")
+      IO.puts("auctioneer: Accepting bid of €#{amount}")
       :ok
     else
       new_amount = amount + 5
       send(buyer, {:higher, new_amount})
-      IO.puts("Seller: Outbidded at €#{inspect new_amount}")
+      IO.puts("auctioneer: Outbidded at €#{inspect new_amount}")
       receive do
-        {:continue} -> seller(buyer, minimum)
+        {:continue} -> auctioneer(buyer, minimum)
         {:quit} -> :ok
       end
     end

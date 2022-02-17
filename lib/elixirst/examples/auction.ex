@@ -7,8 +7,8 @@ defmodule Examples.Auction do
                                ?higher(number).+{!quit().end,
                                                  !continue().S}}"
   @spec buyer(pid, number) :: atom
-  def buyer(seller, amount) do
-    send(seller, {:bid, amount})
+  def buyer(auctioneer, amount) do
+    send(auctioneer, {:bid, amount})
 
     receive do
       {:sold} ->
@@ -16,18 +16,18 @@ defmodule Examples.Auction do
 
         {:higher, value} ->
           if value < 100 do
-            send(seller, {:continue})
-            buyer(seller,  amount + 10)
+            send(auctioneer, {:continue})
+            buyer(auctioneer,  amount + 10)
           else
-            send(seller, {:quit})
+            send(auctioneer, {:quit})
           :ok
         end
     end
   end
 
   @dual "S"
-  @spec seller(pid, number) :: atom
-  def seller(buyer, minimum) do
+  @spec auctioneer(pid, number) :: atom
+  def auctioneer(buyer, minimum) do
     amount =
       receive do
         {:bid, amount} ->
@@ -40,7 +40,7 @@ defmodule Examples.Auction do
     else
       send(buyer, {:higher, amount + 5})
       receive do
-        {:continue} -> seller(buyer, minimum)
+        {:continue} -> auctioneer(buyer, minimum)
         {:quit} -> :ok
       end
     end
