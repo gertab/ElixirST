@@ -2,7 +2,6 @@ defmodule Examples.Auction do
   use ElixirST
   @moduledoc false
 
-
   @session "S = !bid(number).&{?sold().end,
                                ?higher(number).+{!quit().end,
                                                  !continue().S}}"
@@ -11,15 +10,14 @@ defmodule Examples.Auction do
     send(auctioneer, {:bid, amount})
 
     receive do
-      {:sold} ->
-        :ok
+      {:sold} -> :ok
 
-        {:higher, value} ->
-          if value < 100 do
-            send(auctioneer, {:continue})
-            buyer(auctioneer,  amount + 10)
-          else
-            send(auctioneer, {:quit})
+      {:higher, value} ->
+        if value < 100 do
+          send(auctioneer, {:continue})
+          buyer(auctioneer,  amount + 10)
+        else
+          send(auctioneer, {:quit})
           :ok
         end
     end
@@ -43,6 +41,19 @@ defmodule Examples.Auction do
         {:continue} -> auctioneer(buyer, minimum)
         {:quit} -> :ok
       end
+    end
+  end
+
+  # @session "S = !bid(number).&{?sold().end,
+  #                              ?higher(number).+{!quit().end,
+  #                                                !continue().S}}"
+  @spec problematic_buyer(pid, number) :: atom
+  def problematic_buyer(auctioneer, _amount) do
+    send(auctioneer, {:bid, true}) # amount?
+
+    receive do
+      {:sold} -> :ok
+      # {:higher, value} -> #...
     end
   end
 end
