@@ -5,39 +5,35 @@ defmodule Examples.FlightClient do
   # recompile && Examples.FlightClient.main
   @spec main :: {pid, pid}
   def main do
-    ElixirST.spawn(&client/1, [], &Examples.FlightServer.server/1, [])
+    ElixirST.spawn(&client/6, ["MLA", "CDG", "2022-11-24", :economy, 2], &Examples.FlightGateway.gateway/1, [])
   end
 
-  @session "S = +{!request(binary, binary, binary, atom, number).
-                         rec Y.(&{?offer(number, number, binary, number, number, binary).
-                                       +{!more_details().&{?details(number, number, binary, number, number, binary, number, binary).
-                                                                  +{!make_booking([{binary, binary}]).&{?ok(binary),
-                                                                                                        ?error(binary)},
-                                                                    !cancel()},
-                                                           ?error(binary)},
-                                         !reject().Y},
+  @session "S = +{!request(origin: binary, destination: binary, departure_date: binary, class: atom, passenger_no: number).
+                         rec Y.(&{?offer(offer_no: number, total_amount: number, currency: binary, duration: number, stops: number, segments: binary).
+                                       +{!more_details().
+                                            &{?details(offer_no: number, total_amount: number, currency: binary, duration: number, stops: number, segments: binary, passenger_no: number, departure_time: binary).
+                                                +{!make_booking([{binary, binary}]).
+                                                              &{?ok(binary),
+                                                                ?error(binary)},
+                                                  !cancel()},
+                                              ?error(binary)},
+                                        !reject().Y},
                                   ?error(binary).S}),
                   !cancel()}"
-  @spec client(pid) :: :ok
-  def client(pid) do
-    origin = "MLA"
-    destination = "LAX"
-    departure_date = "2021-11-24"
-    class = :economy
-    passenger_no = 2
-
+  @spec client(pid, binary, binary, binary, atom, number) :: :ok
+  def client(pid, origin, destination, departure_date, class, passenger_no) do
     send(pid, {:request, origin, destination, departure_date, class, passenger_no})
+
     IO.puts("\nSending request for a flight from #{origin} to #{destination} on #{departure_date} for #{passenger_no} passengers.")
     IO.puts("Waiting for a response from the server...\n")
 
     consume_offer(pid)
   end
 
-  @spec consume_offer(pid()) :: :ok
+  @spec consume_offer(pid) :: :ok
   defp consume_offer(pid) do
     receive do
       {:offer, offer_no, total_amount, currency, duration, stops, segments} ->
-        IO.puts(inspect(duration))
 
         IO.puts(
           "\nOffer ##{offer_no}: \n#{currency}#{total_amount} (duration: " <>
@@ -77,8 +73,6 @@ defmodule Examples.FlightClient do
                     error(message)
                 end
 
-                :ok
-
               {:error, message} ->
                 error(message)
             end
@@ -93,15 +87,24 @@ defmodule Examples.FlightClient do
         :ok
 
       {:error, message} ->
-        IO.puts("\nReceived error: " <> message)
         send(pid, {:cancel})
-        :ok
+        error(message)
     end
   end
 
   @spec error(binary) :: :ok
   defp error(message) do
     IO.puts("\nReceived error: " <> message)
-    :ok
   end
 end
+
+  # @session "S = +{!request(binary, binary, binary, atom, number).
+  #                        rec Y.(&{?offer(number, number, binary, number, number, binary).
+  #                                      +{!more_details().&{?details(number, number, binary, number, number, binary, number, binary).
+  #                                                                 +{!make_booking([{binary, binary}]).&{?ok(binary),
+  #                                                                                                       ?error(binary)},
+  #                                                                   !cancel()},
+  #                                                          ?error(binary)},
+  #                                        !reject().Y},
+  #                                 ?error(binary).S}),
+  #                 !cancel()}"

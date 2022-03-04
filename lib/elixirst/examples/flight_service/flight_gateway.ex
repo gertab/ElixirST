@@ -1,4 +1,4 @@
-defmodule Examples.FlightServer do
+defmodule Examples.FlightGateway do
   @moduledoc false
 
   defmodule Duffel do
@@ -37,8 +37,8 @@ defmodule Examples.FlightServer do
     end
   end
 
-  # recompile && Examples.FlightServer.server
-  def server(pid) do
+  # recompile && Examples.FlightGateway.gateway
+  def gateway(pid) do
     Duffel.start()
 
     # {origin, destination, departure_date, class, passenger_no} =
@@ -88,7 +88,7 @@ defmodule Examples.FlightServer do
             next_offer(pid, Poison.decode!(body)["data"]["offers"], 1)
         end
 
-        server(pid)
+        gateway(pid)
 
       {:cancel} ->
         IO.puts("Server terminating")
@@ -357,8 +357,8 @@ defmodule Examples.FlightServer do
 
     case length(split) do
       5 ->
-        IO.warn(duration)
-        IO.warn(split)
+        # IO.warn(duration)
+        # IO.warn(split)
         [_, _, hours, minutes, _seconds] = split
         String.to_integer(hours) * 60 + String.to_integer(minutes)
 
