@@ -2,9 +2,9 @@ defmodule Examples.Auction do
   use ElixirST
   @moduledoc false
 
-  @session "S = !bid(number).&{?sold().end,
+  @session "auction = !bid(number).&{?sold().end,
                                ?higher(number).+{!quit().end,
-                                                 !continue().S}}"
+                                                 !continue().auction}}"
   @spec buyer(pid, number) :: atom
   def buyer(auctioneer, amount) do
     send(auctioneer, {:bid, amount})
@@ -23,7 +23,7 @@ defmodule Examples.Auction do
     end
   end
 
-  @dual "S"
+  @dual "auction"
   @spec auctioneer(pid, number) :: atom
   def auctioneer(buyer, minimum) do
     amount =
@@ -40,13 +40,13 @@ defmodule Examples.Auction do
       receive do
         {:continue} -> auctioneer(buyer, minimum)
         {:quit} -> :ok
-      end
-    end
-  end
+       end
+     end
+   end
 
-  # @session "S = !bid(number).&{?sold().end,
-  #                              ?higher(number).+{!quit().end,
-  #                                                !continue().S}}"
+  #  @session "auction = !bid(number).&{?sold().end,
+  #                               ?higher(number).+{!quit().end,
+  #                                                 !continue().auction}}"
   @spec problematic_buyer(pid, number) :: atom
   def problematic_buyer(auctioneer, _amount) do
     send(auctioneer, {:bid, true}) # amount?
@@ -57,5 +57,4 @@ defmodule Examples.Auction do
     end
   end
 end
-
-# explicitly: `mix sessions Examples.Auction`
+  # explicitly: `mix sessions Examples.Auction`
