@@ -54,8 +54,13 @@ defmodule ElixirST.Helper do
 
   def ast() do
     quote do
-      tot = 5
-      7 + tot
+      if value < 100 do
+        send(auctioneer, {:continue})
+        buyer(auctioneer,  amount + 10)
+      else
+        send(auctioneer, {:quit})
+        :ok
+      end
     end
   end
 

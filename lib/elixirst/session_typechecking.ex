@@ -459,7 +459,7 @@ defmodule ElixirST.SessionTypechecking do
       if length(expected_types) != length(parameter_types) do
         throw(
           {:error,
-           "Session type parameter length mismatch. Expected " <>
+           "Session type payload length mismatch. Expected " <>
              "#{ST.st_to_string_current(session_type)} (length = " <>
              "#{length(expected_types)}), but found #{Macro.to_string(send_body)} " <>
              "(length = #{length(parameter_types)})."}
@@ -469,7 +469,7 @@ defmodule ElixirST.SessionTypechecking do
       if TypeOperations.equal?(parameter_types, expected_types) == false do
         throw(
           {:error,
-           "Incorrect parameter types. Expected " <>
+           "Incorrect payload types. Expected " <>
              "#{ST.st_to_string_current(session_type)} " <>
              "but found #{Macro.to_string(parameters)} with type/s #{inspect(parameter_types)}"}
         )
