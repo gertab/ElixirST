@@ -3,7 +3,7 @@ defmodule Examples.AuctionD do
   @moduledoc false
 
   def main do
-    # ElixirST.spawn(&buyer/2, [5], &auctioneer/2, [20])
+    # Examples.AuctionD.main
     ElixirST.spawn(&buyer/2, [50], &auctioneer/2, [200])
   end
 
@@ -11,9 +11,9 @@ defmodule Examples.AuctionD do
                                ?higher(number).+{!quit().end,
                                                  !continue().S}}"
   @spec buyer(pid, number) :: atom
-  def buyer(auctioneer, amount) do
+  def buyer(auctioneer_pid, amount) do
     IO.puts("Buyer: Bidding €#{amount}")
-    send(auctioneer, {:bid, amount})
+    send(auctioneer_pid, {:bid, amount})
 
     receive do
       {:sold} ->
@@ -21,15 +21,20 @@ defmodule Examples.AuctionD do
         :ok
 
       {:higher, value} ->
-        if value < 100 do
-          IO.puts("Buyer: Continuing")
-          send(auctioneer, {:continue})
-          buyer(auctioneer,  amount + 10)
-        else
-          IO.puts("Buyer: Quitting")
-          send(auctioneer, {:quit})
-          :ok
-        end
+        decide(auctioneer_pid, amount, value)
+    end
+  end
+
+  @spec decide(pid, number, number) :: atom
+  defp decide(auctioneer_pid, amount, value) do
+    if value < 100 do
+      IO.puts("Buyer: Continuing")
+      send(auctioneer_pid, {:continue})
+      buyer(auctioneer_pid, amount + 10)
+    else
+      IO.puts("Buyer: Quitting")
+      send(auctioneer_pid, {:quit})
+      :ok
     end
   end
 
@@ -39,8 +44,8 @@ defmodule Examples.AuctionD do
     amount =
       receive do
         {:bid, amount} ->
-              IO.puts("auctioneer: Received bid of €#{amount}")
-              amount
+          IO.puts("auctioneer: Received bid of €#{amount}")
+          amount
       end
 
     if amount > minimum do
@@ -50,7 +55,8 @@ defmodule Examples.AuctionD do
     else
       new_amount = amount + 5
       send(buyer, {:higher, new_amount})
-      IO.puts("auctioneer: Outbidded at €#{inspect new_amount}")
+      IO.puts("auctioneer: Outbidded at €#{inspect(new_amount)}")
+
       receive do
         {:continue} -> auctioneer(buyer, minimum)
         {:quit} -> :ok

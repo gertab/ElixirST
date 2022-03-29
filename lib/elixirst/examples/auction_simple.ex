@@ -1,4 +1,4 @@
-defmodule Examples.Auction do
+defmodule Examples.AuctionSimple do
   use ElixirST
   @moduledoc false
 
@@ -6,30 +6,26 @@ defmodule Examples.Auction do
                                ?higher(number).+{!quit().end,
                                                  !continue().auction}}"
   @spec buyer(pid, number) :: atom
-  def buyer(auctioneer_pid, amount) do
-    send(auctioneer_pid, {:bid, amount})
+  def buyer(auctioneer, amount) do
+    send(auctioneer, {:bid, amount})
 
     receive do
       {:sold} -> :ok
 
-      {:higher, value} -> decide(auctioneer_pid, amount, value)
-    end
-  end
-
-  @spec decide(pid, number, number) :: atom
-  defp decide(auctioneer_pid, amount, value) do
-    if value < 100 do
-      send(auctioneer_pid, {:continue})
-      buyer(auctioneer_pid,  amount + 10)
-    else
-      send(auctioneer_pid, {:quit})
-      :ok
+      {:higher, value} ->
+        if value < 100 do
+          send(auctioneer, {:continue})
+          buyer(auctioneer,  amount + 10)
+        else
+          send(auctioneer, {:quit})
+          :ok
+        end
     end
   end
 
   @dual "auction"
   @spec auctioneer(pid, number) :: atom
-  def auctioneer(buyer_pid, minimum) do
+  def auctioneer(buyer, minimum) do
     amount =
       receive do
         {:bid, amount} ->
@@ -37,12 +33,12 @@ defmodule Examples.Auction do
       end
 
     if amount > minimum do
-      send(buyer_pid, {:sold})
+      send(buyer, {:sold})
       :ok
     else
-      send(buyer_pid, {:higher, amount + 5})
+      send(buyer, {:higher, amount + 5})
       receive do
-        {:continue} -> auctioneer(buyer_pid, minimum)
+        {:continue} -> auctioneer(buyer, minimum)
         {:quit} -> :ok
        end
      end
@@ -60,9 +56,5 @@ defmodule Examples.Auction do
       # {:higher, value} -> #...
     end
   end
-
-  def main do
-    ElixirST.spawn(&buyer/2, [50], &auctioneer/2, [200])
-  end
 end
-# explicitly: `mix sessions Examples.Auction`
+# explicitly: `mix sessions Examples.AuctionSimple`
