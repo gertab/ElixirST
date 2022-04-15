@@ -2,7 +2,15 @@
 
 [![Elixir CI](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml)
 
-ElixirST (**S**ession **T**ypes in **El**ixir) applies *Session Types* to a fragment of the Elixir language. It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between processes. It also ensures that the correct types are being used. For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates.
+ElixirST (**S**ession **T**ypes in **El**ixir) applies *session types* to a fragment of the Elixir language. 
+It statically checks that the programs use the correct communication structures (e.g. `send`/`receive`) when dealing with message passing between processes. 
+<!-- It also ensures that the correct types are being used.  -->
+<!-- For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates. -->
+
+The design decisions of ElixirST and its underlying theory are described in the following papers:
+  - Gerard Tabone and Adrian Francalanza. *[Session Types in Elixir](https://doi.org/10.1145/3486601.3486708)*. AGERE 2021. ([pdf](http://staff.um.edu.mt/afra1/papers/Agere21.pdf))
+  - Gerard Tabone and Adrian Francalanza. *[Static Checking of Concurrent Programs in Elixir Using Session Types](archive/UoM%20-%20technical%20report%202022.pdf)*. Technical report.
+
 
 ## Example
 
