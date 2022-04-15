@@ -9,7 +9,7 @@ It statically checks that the programs use the correct communication structures 
 
 The design decisions of ElixirST and its underlying theory are described in the following papers:
   - Gerard Tabone and Adrian Francalanza. *[Session Types in Elixir](https://doi.org/10.1145/3486601.3486708)*. AGERE 2021. ([pdf](http://staff.um.edu.mt/afra1/papers/Agere21.pdf))
-  - Gerard Tabone and Adrian Francalanza. *[Static Checking of Concurrent Programs in Elixir Using Session Types](archive/UoM%20-%20technical%20report%202022.pdf)*. Technical report.
+  - Gerard Tabone and Adrian Francalanza. *[Static Checking of Concurrent Programs in Elixir Using Session Types](https://gertab.github.io/ElixirST/archive/UoM%20-%20technical%20report%202022.pdf)*. Technical report.
 
 
 ## Example
