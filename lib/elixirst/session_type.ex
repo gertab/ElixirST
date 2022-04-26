@@ -6,7 +6,7 @@ defmodule ElixirST.ST do
       ! = send
       ? = receive
       & = branch (or external choice)
-      + = (interal) choice
+      + = (internal) choice
 
   Session types accept the following grammar:
 
