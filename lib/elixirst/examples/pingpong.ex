@@ -3,36 +3,34 @@ defmodule Examples.PingPong do
   @moduledoc false
   # Send ping pong indefinitely
 
-  @session "ping = ?ping().!pong().ping"
-  @spec ping(pid) :: no_return
-  def ping(pid) do
+  @session "X = !ping().?pong().X"
+  @spec pinger(pid) :: no_return
+  def pinger(pid) do
+    send(pid, {:ping})
+
+    receive do
+      {:pong} -> IO.puts("Received pong.")
+    end
+
+    pinger(pid)
+  end
+
+  @dual "X"
+  @spec ponger(pid) :: no_return
+  def ponger(pid) do
     receive do
       {:ping} ->
         IO.puts(
           "Received ping from #{inspect(pid)}. Replying pong from #{inspect(self())} " <>
             "to #{inspect(pid)}"
         )
-
-        send(pid, {:pong})
     end
+    send(pid, {:pong})
 
-    ping(pid)
-  end
-
-  @dual "ping"
-  @spec pong(pid) :: no_return
-  def pong(pid) do
-    send(pid, {:ping})
-
-    receive do
-      {:pong} ->
-        IO.puts("Received pong.")
-    end
-
-    pong(pid)
+    ponger(pid)
   end
 
   def main() do
-    ElixirST.spawn(&ping/1, [], &pong/1, [])
+    ElixirST.spawn(&pinger/1, [], &ponger/1, [])
   end
 end
