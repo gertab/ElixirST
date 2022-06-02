@@ -128,16 +128,7 @@ The `@dual` attribute checks the dual of the specified session type.
 # Equivalent to: @session "?Ping().!Pong()"
 ```
 
-<!-- In the case of multiple function definitions with the name name and arity (e.g. for pattern matching), define only one session type for all functions. -->
-
 Other examples can be found in the [`examples`](/lib/elixirst/examples) folder.
-<!-- 
-### Features
-
-ElixirST implements several features that allow for _session type_ manipulation.
-Some of these are shown below, which include: 
- - session type parsing ([`lib/elixirst/parser/parser.ex`](/lib/elixirst/parser/parser.ex)),
- - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
 
 ## Acknowledgements
 

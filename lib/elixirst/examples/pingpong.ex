@@ -34,3 +34,26 @@ defmodule Examples.PingPong do
     ElixirST.spawn(&pinger/1, [], &ponger/1, [])
   end
 end
+
+
+
+  # Send ping pong indefinitely
+
+  # @spec hello(pid) :: atom
+
+  # @session "rec X.(!hmm().X)"
+  # def hello(pid) do
+  #   hello(pid)
+  # end
+  # @spec g(pid) :: {atom}
+
+  # @session "!hello().end"
+  # def g(w) do
+  #   f(w)
+  #   send(w, {:hello})
+  # end
+
+  # @spec f(pid) :: atom
+  # defp f(w) do
+  #   f(w)
+  # end
