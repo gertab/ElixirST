@@ -502,7 +502,7 @@ defmodule ElixirST.SessionTypechecking do
         case session_type do
           %ST.Branch{branches: branches} -> branches
           %ST.Recv{label: label, types: types, next: next} -> %{label => %ST.Recv{label: label, types: types, next: next}}
-          x -> throw({:error, "Found a receive/branch, but expected #{ST.st_to_string(x)}."})
+          x -> throw({:error, "Found a receive/branch, but expected #{ST.st_to_string_current(x)}."})
         end
 
       # Each branch from the session type should have an equivalent branch in the receive cases
