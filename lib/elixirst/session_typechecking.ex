@@ -122,7 +122,7 @@ defmodule ElixirST.SessionTypechecking do
                %{
                  result
                  | state: :error,
-                   error_data: "Function #{name}/#{arity} terminates with remaining session type " <> ST.st_to_string(result[:session_type])
+                   error_data: "Unfulfilled session type for #{name}/#{arity} is " <> ST.st_to_string(result[:session_type])
                }}
 
             same_type == false ->
