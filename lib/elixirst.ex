@@ -159,12 +159,11 @@ defmodule ElixirST do
   end
 
   @doc """
-  Spawns two actors, exchanges their pids and then calls the server/client functions
-
+  Creates a session by spawning two actors, exchanging their pids and then calls the functions
   `server_fn` and `client_fn` need to accept a `pid` as their first parameter.
   """
-  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: {pid, pid}
-  def spawn(serverFn, server_args, clientFn, client_args)
+  @spec session(fun, maybe_improper_list, fun, maybe_improper_list) :: {pid, pid}
+  def session(serverFn, server_args, clientFn, client_args)
       when is_function(serverFn) and is_list(server_args) and
              is_function(clientFn) and is_list(client_args) do
     server_pid =
@@ -182,5 +181,13 @@ defmodule ElixirST do
       end)
 
     {server_pid, client_pid}
+  end
+
+  @doc """
+  Renamed to `session/4`
+  """
+  @spec spawn(fun, maybe_improper_list, fun, maybe_improper_list) :: {pid, pid}
+  def spawn(serverFn, server_args, clientFn, client_args) do
+    session(serverFn, server_args, clientFn, client_args)
   end
 end
