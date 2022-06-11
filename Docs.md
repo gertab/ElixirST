@@ -1,4 +1,5 @@
-# ElixirST: Session Types in Elixir
+<!-- # ElixirST: Session Types in Elixir -->
+![](archive/logo.png)
 
 [![Elixir CI](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml)
 
@@ -187,7 +188,7 @@ The package can be installed by adding `elixirst` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:elixirst, "~> 0.6.5"}
+    {:elixirst, "~> 0.7.3"}
   ]
 end
 ```
