@@ -9,8 +9,9 @@ It statically checks that the programs use the correct communication structures 
 <!-- For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates. -->
 
 The design decisions of ElixirST and its underlying theory are described in the following papers:
+  - Gerard Tabone and Adrian Francalanza. *Session Fidelity for ElixirST: A Session-Based Type System for Elixir Modules*. ICE 2022. ([pdf](https://gerardtabone.com/publications/TaboneFrancalanza-ICE2022.pdf))
   - Gerard Tabone and Adrian Francalanza. *[Session Types in Elixir](https://doi.org/10.1145/3486601.3486708)*. AGERE 2021. ([pdf](http://staff.um.edu.mt/afra1/papers/Agere21.pdf))
-  - Gerard Tabone and Adrian Francalanza. *[Static Checking of Concurrent Programs in Elixir Using Session Types](https://gertab.github.io/ElixirST/archive/UoM%20-%20technical%20report%202022.pdf)*. Technical report.
+  - Gerard Tabone and Adrian Francalanza. *Static Checking of Concurrent Programs in Elixir Using Session Types*. Technical report. ([pdf](https://gertab.github.io/ElixirST/archive/UoM%20-%20technical%20report%202022.pdf))
 
 
 ## Example
