@@ -2,7 +2,8 @@ defmodule Examples.Auction do
   use ElixirST
   @moduledoc false
 
-  @session "auction = !bid(number).&{?sold().end,
+  @session "auction = !bid(number)
+                            .&{?sold().end,
                                ?higher(number).+{!quit().end,
                                                  !continue().auction}}"
   @spec buyer(pid, number) :: atom
