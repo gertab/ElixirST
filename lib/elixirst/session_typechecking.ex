@@ -55,17 +55,16 @@ defmodule ElixirST.SessionTypechecking do
 
       result_env = session_typecheck_by_function(function, env)
 
-      %{
-        state: result_env[:state],
-        error_data: result_env[:error_data],
-        variable_ctx: result_env[:variable_ctx],
-        session_type: ST.st_to_string(result_env[:session_type]),
-        type: result_env[:type]
-        # functions: result_env[:functions],
-        # function_session_type_ctx: result_env[:function_session_type_ctx]
-      }
-      |> inspect()
-      # |> Logger.debug()
+      # %{
+      #   state: result_env[:state],
+      #   error_data: result_env[:error_data],
+      #   variable_ctx: result_env[:variable_ctx],
+      #   session_type: ST.st_to_string(result_env[:session_type]),
+      #   type: result_env[:type]
+      #   # functions: result_env[:functions],
+      #   # function_session_type_ctx: result_env[:function_session_type_ctx]
+      # }
+      # # |> Logger.debug()
 
       case result_env[:state] do
         :ok ->
@@ -95,9 +94,12 @@ defmodule ElixirST.SessionTypechecking do
     all_results =
       for {ast, parameters} <- List.zip([bodies, parameters]) do
         # Initialize the variable context with the parameters and their types
+
         variable_ctx =
           Enum.zip(parameters, param_types)
-          |> remove_nils()
+          |> Enum.map(fn {var, type} -> TypeOperations.get_vars(var, type) end)
+          # todo: currently ignoring malformed spec types: {:error, "Incorrect type specification"}
+          |> List.flatten()
           |> Enum.into(%{})
 
         env = %{env | variable_ctx: variable_ctx}

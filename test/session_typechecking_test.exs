@@ -789,7 +789,7 @@ defmodule SessionTypecheckingTest do
           meta: [line: 52],
           name: :test_call,
           param_types: [:pid],
-          parameters: [[:pid]],
+          parameters: [[{:pid, [version: 0, line: 38], nil}]],
           return_type: :atom,
           types_known?: true
         }

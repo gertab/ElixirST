@@ -68,7 +68,9 @@ defmodule ElixirST.Retriever do
       all_functions =
         get_all_functions!(dbgi_map)
         |> add_types_to_functions(to_map(function_types))
+        # |> IO.inspect
 
+      # Session typechecking of each individual function
       ElixirST.SessionTypechecking.session_typecheck_module(
         all_functions,
         to_map(session_types_parsed ++ dual_session_types_parsed),
@@ -117,7 +119,7 @@ defmodule ElixirST.Retriever do
            meta: meta,
            cases: length(bodies),
            case_metas: metas,
-           parameters: process_parameters(parameters),
+           parameters: parameters,
            guards: guards,
            bodies: bodies
          }}
@@ -140,15 +142,5 @@ defmodule ElixirST.Retriever do
       end
     end
     |> to_map()
-  end
-
-  # Given a list of lists, returns the names of the variables. If no variable is present, nil is used
-  defp process_parameters(parameters) do
-    for parameter <- parameters do
-      for variable <- parameter do
-        # Change any variables starting with _ to nils
-        ElixirST.TypeOperations.get_var(variable)
-      end
-    end
   end
 end

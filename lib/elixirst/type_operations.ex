@@ -111,24 +111,6 @@ defmodule ElixirST.TypeOperations do
   defp get_type_internal(type, _env) when is_atom(type), do: :atom
   defp get_type_internal(_, _), do: :error
 
-  @doc """
-  Returns the name of the quoted variable or nil in case of an underscore at the beginning.
-  """
-  @spec get_var(any) :: any
-  def get_var({var, _, _}) when is_atom(var) do
-    name = Atom.to_string(var)
-
-    if String.at(name, 0) == "_" do
-      nil
-    else
-      var
-    end
-  end
-
-  def get_var(_) do
-    nil
-  end
-
   @spec typeof(atom | binary | boolean | :error | nil | number | pid) :: :atom | :binary | :boolean | :error | nil | :number | :pid
   def typeof(value) when is_nil(value), do: nil
   def typeof(value) when is_boolean(value), do: :boolean
@@ -195,29 +177,34 @@ defmodule ElixirST.TypeOperations do
   end
 
   # var is the quoted part of the lhs in a binding operation (i.e. =)
-  defp get_vars(var, type)
-  defp get_vars(_, :any), do: []
-  defp get_vars({op, _, _}, type) when op not in [:{}, :%{}, :=, :_, :|], do: {op, type}
-  defp get_vars({:_, _, _}, _type), do: []
-  defp get_vars({:=, _, [_arg1, _arg2]}, _), do: {:error, "'=' is not supported"}
-  defp get_vars([], {:list, _type}), do: []
-  defp get_vars([{:|, _, [operand1, operand2]}], {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
-  defp get_vars({:|, _, [operand1, operand2]}, {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
-  defp get_vars(op, {:list, type}) when is_list(op), do: Enum.map(op, fn x -> get_vars(x, type) end)
-  defp get_vars(_, {:list, _}), do: {:error, "Incorrect type specification"}
-  defp get_vars([], _), do: {:error, "Incorrect type specification"}
-  defp get_vars({:|, _, _}, _), do: {:error, "Incorrect type specification"}
-  defp get_vars({:%{}, _, op}, {:map, {_, value_types}}),
+  @spec get_vars(any, atom | {:list, any} | {:tuple, list} | list)
+          :: list | {:error, :binary}
+  def get_vars(var, type)
+  def get_vars(_, :any), do: []
+  def get_vars({op, _, _}, type) when op not in [:{}, :%{}, :=, :_, :|], do: {op, type}
+  def get_vars({:_, _, _}, _type), do: []
+  def get_vars({:=, _, [_arg1, _arg2]}, _), do: {:error, "'=' is not supported"}
+  def get_vars([], {:list, _type}), do: []
+  def get_vars([{:|, _, [operand1, operand2]}], {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+  def get_vars({:|, _, [operand1, operand2]}, {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+  def get_vars(op, {:list, type}) when is_list(op), do: Enum.map(op, fn x -> get_vars(x, type) end)
+  def get_vars(_, {:list, _}), do: {:error, "Incorrect type specification"}
+  def get_vars([], _), do: {:error, "Incorrect type specification"}
+  def get_vars({:|, _, _}, _), do: {:error, "Incorrect type specification"}
+
+  def get_vars({:%{}, _, op}, {:map, {_, value_types}}),
     do:
       Enum.zip(op, value_types)
       |> Enum.map(fn {{_, value}, value_type} -> get_vars(value, value_type) end)
-  defp get_vars({:%{}, _, _}, _), do: {:error, "Incorrect type specification"}
-  defp get_vars(_, {:map, {_, _}}), do: {:error, "Incorrect type specification"}
-  defp get_vars({:{}, _, ops}, {:tuple, type_list}), do: get_vars_tuple(ops, type_list)
-  defp get_vars(ops, {:tuple, type_list}) when is_tuple(ops), do: get_vars_tuple(Tuple.to_list(ops), type_list)
-  defp get_vars({:{}, _, _}, _), do: {:error, "Incorrect type specification"}
-  defp get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
-  defp get_vars(value, type) when type in @types or is_atom(type) do
+
+  def get_vars({:%{}, _, _}, _), do: {:error, "Incorrect type specification"}
+  def get_vars(_, {:map, {_, _}}), do: {:error, "Incorrect type specification"}
+  def get_vars({:{}, _, ops}, {:tuple, type_list}), do: get_vars_tuple(ops, type_list)
+  def get_vars(ops, {:tuple, type_list}) when is_tuple(ops), do: get_vars_tuple(Tuple.to_list(ops), type_list)
+  def get_vars({:{}, _, _}, _), do: {:error, "Incorrect type specification"}
+  def get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
+
+  def get_vars(value, type) when type in @types or is_atom(type) do
     # (is_integer(value) and type == :integer) or
     # (is_float(value) and type == :float) or
     literal =
@@ -234,8 +221,10 @@ defmodule ElixirST.TypeOperations do
       {:error, "Incorrect type specification"}
     end
   end
-  defp get_vars(_, _), do: {:error, "Incorrect type specification"}
-  defp get_vars_tuple(ops, type_list) do
+
+  def get_vars(_, _), do: {:error, "Incorrect type specification"}
+
+  def get_vars_tuple(ops, type_list) do
     if length(ops) === length(type_list),
       do: Enum.zip(ops, type_list) |> Enum.map(fn {var, type} -> get_vars(var, type) end),
       else: {:error, "The number of parameters in tuple does not match the number of types"}
