@@ -87,8 +87,7 @@ defmodule ElixirST.Helper do
   end
 
   def expanded_quoted(ast) do
-    {ast, %Macro.Env{}} = :elixir_expand.expand(ast, __ENV__)
-
+   {ast, _, _} = :elixir_expand.expand(ast,  :elixir_env.env_to_ex(__ENV__), __ENV__)
     ast
   end
 
