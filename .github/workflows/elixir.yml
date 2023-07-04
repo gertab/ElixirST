@@ -14,8 +14,8 @@ jobs:
 
     strategy:
       matrix:
-        elixir: ['>1.10.3']
-        otp: ['>22.3']
+        elixir: ['1.14.5']
+        otp: ['25']
 
     steps:
     - uses: actions/checkout@v3
@@ -33,6 +33,10 @@ jobs:
         restore-keys: ${{ runner.os }}-mix-
     - name: Install dependencies
       run: mix deps.get
+    - name: Run local.rebar
+      run: mix local.rebar --force
+    - name: Run local.hex
+      run: mix local.hex --force
     - name: Run tests
       run: mix test
     - name: Retrieve PLT Cache
@@ -46,4 +50,4 @@ jobs:
       run:
         mkdir -p priv/plts && mix dialyzer --plt
     - name: Run dialyzer
-      run: mix dialyzer --no-check --halt-exit-status
+      run: mix dialyzer --format github
