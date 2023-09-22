@@ -417,6 +417,7 @@ defmodule ElixirST.ST do
 
   @doc """
   Converts a string to a session type. To do the opposite, use `st_to_string/1`.
+  May throw a runtime error message if parsing fails.
 
   ## Examples
       iex> s = "?Ping().!Pong()"

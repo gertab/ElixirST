@@ -19,19 +19,20 @@ defmodule ElixirST.Parser do
       ...> ElixirST.ST.st_to_string(session_type)
       "rec Y.(+{!Hello(number, [{boolean, atom}]).Y, !Ok()})"
   """
-  @spec parse(bitstring() | charlist()) :: session_type()
-  def parse(string) when is_bitstring(string) do
+  @spec parse(bitstring()) :: session_type()
+  def parse(session_type) when is_bitstring(session_type) do
     st =
-      string
+      session_type
       |> String.to_charlist()
-      |> parse()
+      |> parse_charlist()
 
     validate!(st)
     st
   end
 
-  def parse(string) do
-    with {:ok, tokens, _} <- lexer(string) do
+  @spec parse_charlist(charlist()) :: session_type()
+  defp parse_charlist(session_type_charlist) do
+    with {:ok, tokens, _} <- lexer(session_type_charlist) do
       if tokens == [] do
         # Empty input
         %ST.Terminate{}
@@ -40,15 +41,14 @@ defmodule ElixirST.Parser do
           {:ok, session_type} ->
             convert_to_structs(session_type, [])
 
-          {:error, errors} ->
-            throw("Error while parsing session type #{inspect(string)}: " <> inspect(errors))
+          {:error, {_line, :parser, error_info}} ->
+            throw("Error while parsing session type #{session_type_charlist}: #{:parser.format_error(error_info)}")
         end
       end
     else
-      {:error, {_line, :lexer, error}, 1} ->
+      {:error, {_line, :lexer, error_info}, 1} ->
         # todo: cuter error message needed
-        throw("Error in syntax of the session type " <> inspect(string) <> ". Found " <> inspect(error))
-        []
+        throw("Error in syntax of the session type #{session_type_charlist}: #{:lexer.format_error(error_info)}")
     end
   end
 
@@ -81,6 +81,7 @@ defmodule ElixirST.Parser do
     checked_types = Enum.map(types, &ElixirST.TypeOperations.valid_type/1)
 
     Enum.each(checked_types, fn
+      # todo fix. add line number
       {:error, incorrect_types} -> throw("Invalid type/s: #{inspect(incorrect_types)}")
       _ -> :ok
     end)

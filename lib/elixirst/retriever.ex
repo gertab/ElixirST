@@ -48,6 +48,23 @@ defmodule ElixirST.Retriever do
       # Retrieve dual session types (as labels)
       duals = Keyword.get_values(dbgi_map[:attributes], :dual_unprocessed_collection)
 
+      # Retrieve errors created within the @session/@dual/@spec attributes
+      invalid_collection = Keyword.get_values(dbgi_map[:attributes], :invalid_collection)
+
+      function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
+
+      all_functions =
+        get_all_functions!(dbgi_map)
+        |> add_types_to_functions(to_map(function_types))
+
+      # If there were any errors collected in the invalid_collection attribute, then expose them
+      for {{name, arity}, error_message} <- invalid_collection do
+        # Match the function name/arity with its line number in file
+        # for better error localization
+        line = get_function_line(all_functions, name, arity)
+        raise ElixirSTError, message: error_message, lines: [line || 1]
+      end
+
       dual_session_types_parsed =
         for {{name, arity}, dual_label} <- duals do
           case Keyword.fetch(session_types, dual_label) do
@@ -59,16 +76,11 @@ defmodule ElixirST.Retriever do
               {{name, arity}, dual}
 
             :error ->
-              throw("Dual session type '#{dual_label}' does not exist")
+              error_message = "Dual session type '#{dual_label}' does not exist"
+              line = get_function_line(all_functions, name, arity)
+              raise ElixirSTError, message: error_message, lines: [line || 1]
           end
         end
-
-      function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
-
-      all_functions =
-        get_all_functions!(dbgi_map)
-        |> add_types_to_functions(to_map(function_types))
-        # |> IO.inspect
 
       # Session typechecking of each individual function
       ElixirST.SessionTypechecking.session_typecheck_module(
@@ -79,7 +91,10 @@ defmodule ElixirST.Retriever do
       )
     catch
       {:error, message} ->
-        Logger.error("Error while reading BEAM files: " <> message)
+        raise ElixirSTError, message: "Error while reading BEAM files: " <> message, lines: [1]
+
+      :error, error = %ElixirSTError{} ->
+        raise ElixirSTError, message: error.message, lines: error.lines
     end
   end
 
@@ -136,11 +151,23 @@ defmodule ElixirST.Retriever do
 
       if not is_nil(types) do
         {param_types, return_type} = types
+
         {{name, arity}, %{function | types_known?: true, return_type: return_type, param_types: param_types}}
       else
         {{name, arity}, function}
       end
     end
     |> to_map()
+  end
+
+  # Returns the line where a function is defined within a files
+  defp get_function_line(all_functions, name, arity) do
+    function_with_issues = Map.get(all_functions, {name, arity}, nil)
+
+    if function_with_issues do
+      function_with_issues.meta[:line]
+    else
+      nil
+    end
   end
 end

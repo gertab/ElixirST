@@ -7,6 +7,7 @@ defmodule ElixirSTError do
   end
 
   def message(%{lines: lines, message: message}) do
-    "[Line #{inspect(List.last(lines))}] [#{inspect(lines)}] " <> message
+    "[Line #{inspect(List.last(lines))}] " <> message
+    #  [#{inspect(lines)}]
   end
 end
