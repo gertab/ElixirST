@@ -197,7 +197,7 @@ The package can be installed by adding `elixirst` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:elixirst, "~> 0.7.5"}
+    {:elixirst, "~> 0.8.0"}
   ]
 end
 ```

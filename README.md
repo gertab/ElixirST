@@ -94,7 +94,7 @@ The package can be installed by adding `elixirst` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:elixirst, "~> 0.7.5"}
+    {:elixirst, "~> 0.8.0"}
   ]
 end
 ```
@@ -132,6 +132,14 @@ The `@dual` attribute checks the dual of the specified session type.
 ```
 
 Other examples can be found in the [`examples`](/lib/elixirst/examples) folder.
+
+## Cite
+
+Feel free to cite *ElixirST* as follows (or use [.bib](ref.bib) file):
+
+```
+Francalanza, A., & Tabone, G. (2023). ElixirST: A session-based type system for Elixir modules. Journal of Logical and Algebraic Methods in Programming, 135, 100891. https://doi.org/10.1016/j.jlamp.2023.100891
+``` 
 
 ## Acknowledgements
 
