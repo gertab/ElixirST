@@ -1,8 +1,6 @@
 defmodule ElixirST.SessionTypechecking do
-  alias ElixirST.ST
-  alias ElixirST.TypeOperations
-  require ST
-  require ElixirST.TypeOperations
+  alias ElixirST.{ST, TypeOperations}
+  alias ElixirSTError
   require Logger
 
   @moduledoc """
@@ -32,7 +30,9 @@ defmodule ElixirST.SessionTypechecking do
       } = function
 
       if not types_known? do
-        throw("Function #{name}/#{arity} has unknown return type. Use @spec to set parameter and return types.")
+        # Get line number from meta
+        line = Keyword.get(function.meta, :line)
+        raise ElixirSTError, message: "Function #{name}/#{arity} has unknown return type. Use @spec to set parameter and return types.", lines: [line]
       end
 
       env = %{
@@ -40,6 +40,8 @@ defmodule ElixirST.SessionTypechecking do
         :state => :ok,
         # error message
         :error_data => nil,
+        # lines where errors occur
+        :error_lines => [],
         # :x => :atom
         :variable_ctx => %{},
         # Expected session type
@@ -73,7 +75,7 @@ defmodule ElixirST.SessionTypechecking do
         :error ->
           Logger.error("Session typechecking for #{name}/#{arity} found an error. ")
           Logger.error(result_env[:error_data])
-          throw(result_env[:error_data])
+          raise ElixirSTError, message: result_env.error_data, lines: result_env.error_lines
       end
 
       result_env
@@ -86,6 +88,7 @@ defmodule ElixirST.SessionTypechecking do
       name: name,
       arity: arity,
       bodies: bodies,
+      meta: meta,
       return_type: expected_return_type,
       parameters: parameters,
       param_types: param_types
@@ -124,6 +127,7 @@ defmodule ElixirST.SessionTypechecking do
                %{
                  result
                  | state: :error,
+                   error_lines: append_error_line(result[:error_lines], meta[:line]),
                    error_data: "Unfulfilled session type for #{name}/#{arity} is " <> ST.st_to_string_current(result[:session_type])
                }}
 
@@ -132,6 +136,7 @@ defmodule ElixirST.SessionTypechecking do
                %{
                  result
                  | state: :error,
+                   error_lines: append_error_line(result[:error_lines], meta[:line]),
                    error_data:
                      "Return type for #{name}/#{arity} is #{TypeOperations.string(result[:type])} but expected " <>
                        TypeOperations.string(expected_return_type)
@@ -163,7 +168,7 @@ defmodule ElixirST.SessionTypechecking do
 
   # Block
   def typecheck({:__block__, meta, args}, env) do
-    # Logger.debug("Typechecking: Block")
+    Logger.debug("Typechecking: Block")
     node = {:__block__, meta, nil}
 
     env =
@@ -176,8 +181,8 @@ defmodule ElixirST.SessionTypechecking do
 
           _ ->
             {:cont, %{new_env | variable_ctx: Map.merge(env_acc[:variable_ctx], new_env[:variable_ctx])}}
-        end
-      end)
+          end
+        end)
 
     {node, env}
   end
@@ -186,7 +191,7 @@ defmodule ElixirST.SessionTypechecking do
   def typecheck(node, env)
       when is_atom(node) or is_number(node) or is_binary(node) or is_boolean(node) or
              is_float(node) or is_integer(node) or is_nil(node) or is_pid(node) do
-    # Logger.debug("Typechecking: Literal: #{inspect(node)} #{TypeOperations.typeof(node)}")
+    Logger.debug("Typechecking: Literal: #{inspect(node)} #{TypeOperations.typeof(node)}")
 
     {node, %{env | type: TypeOperations.typeof(node)}}
   end
@@ -194,6 +199,8 @@ defmodule ElixirST.SessionTypechecking do
   # Tuples
   def typecheck({:{}, meta, args}, env) when is_list(args) do
     node = {:{}, meta, []}
+    Logger.debug("Typechecking: {}")
+
 
     {types_list, new_env} =
       Enum.map(args, fn arg -> elem(Macro.prewalk(arg, env, &typecheck/2), 1) end)
@@ -212,21 +219,29 @@ defmodule ElixirST.SessionTypechecking do
 
   # Tuples (of size 2)
   def typecheck({arg1, arg2}, env) do
+    Logger.debug("Typechecking: {}2")
+
     node = {:{}, [], [arg1, arg2]}
     typecheck(node, env)
   end
 
   # Lists and List operations
   def typecheck([], env) do
+    Logger.debug("Typechecking: []")
+
     {[], %{env | type: {:list, :any}}}
   end
 
   def typecheck([{:|, meta, [operand1, operand2]}], env) do
+    Logger.debug("Typechecking: :|")
+
     node = {:|, meta, []}
     process_binary_operations(node, meta, :|, operand1, operand2, {:list, nil}, false, false, env)
   end
 
   def typecheck(node, env) when is_list(node) do
+    Logger.debug("Typechecking: list")
+
     typechecked_nodes = Enum.map(node, fn t -> elem(Macro.prewalk(t, env, &typecheck/2), 1) end)
 
     result =
@@ -254,7 +269,7 @@ defmodule ElixirST.SessionTypechecking do
 
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:++, :--] do
-    # Logger.debug("Typechecking: Erlang #{operator}")
+    Logger.debug("Typechecking: Erlang 1 #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
     {node, result_env} = process_binary_operations(node, meta2, operator, arg1, arg2, {:list, nil}, true, false, env)
@@ -271,7 +286,8 @@ defmodule ElixirST.SessionTypechecking do
            %{
              result_env
              | state: :error,
-               error_data: error_message("Expected type of list but found " <> TypeOperations.string(result_env[:type]), meta2)
+               error_lines: append_error_line(result_env[:error_lines], meta1[:line]),
+               error_data: "Expected type of list but found " <> TypeOperations.string(result_env[:type])
            }}
       end
     end
@@ -280,10 +296,17 @@ defmodule ElixirST.SessionTypechecking do
   # Arithmetic operations
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:+, :-, :*, :/] do
-    # Logger.debug("Typechecking: Erlang #{operator}")
+    Logger.debug("Typechecking: Erlang 2 #{operator}")
     node = {{:., meta1, []}, meta2, []}
 
-    process_binary_operations(node, meta2, operator, arg1, arg2, :number, false, false, env)
+    {node, env_res} = process_binary_operations(node, meta2, operator, arg1, arg2, :number, false, false, env)
+
+    # IO.inspect("return Erlang 2 #{operator}")
+    # IO.inspect env_res[:state]
+    # IO.inspect env_res[:error_data]
+    # IO.inspect env_res[:error_lines]
+
+    {node, env_res}
   end
 
   # too complex in extended elixir: [:and, :or]
@@ -293,18 +316,22 @@ defmodule ElixirST.SessionTypechecking do
   def typecheck({{:., meta1, [:erlang, operator]}, meta2, [arg1, arg2]}, env)
       when operator in [:==, :"/=", :"=:=", :"=/=", :>, :<, :"=<", :>=] do
     node = {{:., meta1, []}, meta2, []}
+    Logger.debug("Typechecking: Extended Elixir format")
+
     # improve: convert operator from extended elixir to elixir
     process_binary_operations(node, meta2, operator, arg1, arg2, :any, false, true, env)
   end
 
   # Not
   def typecheck({{:., _meta1, [:erlang, :not]}, meta2, [arg]} = node, env) do
+    Logger.debug("Typechecking: not")
+
     process_unary_operations(node, meta2, arg, :boolean, env)
   end
 
   # Negate
   def typecheck({{:., _meta1, [:erlang, :-]}, meta2, [arg]}, env) do
-    # Logger.debug("Typechecking: Erlang negation")
+    Logger.debug("Typechecking: Erlang negation")
 
     node = {nil, meta2, []}
     process_unary_operations(node, meta2, arg, :number, env)
@@ -312,15 +339,18 @@ defmodule ElixirST.SessionTypechecking do
 
   def typecheck({{:., _meta1, [:erlang, erlang_function]}, meta2, _arg}, env)
       when erlang_function not in [:send, :self] do
-    # Logger.debug("Typechecking: Erlang others #{erlang_function} (not supported)")
+    Logger.debug("Typechecking: Erlang others #{erlang_function} (not supported)")
     node = {nil, meta2, []}
 
-    {node, %{env | state: :error, error_data: error_message("Unknown erlang function #{inspect(erlang_function)}", meta2)}}
+    {node, %{env |
+      state: :error,
+      error_lines: append_error_line(env[:error_lines], meta2[:line]),
+      error_data: "Unknown erlang function #{inspect(erlang_function)}"}}
   end
 
   # Binding operator
   def typecheck({:=, meta, [pattern, expr]}, env) do
-    # Logger.debug("Typechecking: Binding operator (i.e. =)")
+    Logger.debug("Typechecking: Binding operator (i.e. =)")
     node = {:=, meta, []}
 
     {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
@@ -334,7 +364,7 @@ defmodule ElixirST.SessionTypechecking do
         pattern_vars = TypeOperations.var_pattern(pattern, [expr_env[:type]])
 
         case pattern_vars do
-          {:error, msg} -> {node, %{expr_env | state: :error, error_data: error_message(msg, meta)}}
+          {:error, msg} -> {node, %{expr_env | state: :error, error_lines: append_error_line(env[:error_lines], meta[:line]), error_data: msg}}
           _ -> {node, %{expr_env | variable_ctx: Map.merge(expr_env[:variable_ctx], pattern_vars || %{})}}
         end
     end
@@ -342,38 +372,41 @@ defmodule ElixirST.SessionTypechecking do
 
   # Variables
   def typecheck({x, meta, arg}, env) when is_atom(arg) do
-    # Logger.debug("Typechecking: Variable #{inspect(x)} with type #{inspect(env[:variable_ctx][x])}")
+    Logger.debug("Typechecking: Variable #{inspect(x)} with type #{inspect(env[:variable_ctx][x])}")
     node = {x, meta, arg}
 
     if Map.has_key?(env[:variable_ctx], x) do
       {node, %{env | type: env[:variable_ctx][x]}}
     else
-      {node, %{env | state: :error, error_data: error_message("Variable #{x} was not found", meta)}}
+      {node, %{env | state: :error, error_lines: append_error_line(env[:error_lines], meta[:line]), error_data: "Variable #{x} was not found"}}
     end
   end
 
   # Case
   def typecheck({:case, meta, [expr, body | _]}, env) do
+    Logger.debug("Typechecking: case")
+
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
     node = {:case, meta, []}
     cases = process_cases(body[:do])
+    case_line = meta[:line]
 
     {_expr_ast, expr_env} = Macro.prewalk(expr, env, &typecheck/2)
 
     result =
       case expr_env[:state] do
         :error ->
-          {:error, {:inner_error, expr_env[:error_data]}}
+          {:error, case_line, {:inner_error, expr_env[:error_lines], expr_env[:error_data]}}
 
         _ ->
           # Get label, parameters and remaining ast from the source ast
           all_cases_result =
-            Enum.map(cases, fn {lhs, rhs} ->
+            Enum.map(cases, fn {line, lhs, rhs} ->
               pattern_vars = TypeOperations.var_pattern([lhs], [expr_env[:type]]) || %{}
 
               case pattern_vars do
-                {:error, msg} ->
-                  {:error, msg}
+                {:error, line, msg} ->
+                  {:error, line, msg}
 
                 _ ->
                   env = %{env | variable_ctx: Map.merge(env[:variable_ctx], pattern_vars)}
@@ -381,24 +414,31 @@ defmodule ElixirST.SessionTypechecking do
                   {_case_ast, case_env} = Macro.prewalk(rhs, env, &typecheck/2)
 
                   case case_env[:state] do
-                    :error -> {:error, case_env[:error_data]}
+                    :error ->
+                      {:error, line, {:inner_error, case_env[:error_lines], case_env[:error_data]}}
                     _ -> case_env
                   end
               end
             end)
 
-          process_cases_result(all_cases_result)
+          case process_cases_result(all_cases_result) do
+            {:error, line, message} ->
+              {:error, line || meta[:line], message}
+
+            result ->
+              result
+          end
       end
 
     case result do
-      {:error, _} = error -> {node, append_error(env, error, meta)}
+      {:error, _, _} = error -> {node, append_error(env, error)}
       _ -> {node, %{env | session_type: result[:session_type], type: result[:type]}}
     end
   end
 
   # Send Function
   def typecheck({{:., _meta1, [:erlang, :send]}, meta2, [send_destination, send_body | _]}, env) do
-    # Logger.debug("Typechecking: Erlang send")
+    Logger.debug("Typechecking: Erlang send")
 
     node = {nil, meta2, []}
 
@@ -480,19 +520,19 @@ defmodule ElixirST.SessionTypechecking do
       {node, %{send_body_env | session_type: remaining_session_types}}
     catch
       {:error, message} ->
-        {node, %{env | state: :error, error_data: error_message(message, meta2)}}
-
-      x ->
-        throw("Unknown error: " <> inspect(x))
+        {node, append_error(env, {:error, meta2[:line], message})}
     end
   end
 
   # Receive
   def typecheck({:receive, meta, [body | _]}, env) do
     # body contains [do: [ {:->, _, [ [ when/condition ], work ]}, other_cases... ] ]
+    Logger.debug("Typechecking: receive")
+
 
     node = {:receive, meta, []}
     cases = process_cases(body[:do])
+    receive_line = meta[:line]
 
     try do
       # In case of one receive branch, it should match with a %ST.Recv{}
@@ -504,13 +544,13 @@ defmodule ElixirST.SessionTypechecking do
         case session_type do
           %ST.Branch{branches: branches} -> branches
           %ST.Recv{label: label, types: types, next: next} -> %{label => %ST.Recv{label: label, types: types, next: next}}
-          x -> throw({:error, "Found a receive/branch, but expected #{ST.st_to_string_current(x)}."})
+          x -> throw({:error, receive_line, "Found a receive/branch, but expected #{ST.st_to_string_current(x)}."})
         end
 
       # Each branch from the session type should have an equivalent branch in the receive cases
       if map_size(branches_session_types) != length(cases) do
         throw(
-          {:error,
+          {:error, receive_line,
            "[in branch/receive] Mismatch in number of receive and & branches. " <>
              "Expected session type #{ST.st_to_string_current(session_type)}"}
         )
@@ -518,7 +558,7 @@ defmodule ElixirST.SessionTypechecking do
 
       # Get label, parameters and remaining AST from the source AST
       all_branches_result =
-        Enum.map(cases, fn {lhs, rhs} ->
+        Enum.map(cases, fn {line, lhs, rhs} ->
           [head | _] = tuple_to_list(lhs)
 
           if branches_session_types[head] do
@@ -528,7 +568,7 @@ defmodule ElixirST.SessionTypechecking do
 
             case pattern_vars do
               {:error, msg} ->
-                {:error, msg}
+                {:error, line, msg}
 
               _ ->
                 env = %{
@@ -540,55 +580,52 @@ defmodule ElixirST.SessionTypechecking do
                 {_branch_ast, branch_env} = Macro.prewalk(rhs, env, &typecheck/2)
 
                 case branch_env[:state] do
-                  :error -> {:error, {:inner_error, branch_env[:error_data]}}
+                  :error -> {:error, line, {:inner_error, branch_env[:error_lines], branch_env[:error_data]}}
                   _ -> branch_env
                 end
             end
           else
-            throw({:error, "Receive branch with label #{inspect(head)} did not match session type"})
+            throw({:error, line, "Receive branch with label #{inspect(head)} did not match session type"})
           end
         end)
 
       case process_cases_result(all_branches_result) do
-        {:error, message} ->
-          throw({:error, message})
+        {:error, line, message} ->
+          throw({:error, line || receive_line, message})
 
         result ->
           {node, %{env | session_type: result[:session_type], type: result[:type]}}
       end
     catch
-      {:error, _} = error ->
-        {node, append_error(env, error, meta)}
-
-      x ->
-        throw("Unknown error: " <> inspect(x))
+      {:error, _, _} = error ->
+        {node, append_error(env, error)}
     end
   end
 
   # Hardcoded stuff (not ideal)
   def typecheck({{:., _meta1, [:erlang, :self]}, meta2, []}, env) do
-    # Logger.debug("Typechecking: Erlang self")
+    Logger.debug("Typechecking: Erlang self")
     node = {nil, meta2, []}
     {node, %{env | type: :pid}}
   end
 
   def typecheck({{:., _meta, [IO, :puts]}, meta2, _}, env) do
-    # Logger.debug("Typechecking: IO.puts")
+    Logger.debug("Typechecking: IO.puts")
     node = {nil, meta2, []}
     {node, %{env | type: :atom}}
   end
 
   def typecheck({{:., _meta, [IO, :gets]}, meta2, _}, env) do
-    # Logger.debug("Typechecking: IO.gets")
+    Logger.debug("Typechecking: IO.gets")
     node = {nil, meta2, []}
     {node, %{env | type: :binary}}
   end
 
-  def typecheck({{:., _meta, _call}, meta2, _}, env) do
-    # Logger.debug("Typechecking: Remote function call (#{inspect(call)})")
+  def typecheck({{:., _meta, call}, meta2, _}, env) do
+    Logger.debug("Typechecking: Remote function call (#{inspect(call)})")
     node = {nil, meta2, []}
 
-    {node, %{env | state: :error, error_data: error_message("Remote functions not allowed.", meta2)}}
+    {node, %{env | state: :error, error_lines: append_error_line(env[:error_lines], meta2[:line]), error_data: "Remote functions not allowed."}}
   end
 
   def typecheck({:., meta, _}, env) do
@@ -598,10 +635,11 @@ defmodule ElixirST.SessionTypechecking do
 
   # Functions
   def typecheck({name, meta, args}, env) when is_list(args) do
-    # Logger.debug("Typechecking: Function #{inspect(name)}")
+    Logger.debug("Typechecking: Function #{inspect(name)}")
     node = {name, meta, []}
 
     name_arity = {name, length(args)}
+    line = meta[:line]
 
     try do
       function =
@@ -670,7 +708,7 @@ defmodule ElixirST.SessionTypechecking do
 
         cond do
           new_env[:state] == :error ->
-            throw({:error, new_env[:error_data]})
+            throw({:error, {:inner_error, new_env[:error_lines], new_env[:error_data]}})
 
           new_env[:session_type] != %ST.Terminate{} ->
             throw({:error, "Function #{name}/#{length(args)} does not match the session type " <> ST.st_to_string(env[:session_type])})
@@ -680,27 +718,27 @@ defmodule ElixirST.SessionTypechecking do
         end
       end
     catch
-      {:error, _} = error ->
-        {node, append_error(env, error, meta)}
-
-      x ->
-        throw("Unknown error: " <> inspect(x))
+      {:error, details} ->
+        {node, append_error(env, {:error, line, details})}
     end
   end
 
   def typecheck(other, env) do
-    # Logger.debug("Typechecking: other #{inspect(other)}")
+    Logger.debug("Typechecking: other #{inspect(other)}")
     {other, env}
   end
 
   # Returns the lhs and rhs for all cases (i.e. lhs -> rhs)
+  # Includes also the line number of each case
   defp process_cases(cases) do
     Enum.map(cases, fn
-      {:->, _, [[{:when, _, [var, _cond | _]}], rhs | _]} ->
-        {var, rhs}
+      {:->, meta, [[{:when, _, [var, _cond | _]}], rhs | _]} ->
+        line = meta[:line]
+        {line, var, rhs}
 
-      {:->, _, [[lhs], rhs | _]} ->
-        {lhs, rhs}
+      {:->, meta, [[lhs], rhs | _]} ->
+        line = meta[:line]
+        {line, lhs, rhs}
     end)
   end
 
@@ -708,15 +746,16 @@ defmodule ElixirST.SessionTypechecking do
   defp process_cases_result(all_cases) when is_list(all_cases) do
     Enum.reduce_while(all_cases, hd(all_cases), fn curr_case, acc ->
       case curr_case do
-        {:error, message} ->
-          {:halt, {:error, message}}
+        {:error, line, message} ->
+          {:halt, {:error, line, message}}
 
         _ ->
           common_type = TypeOperations.equal?(curr_case[:type], acc[:type])
 
           if common_type == false do
             {:halt,
-             {:error,
+            # todo fix. line number should not be nil
+             {:error, nil,
               "Types #{inspect(curr_case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
                 "cases should have end up with the same type."}}
           else
@@ -724,7 +763,7 @@ defmodule ElixirST.SessionTypechecking do
               {:cont, %{curr_case | type: curr_case[:type]}}
             else
               {:halt,
-               {:error,
+               {:error, nil,
                 "Mismatch in session type following the case: " <>
                   "#{ST.st_to_string(curr_case[:session_type])} and " <>
                   "#{ST.st_to_string(acc[:session_type])}"}}
@@ -734,25 +773,37 @@ defmodule ElixirST.SessionTypechecking do
     end)
   end
 
-  defp append_error(env, {:error, {:inner_error, message}}, _meta) do
-    %{env | state: :error, error_data: message}
+  # Append line numbers + message to the current environment.
+  # If errors occur withing a sub-expression, then append the error_lines to keep a stack of error lines
+  defp append_error(env, {:error, line, {:inner_error, existing_error_lines, message}}) do
+    %{env | state: :error, error_lines: append_error_line(existing_error_lines, line), error_data: message}
   end
 
-  defp append_error(env, {:error, message}, meta) do
-    %{env | state: :error, error_data: error_message(message, meta)}
+  defp append_error(env, {:error, line, message}) do
+    %{env | state: :error, error_lines: append_error_line(env.error_lines, line), error_data: message}
+  end
+
+  defp append_error_line(error_lines, nil) do
+    error_lines
+  end
+
+  defp append_error_line(error_lines, line) when is_list(error_lines) do
+    [line | error_lines]
   end
 
   defp process_binary_operations(node, meta, operator, arg1, arg2, allowed_type, any_type, is_comparison, env) do
     {_op1_ast, op1_env} = Macro.prewalk(arg1, env, &typecheck/2)
     {_op2_ast, op2_env} = Macro.prewalk(arg2, env, &typecheck/2)
 
+    line = meta[:line]
+
     try do
       if op1_env[:state] == :error do
-        throw({:error, {:inner_error, op1_env[:error_data]}})
+        throw({:error, {:inner_error, op1_env[:error_lines], op1_env[:error_data]}})
       end
 
       if op2_env[:state] == :error do
-        throw({:error, {:inner_error, op2_env[:error_data]}})
+        throw({:error, {:inner_error, op2_env[:error_lines], op2_env[:error_data]}})
       end
 
       cond do
@@ -779,31 +830,16 @@ defmodule ElixirST.SessionTypechecking do
              %{
                op1_env
                | state: :error,
-                 error_data:
-                   error_message(
-                     "Operator type problem in [a | b]: b should be a list of the type of a. Found " <>
-                       "#{TypeOperations.string(op1_env[:type])}, #{TypeOperations.string(op2_env[:type])}",
-                     meta
-                   )
+                 error_lines: append_error_line(env[:error_lines], line),
+                 error_data: "Operator type problem in [a | b]: b should be a list of the type of a. Found " <>
+                       "#{TypeOperations.string(op1_env[:type])}, #{TypeOperations.string(op2_env[:type])}"
              }}
           end
 
         true ->
           same_type = TypeOperations.equal?(op1_env[:type], op2_env[:type])
 
-          if same_type == false do
-            {node,
-             %{
-               op1_env
-               | state: :error,
-                 error_data:
-                   error_message(
-                     "Operator type problem in #{Atom.to_string(operator)}: #{TypeOperations.string(op1_env[:type])}, " <>
-                       "#{TypeOperations.string(op2_env[:type])} are not of the same type",
-                     meta
-                   )
-             }}
-          else
+          if same_type do
             if any_type || TypeOperations.equal?(op1_env[:type], allowed_type) do
               {node,
                %{
@@ -813,19 +849,20 @@ defmodule ElixirST.SessionTypechecking do
                }}
             else
               throw(
-                {:error,
-                 "Operator type problem in #{Atom.to_string(operator)}: #{TypeOperations.string(op1_env[:type])}, " <>
+                {:error, "Operator type problem in #{Atom.to_string(operator)}: #{TypeOperations.string(op1_env[:type])}, " <>
                    "#{TypeOperations.string(op2_env[:type])} is not of type #{inspect(allowed_type)}"}
               )
             end
+          else
+            throw(
+              {:error, "Operator type problem in #{Atom.to_string(operator)}: #{TypeOperations.string(op1_env[:type])}, " <>
+              "#{TypeOperations.string(op2_env[:type])} are not of the same type"}
+            )
           end
       end
     catch
-      {:error, _} = error ->
-        {node, append_error(env, error, meta)}
-
-      x ->
-        throw("Unknown error: " <> inspect(x))
+      {:error, details} ->
+        {node, append_error(env, {:error, line, details})}
     end
   end
 
@@ -846,11 +883,8 @@ defmodule ElixirST.SessionTypechecking do
            %{
              op1_env
              | state: :error,
-               error_data:
-                 error_message(
-                   "Type problem: Found expression of type #{inspect(op1_env[:type])} but expected a #{inspect(expected_type)}",
-                   meta
-                 )
+               error_lines: append_error_line(env[:error_lines], meta[:line]),
+               error_data: "Type problem: Found expression of type #{inspect(op1_env[:type])} but expected a #{inspect(expected_type)}"
            }}
         end
     end
@@ -864,26 +898,26 @@ defmodule ElixirST.SessionTypechecking do
     args
   end
 
-  defp remove_nils(list) do
-    Enum.filter(
-      list,
-      fn
-        {nil, _} -> false
-        _ -> true
-      end
-    )
-  end
+  # defp remove_nils(list) do
+  #   Enum.filter(
+  #     list,
+  #     fn
+  #       {nil, _} -> false
+  #       _ -> true
+  #     end
+  #   )
+  # end
 
-  defp error_message(message, meta) do
-    line =
-      if meta[:line] do
-        "[Line #{meta[:line]}] "
-      else
-        ""
-      end
+  # defp error_message(message, meta) do
+  #   line =
+  #     if meta[:line] do
+  #       "[Line #{meta[:line]}] "
+  #     else
+  #       ""
+  #     end
 
-    line <> message
-  end
+  #   line <> message
+  # end
 
   defp lookup_function(all_functions, {name, arity}) do
     try do

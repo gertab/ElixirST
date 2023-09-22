@@ -1,6 +1,6 @@
 defmodule ElixirST do
   alias ElixirST.ST
-  require ST
+  alias ElixirSTError
   require Logger
 
   @moduledoc """
@@ -58,7 +58,12 @@ defmodule ElixirST do
   end
 
   def __after_compile__(_env, bytecode) do
-    ElixirST.Retriever.process(bytecode)
+    try do
+      # Initiate typechecking
+      ElixirST.Retriever.process(bytecode)
+    catch
+      :error, error = %ElixirSTError{} -> raise ElixirSTError, message: error.message, lines: error.lines
+    end
   end
 
   # Processes @session attribute - gets the function and session type details

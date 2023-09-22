@@ -8,6 +8,7 @@ defmodule SessionTypecheckingTest do
     %{
       :state => :ok,
       :error_data => nil,
+      :error_lines => [],
       :variable_ctx => %{},
       :session_type => %ST.Terminate{},
       :type => :any,

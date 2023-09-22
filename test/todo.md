@@ -13,6 +13,7 @@
 - [ ] Improve examples, docs and doctests
 - [ ] Add spawn(server_fn, server_args, client_fn, client_args) that spawns two actors, exchanges their pids and calls the server/client functions
 - [ ] Unfold multiple e.g. rec X.rec Y.(!A().X)
+- [ ] Recursive types should be be contractive, containing no subexpressions of the form rec X.rec X1...X
 
 ### ElixirST.SessionTypechecking Module
 - [ ] Improve error messages
