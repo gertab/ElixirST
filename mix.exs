@@ -4,7 +4,7 @@ defmodule ElixirST.MixProject do
   def project do
     [
       app: :elixirst,
-      version: "0.8.0",
+      version: "0.8.1",
       elixir: "~> 1.9",
       dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
@@ -19,7 +19,8 @@ defmodule ElixirST.MixProject do
         logo: "assets/logo.png",
         cover: "assets/logo-full.png",
         extras: ["Licence": [filename: "LICENCE", title: "Licence"], "docs.md": [filename: "docs", title: "Documentation"]],
-        assets: "assets"
+        assets: "assets",
+        source_ref: "master"
       ],
 
       # Leex/Yecc options
