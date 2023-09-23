@@ -18,7 +18,7 @@ defmodule ElixirST.MixProject do
         main: "docs",
         logo: "assets/logo.png",
         cover: "assets/logo-full.png",
-        extras: ["Licence": [filename: "LICENCE", title: "Licence"], "docs.md": [filename: "docs", title: "Documentation"]],
+        extras: ["LICENCE": [filename: "LICENCE", title: "Licence"], "Docs.md": [filename: "Docs.md", title: "Documentation"]],
         assets: "assets",
         source_ref: "master"
       ],
