@@ -1,5 +1,6 @@
 <!-- # ElixirST: Session Types in Elixir -->
-![](archive/logo.png)
+
+![ElixirST: Session Types in Elixir](assets/logo-full.png)
 
 [![Elixir CI](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml)
 
@@ -242,6 +243,15 @@ ElixirST implements several features that allow for _session type_ manipulation.
 Some of these are shown below, which include: 
  - session type parsing ([`lib/elixirst/parser/parser.ex`](/lib/elixirst/parser/parser.ex)),
  - session type comparison (e.g. equality) and manipulation (e.g. duality). -->
+
+### Cite
+
+Feel free to cite *ElixirST* as follows (or use [.bib](https://github.com/gertab/ElixirST/blob/master/ref.bib) file):
+
+```text
+Francalanza, A., & Tabone, G. (2023). ElixirST: A session-based type system for Elixir modules. Journal of Logical and Algebraic Methods in Programming, 135, 100891. https://doi.org/10.1016/j.jlamp.2023.100891
+``` 
+
 
 ### Acknowledgements
 

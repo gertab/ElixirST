@@ -14,8 +14,13 @@ defmodule ElixirST.MixProject do
       # Docs
       name: "ElixirST",
       source_url: "https://github.com/gertab/ElixirST",
-      # The main page in the docs
-      docs: [main: "docs", extras: ["docs.md", "LICENCE"]],
+      docs: [
+        main: "docs",
+        logo: "assets/logo.png",
+        cover: "assets/logo-full.png",
+        extras: ["Licence": [filename: "LICENCE", title: "Licence"], "docs.md": [filename: "docs", title: "Documentation"]],
+        assets: "assets"
+      ],
 
       # Leex/Yecc options
       # leex_options: [],
@@ -41,7 +46,8 @@ defmodule ElixirST.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.22.0", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
+      # {:ex_doc, "~> 0.22.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
     ]
