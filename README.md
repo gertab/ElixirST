@@ -1,5 +1,5 @@
 <!-- # ElixirST: Session Types in Elixir -->
-![](assets/logo.png)
+![](assets/logo-full.png)
 
 [![Elixir CI](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml/badge.svg)](https://github.com/gertab/ElixirST/actions/workflows/elixir.yml)
 

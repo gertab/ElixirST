@@ -9,10 +9,11 @@ It statically checks that the programs use the correct communication structures 
 <!-- It also ensures that the correct types are being used.  -->
 <!-- For example, the session type `?Add(number, number).!Result(number).end` expects that two numbers are received (i.e. `?`), then a number is sent (i.e. `!`) and finally the session terminates. -->
 
-The design decisions of ElixirST and its underlying theory are described in the following papers:
-  - Gerard Tabone and Adrian Francalanza. *Session Fidelity for ElixirST: A Session-Based Type System for Elixir Modules*. ICE 2022. ([doi](http://doi.org/10.4204/EPTCS.365.2), [pdf](https://gerardtabone.com/publications/TaboneFrancalanza-ICE2022.pdf))
-  - Gerard Tabone and Adrian Francalanza. *Session Types in Elixir*. AGERE 2021. ([doi](https://doi.org/10.1145/3486601.3486708), [pdf](http://staff.um.edu.mt/afra1/papers/Agere21.pdf))
-  - Gerard Tabone and Adrian Francalanza. *Static Checking of Concurrent Programs in Elixir Using Session Types*. Technical report, 2022. ([pdf](https://gertab.github.io/ElixirST/archive/UoM%20-%20technical%20report%202022.pdf))
+The design decisions of ElixirST and its underlying theory are described in the following papers co-authored by Gerard Tabone and Adrian Francalanza:
+  - *ElixirST: A Session-Based Type System for Elixir Modules*. JLAMP 2023. ([doi](https://doi.org/10.1016/j.jlamp.2023.100891), [pdf](https://gerardtabone.com/publications/FrancalanzaTaboneJLAMP.pdf))
+  - *Session Fidelity for ElixirST: A Session-Based Type System for Elixir Modules*. ICE 2022. ([doi](http://doi.org/10.4204/EPTCS.365.2), [pdf](https://gerardtabone.com/publications/TaboneFrancalanza-ICE2022.pdf))
+  - *Session Types in Elixir*. AGERE 2021. ([doi](https://doi.org/10.1145/3486601.3486708), [pdf](https://gerardtabone.com/publications/TaboneFrancalanza-ICE2022.pdf))
+  - *Static Checking of Concurrent Programs in Elixir Using Session Types*. Technical report, 2022. ([pdf](https://gerardtabone.com/ElixirST/archive/UoM%20-%20technical%20report%202022.pdf))
 
 
 ## Example
@@ -198,7 +199,7 @@ The package can be installed by adding `elixirst` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:elixirst, "~> 0.8.3"}
+    {:elixirst, "~> 0.8.4"}
   ]
 end
 ```

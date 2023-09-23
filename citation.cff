@@ -8,7 +8,7 @@ authors:
     given-names: Gerard
     orcid: https://orcid.org/0000-0001-9047-061X
 title: "ElixirST"
-version: 0.8.2
+version: 0.8.3
 date-released: 2021-09-17
 url: "https://github.com/gertab/ElixirST"
 keywords:
